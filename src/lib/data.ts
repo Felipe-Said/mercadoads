@@ -25,6 +25,7 @@ export interface Product {
   category: string | null
   stock: number | null
   sales_count: number
+  status: 'draft' | 'active' | 'paused' | 'rejected'
   seller?: Profile | null
 }
 
@@ -86,17 +87,18 @@ function mapProduct(row: Record<string, unknown>): Product {
     category: (row.category as string | null) ?? null,
     stock: row.stock == null ? null : toNumber(row.stock),
     sales_count: toNumber(row.sales_count),
+    status: (row.status as Product['status']) ?? 'active',
     seller: (row.profiles as Profile | null) ?? null,
   }
 }
 
-export async function getProducts(options: { offersOnly?: boolean; category?: string; sellerId?: string } = {}) {
+export async function getProducts(options: { offersOnly?: boolean; category?: string; sellerId?: string; includeInactive?: boolean } = {}) {
   let query = supabase
     .from('products')
     .select('*, profiles:seller_id(id, role, full_name, pix_key, created_at)')
-    .eq('status', 'active')
     .order('created_at', { ascending: false })
 
+  if (!options.includeInactive) query = query.eq('status', 'active')
   if (options.offersOnly) query = query.not('original_price', 'is', null)
   if (options.category && options.category !== 'all') query = query.ilike('category', `%${options.category}%`)
   if (options.sellerId) query = query.eq('seller_id', options.sellerId)
