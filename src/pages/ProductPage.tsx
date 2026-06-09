@@ -101,7 +101,14 @@ export function ProductPage() {
     if (!product || !question.trim()) return
     if (authLoading) return
 
-    if (!user) {
+    const { data: sessionData, error: sessionError } = await supabase.auth.getUser()
+    if (sessionError) {
+      setError(sessionError.message)
+      return
+    }
+
+    const sessionUser = sessionData.user
+    if (!sessionUser) {
       setError('Entre na sua conta para perguntar ao vendedor.')
       return
     }
@@ -110,7 +117,7 @@ export function ProductPage() {
 
     const { data, error: insertError } = await supabase
       .from('product_questions')
-      .insert({ product_id: product.id, user_id: user.id, question: question.trim() })
+      .insert({ product_id: product.id, user_id: sessionUser.id, question: question.trim() })
       .select('id, question, answer, created_at')
       .single()
 
@@ -171,9 +178,19 @@ export function ProductPage() {
               <div className="mb-8">
                 <p className="text-sm font-semibold text-ml-dark mb-3">Pergunte ao vendedor</p>
                 <div className="flex gap-4">
-                  <input value={question} onChange={(event) => setQuestion(event.target.value)} type="text" placeholder="Escreva sua pergunta..." className="w-full h-12 px-4 border border-gray-300 rounded-md focus:outline-none focus:border-ml-blue focus:ring-1 focus:ring-ml-blue transition-colors text-sm" />
-                  <Button onClick={handleQuestion} className="bg-ml-blue text-white hover:bg-ml-hover font-semibold px-8 h-12 rounded-md transition-colors">Perguntar</Button>
+                  <input
+                    value={question}
+                    onChange={(event) => setQuestion(event.target.value)}
+                    type="text"
+                    placeholder={user ? 'Escreva sua pergunta...' : 'Entre para perguntar'}
+                    disabled={!user}
+                    className="w-full h-12 px-4 border border-gray-300 rounded-md focus:outline-none focus:border-ml-blue focus:ring-1 focus:ring-ml-blue transition-colors text-sm disabled:bg-gray-50 disabled:text-gray-400"
+                  />
+                  <Button onClick={handleQuestion} disabled={!user || authLoading} className="bg-ml-blue text-white hover:bg-ml-hover font-semibold px-8 h-12 rounded-md transition-colors disabled:opacity-60">
+                    Perguntar
+                  </Button>
                 </div>
+                {!user && <p className="text-xs text-gray-500 mt-2">Faça login para enviar perguntas ao vendedor.</p>}
               </div>
 
               <div className="space-y-5">
