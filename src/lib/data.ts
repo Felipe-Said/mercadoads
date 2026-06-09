@@ -82,7 +82,7 @@ function mapProduct(row: Record<string, unknown>): Product {
     price: toNumber(row.price),
     originalPrice: row.original_price == null ? undefined : toNumber(row.original_price),
     installments: row.installments ? String(row.installments) : undefined,
-    shipping: String(row.delivery_type ?? 'Entrega automatica'),
+    shipping: String(row.delivery_type ?? 'Entrega digital na plataforma'),
     image: String(row.image_url ?? ''),
     category: (row.category as string | null) ?? null,
     stock: row.stock == null ? null : toNumber(row.stock),

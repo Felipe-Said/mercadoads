@@ -7,8 +7,7 @@ export function Cart() {
   const { cart, removeFromCart, updateQuantity, totalItems } = useCart()
 
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0)
-  const shipping = subtotal > 79 ? 0 : 15.90 // Grátis acima de R$79
-  const total = subtotal + shipping
+  const total = subtotal
 
   return (
     <div className="min-h-screen bg-[#ebebeb]">
@@ -21,7 +20,7 @@ export function Cart() {
           <div className="bg-white rounded-md shadow-sm p-12 text-center flex flex-col items-center">
             <ShoppingBag className="w-16 h-16 text-gray-300 mb-4" />
             <h2 className="text-xl font-medium text-gray-800 mb-2">Seu carrinho está vazio</h2>
-            <p className="text-gray-500 mb-6">Milhares de produtos com frete grátis esperando por você.</p>
+            <p className="text-gray-500 mb-6">Produtos digitais prontos para entrega dentro da plataforma.</p>
             <Link to="/" className="bg-ml-blue text-white px-6 py-3 rounded-md font-semibold hover:bg-ml-hover transition-colors">
               Descobrir ofertas
             </Link>
@@ -96,7 +95,7 @@ export function Cart() {
                 </div>
                 
                 <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex justify-between items-center text-sm">
-                  <span className="text-gray-500">O frete grátis está sujeito ao peso, preço e distância do envio.</span>
+                  <span className="text-gray-500">Todos os produtos sao digitais e entregues dentro da plataforma.</span>
                 </div>
               </div>
             </div>
@@ -112,19 +111,13 @@ export function Cart() {
                     <span>R$ {subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex justify-between text-gray-600 text-sm">
-                    <span>Envio</span>
-                    {shipping === 0 ? (
-                      <span className="text-[#00a650] font-medium">Grátis</span>
-                    ) : (
-                      <span>R$ {shipping.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                    )}
+                    <span>Entrega digital</span>
+                    <span className="text-[#00a650] font-medium">Inclusa</span>
                   </div>
-                  {shipping === 0 && (
-                    <div className="text-xs text-[#00a650] mt-1 bg-[#e6f7ee] p-2 rounded flex items-center gap-1">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5l10 -10"/></svg>
-                      Você tem frete grátis neste pedido
-                    </div>
-                  )}
+                  <div className="text-xs text-[#00a650] mt-1 bg-[#e6f7ee] p-2 rounded flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5l10 -10"/></svg>
+                    Entrega liberada dentro da plataforma apos a confirmacao
+                  </div>
                 </div>
 
                 <div className="border-t border-gray-100 pt-4 mb-6 flex justify-between items-end">

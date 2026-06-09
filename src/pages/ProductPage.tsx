@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Check, MapPin, MessageSquare, Shield, Star, Trophy } from 'lucide-react'
+import { Check, MessageSquare, Shield, Star, Trophy } from 'lucide-react'
 import { RegistrationModal } from '../components/RegistrationModal'
 import { Button } from '../components/ui/button'
 import { useAuth } from '../contexts/AuthContext'
@@ -202,8 +202,8 @@ export function ProductPage() {
               </div>
 
               <div className="mb-6">
-                <p className="text-green-500 font-semibold text-[15px]">{product.shipping}</p>
-                <p className="text-gray-500 text-[13px]">O acesso sera enviado conforme a configuracao de entrega do vendedor.</p>
+                <p className="text-green-500 font-semibold text-[15px]">Entrega digital na plataforma</p>
+                <p className="text-gray-500 text-[13px]">O acesso sera liberado dentro da plataforma apos a confirmacao.</p>
               </div>
 
               <div className="mb-6">
@@ -227,7 +227,7 @@ export function ProductPage() {
                 </div>
                 <div className="flex gap-3">
                   <Trophy className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                  <p className="text-[13px] text-gray-500 leading-tight">Pedido registrado com rastreio interno da plataforma.</p>
+                  <p className="text-[13px] text-gray-500 leading-tight">Pedido registrado com acompanhamento interno da plataforma.</p>
                 </div>
               </div>
             </div>
@@ -235,7 +235,7 @@ export function ProductPage() {
             <div className="border border-gray-200 rounded-md p-6">
               <h3 className="text-[17px] font-normal text-ml-dark mb-4">Informacoes sobre o vendedor</h3>
               <div className="flex items-start gap-3 mb-5">
-                <MapPin className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                <Shield className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-ml-dark">{product.seller?.full_name ?? 'Vendedor verificado'}</p>
                   <p className="text-[13px] text-gray-500">Mercado Ads</p>
@@ -247,7 +247,7 @@ export function ProductPage() {
                   <p className="leading-tight">Vendas registradas</p>
                 </div>
                 <div className="px-1">Bom atendimento</div>
-                <div className="px-1">Entrega no prazo</div>
+                <div className="px-1">Entrega digital</div>
               </div>
             </div>
           </div>

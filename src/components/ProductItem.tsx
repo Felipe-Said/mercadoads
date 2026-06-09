@@ -45,7 +45,7 @@ export function ProductItem({ product }: ProductItemProps) {
             
             <div className="text-[12px] font-semibold text-green-500 mb-3 flex items-center gap-1">
               <span className="font-bold text-green-500">✓</span>
-              <span className="font-semibold">{product.shipping}</span>
+              <span className="font-semibold">Entrega digital</span>
             </div>
             
             <p className="text-[14px] text-gray-500 font-light leading-snug group-hover:text-ml-blue transition-colors line-clamp-2">

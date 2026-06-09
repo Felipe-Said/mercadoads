@@ -20,7 +20,6 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
   const [originalPrice, setOriginalPrice] = useState('')
   const [category, setCategory] = useState(categories[0])
   const [imageUrl, setImageUrl] = useState('')
-  const [deliveryType, setDeliveryType] = useState('Entrega automatica')
   const [stock, setStock] = useState('')
   const [allowAffiliates, setAllowAffiliates] = useState(false)
   const [defaultCommission, setDefaultCommission] = useState('0')
@@ -35,7 +34,6 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
     setOriginalPrice('')
     setCategory(categories[0])
     setImageUrl('')
-    setDeliveryType('Entrega automatica')
     setStock('')
     setAllowAffiliates(false)
     setDefaultCommission('0')
@@ -55,7 +53,7 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
       original_price: originalPrice ? Number(originalPrice) : null,
       image_url: imageUrl || null,
       category,
-      delivery_type: deliveryType,
+      delivery_type: 'Entrega digital na plataforma',
       stock: stock ? Number(stock) : 0,
       allow_affiliates: allowAffiliates,
       default_commission: Number(defaultCommission || 0),
@@ -111,11 +109,6 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
       <div className="md:col-span-2">
         <label className="block text-sm font-medium text-gray-700 mb-1">URL da imagem</label>
         <input type="url" value={imageUrl} onChange={(event) => setImageUrl(event.target.value)} placeholder="https://..." className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de entrega</label>
-        <input value={deliveryType} onChange={(event) => setDeliveryType(event.target.value)} className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
       </div>
 
       <div>

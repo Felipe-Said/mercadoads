@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { Search, Menu, ChevronDown, LogOut } from "lucide-react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
 import { useCart } from "../contexts/CartContext"
 import { supabase } from "../lib/supabase"
@@ -15,6 +15,7 @@ type HeaderSettings = {
 export function Header() {
   const { role, logout } = useAuth();
   const { totalItems } = useCart();
+  const navigate = useNavigate()
   const [settings, setSettings] = useState<HeaderSettings>({
     logoUrl: '',
     logoDesktopSize: 130,
@@ -47,6 +48,11 @@ export function Header() {
       })
       .catch(console.error)
   }, [])
+
+  const handleLogout = async () => {
+    await logout()
+    navigate('/', { replace: true })
+  }
 
   return (
     <header className="bg-ml-yellow text-ml-dark py-2 px-4 shadow-sm sticky top-0 z-40">
@@ -139,7 +145,7 @@ export function Header() {
                   {role === 'admin' && (
                     <Link to="/painel/admin" className="hover:text-black/80 font-medium text-ml-blue">Painel Admin</Link>
                   )}
-                  <button onClick={logout} className="hover:text-black/80 flex items-center gap-1 text-red-500 hover:text-red-600 transition-colors">
+                  <button onClick={handleLogout} className="hover:text-black/80 flex items-center gap-1 text-red-500 hover:text-red-600 transition-colors">
                     <LogOut className="w-3 h-3" /> Sair
                   </button>
                 </>

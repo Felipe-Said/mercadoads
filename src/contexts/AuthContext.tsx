@@ -100,6 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error
       setUser(null)
       setProfile(null)
+      setLoading(false)
     },
   }), [loading, profile, user])
 
