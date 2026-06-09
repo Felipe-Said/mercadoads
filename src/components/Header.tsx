@@ -1,11 +1,52 @@
+import { useEffect, useState } from "react"
 import { Search, Menu, ChevronDown, LogOut } from "lucide-react"
 import { Link } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
 import { useCart } from "../contexts/CartContext"
+import { supabase } from "../lib/supabase"
+
+type HeaderSettings = {
+  logoUrl: string
+  logoDesktopSize: number
+  logoMobileSize: number
+  headerPromo: { gifUrl: string; text: string; link: string }
+}
 
 export function Header() {
   const { role, logout } = useAuth();
   const { totalItems } = useCart();
+  const [settings, setSettings] = useState<HeaderSettings>({
+    logoUrl: '',
+    logoDesktopSize: 130,
+    logoMobileSize: 80,
+    headerPromo: {
+      gifUrl: 'https://http2.mlstatic.com/frontend-assets/ml-web-navigation/ui-navigation/5.19.1/mercadolibre/mplus-icon.svg',
+      text: 'Assine o Meli+',
+      link: '/meliplus',
+    },
+  })
+
+  useEffect(() => {
+    supabase
+      .from('platform_settings')
+      .select('logo_url, logo_desktop_size, logo_mobile_size, header_promo_json')
+      .eq('id', 1)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error || !data) return
+        setSettings({
+          logoUrl: data.logo_url ?? '',
+          logoDesktopSize: Number(data.logo_desktop_size ?? 130),
+          logoMobileSize: Number(data.logo_mobile_size ?? 80),
+          headerPromo: {
+            gifUrl: data.header_promo_json?.gifUrl ?? '',
+            text: data.header_promo_json?.text ?? '',
+            link: data.header_promo_json?.link ?? '',
+          },
+        })
+      })
+      .catch(console.error)
+  }, [])
 
   return (
     <header className="bg-ml-yellow text-ml-dark py-2 px-4 shadow-sm sticky top-0 z-40">
@@ -13,8 +54,19 @@ export function Header() {
         {/* Top Row: Logo & Search */}
         <div className="flex items-center gap-4">
           <Link to="/" className="flex-shrink-0 flex items-center font-bold text-xl tracking-tight cursor-pointer">
-            <span className="text-ml-blue mr-1">Mercado</span>
-            <span>Ads</span>
+            {settings.logoUrl ? (
+              <img
+                src={settings.logoUrl}
+                alt="Mercado Ads"
+                className="object-contain max-h-12"
+                style={{ width: `clamp(${settings.logoMobileSize}px, 12vw, ${settings.logoDesktopSize}px)` }}
+              />
+            ) : (
+              <>
+                <span className="text-ml-blue mr-1">Mercado</span>
+                <span>Ads</span>
+              </>
+            )}
           </Link>
           
           <div className="flex-grow max-w-2xl relative">
@@ -28,12 +80,14 @@ export function Header() {
             </button>
           </div>
           
-          <div className="hidden md:flex items-center text-sm font-medium gap-6 ml-auto">
-            <Link to="/meliplus" className="flex items-center gap-2 cursor-pointer hover:text-black/70">
-              <img src="https://http2.mlstatic.com/frontend-assets/ml-web-navigation/ui-navigation/5.19.1/mercadolibre/mplus-icon.svg" alt="Meli+" className="h-6 object-contain" />
-              <span>Assine o Meli+</span>
-            </Link>
-          </div>
+          {settings.headerPromo.text && (
+            <div className="hidden md:flex items-center text-sm font-medium gap-6 ml-auto">
+              <Link to={settings.headerPromo.link || '/'} className="flex items-center gap-2 cursor-pointer hover:text-black/70">
+                {settings.headerPromo.gifUrl && <img src={settings.headerPromo.gifUrl} alt="" className="h-6 object-contain" />}
+                <span>{settings.headerPromo.text}</span>
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* Bottom Row: Nav Links */}

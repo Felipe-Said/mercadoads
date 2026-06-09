@@ -30,8 +30,10 @@ const emptyBannerForm: BannerForm = {
 export function Personalizacao() {
   const [primaryColor, setPrimaryColor] = useState('#fff159')
   const [secondaryColor, setSecondaryColor] = useState('#3483fa')
+  const [logoUrl, setLogoUrl] = useState('')
   const [desktopLogoSize, setDesktopLogoSize] = useState(130)
   const [mobileLogoSize, setMobileLogoSize] = useState(80)
+  const [headerPromo, setHeaderPromo] = useState({ gifUrl: '', text: '', link: '' })
   const [banners, setBanners] = useState<Banner[]>([])
   const [bannerForm, setBannerForm] = useState<BannerForm>(emptyBannerForm)
   const [bannerMessage, setBannerMessage] = useState<string | null>(null)
@@ -48,8 +50,14 @@ export function Personalizacao() {
         const settings = settingsResult.data
         setPrimaryColor(settings?.primary_color ?? '#fff159')
         setSecondaryColor(settings?.secondary_color ?? '#3483fa')
+        setLogoUrl(settings?.logo_url ?? '')
         setDesktopLogoSize(Number(settings?.logo_desktop_size ?? 130))
         setMobileLogoSize(Number(settings?.logo_mobile_size ?? 80))
+        setHeaderPromo({
+          gifUrl: settings?.header_promo_json?.gifUrl ?? '',
+          text: settings?.header_promo_json?.text ?? '',
+          link: settings?.header_promo_json?.link ?? '',
+        })
         setBanners(bannerData)
       })
       .catch(console.error)
@@ -59,8 +67,14 @@ export function Personalizacao() {
     const { error } = await supabase.from('platform_settings').update({
       primary_color: primaryColor,
       secondary_color: secondaryColor,
+      logo_url: logoUrl || null,
       logo_desktop_size: desktopLogoSize,
       logo_mobile_size: mobileLogoSize,
+      header_promo_json: {
+        gifUrl: headerPromo.gifUrl,
+        text: headerPromo.text,
+        link: headerPromo.link,
+      },
     }).eq('id', 1)
 
     if (error) throw error
@@ -119,6 +133,42 @@ export function Personalizacao() {
         <h2 className="text-xl font-light text-ml-dark mb-4">Layout da Plataforma</h2>
 
         <Card className="bg-white border-none shadow-sm rounded-md">
+          <CardContent className="p-6">
+            <h3 className="text-lg font-medium text-ml-dark mb-4">Logotipo</h3>
+            <div className="grid grid-cols-1 md:grid-cols-[180px_1fr] gap-6">
+              <div className="border-2 border-dashed border-gray-300 rounded-md p-4 flex items-center justify-center bg-gray-50 min-h-32">
+                {logoUrl ? (
+                  <img src={logoUrl} alt="Logo da plataforma" className="max-w-full max-h-24 object-contain" />
+                ) : (
+                  <span className="text-sm text-gray-400 text-center">Preview da logo</span>
+                )}
+              </div>
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">URL da logo (PNG/SVG)</label>
+                  <input
+                    type="url"
+                    value={logoUrl}
+                    onChange={(event) => setLogoUrl(event.target.value)}
+                    placeholder="https://..."
+                    className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">Use uma URL publica da imagem. O tamanho visual e controlado abaixo.</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Logo desktop ({desktopLogoSize}px)</label>
+                  <input type="range" min="50" max="300" value={desktopLogoSize} onChange={(event) => setDesktopLogoSize(Number(event.target.value))} className="w-full accent-ml-blue" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Logo mobile ({mobileLogoSize}px)</label>
+                  <input type="range" min="30" max="200" value={mobileLogoSize} onChange={(event) => setMobileLogoSize(Number(event.target.value))} className="w-full accent-ml-blue" />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-none shadow-sm rounded-md">
           <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Cor principal</label>
@@ -130,14 +180,52 @@ export function Personalizacao() {
               <input type="color" value={secondaryColor} onChange={(event) => setSecondaryColor(event.target.value)} className="w-16 h-12" />
               <input type="text" value={secondaryColor} onChange={(event) => setSecondaryColor(event.target.value)} className="ml-3 h-10 px-3 border border-gray-300 rounded-sm" />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Logo desktop ({desktopLogoSize}px)</label>
-              <input type="range" min="50" max="300" value={desktopLogoSize} onChange={(event) => setDesktopLogoSize(Number(event.target.value))} className="w-full accent-ml-blue" />
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-none shadow-sm rounded-md">
+          <CardContent className="p-6">
+            <h3 className="text-lg font-medium text-ml-dark mb-4">Promocao do cabecalho</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">URL do icone/GIF</label>
+                <input
+                  type="url"
+                  value={headerPromo.gifUrl}
+                  onChange={(event) => setHeaderPromo((current) => ({ ...current, gifUrl: event.target.value }))}
+                  placeholder="https://..."
+                  className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Texto</label>
+                <input
+                  type="text"
+                  value={headerPromo.text}
+                  onChange={(event) => setHeaderPromo((current) => ({ ...current, text: event.target.value }))}
+                  placeholder="Ex: Assine o Meli+"
+                  className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Link</label>
+                <input
+                  type="text"
+                  value={headerPromo.link}
+                  onChange={(event) => setHeaderPromo((current) => ({ ...current, link: event.target.value }))}
+                  placeholder="/ofertas"
+                  className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Logo mobile ({mobileLogoSize}px)</label>
-              <input type="range" min="30" max="200" value={mobileLogoSize} onChange={(event) => setMobileLogoSize(Number(event.target.value))} className="w-full accent-ml-blue" />
-            </div>
+            {(headerPromo.text || headerPromo.gifUrl) && (
+              <div className="mt-5 p-4 rounded-md flex justify-end items-center" style={{ backgroundColor: primaryColor }}>
+                <span className="flex items-center gap-2 text-ml-dark font-medium text-sm">
+                  {headerPromo.gifUrl && <img src={headerPromo.gifUrl} alt="" className="h-6 object-contain" />}
+                  {headerPromo.text}
+                </span>
+              </div>
+            )}
           </CardContent>
         </Card>
 
