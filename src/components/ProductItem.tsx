@@ -1,7 +1,7 @@
 import React from "react"
 import { Link } from "react-router-dom"
 import { Card, CardContent } from "./ui/card"
-import { Product } from "./ProductCard" // Import type
+import type { Product } from "../lib/data"
 
 interface ProductItemProps {
   product: Product;
@@ -14,7 +14,7 @@ export function ProductItem({ product }: ProductItemProps) {
         <div>
           <div className="w-full h-52 bg-white flex items-center justify-center border-b border-gray-100 overflow-hidden relative">
             <img 
-              src={product.image} 
+              src={product.image || '/favicon.svg'} 
               alt={product.title} 
               className="max-w-full max-h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500 ease-out"
             />

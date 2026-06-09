@@ -1,8 +1,18 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { SellerLayout } from '../../components/layouts/SellerLayout'
 import { Card } from '../../components/ui/card'
+import { formatCurrency, formatDate, getSales, type Sale } from '../../lib/data'
+import { useAuth } from '../../contexts/AuthContext'
 
 export function VendasEntregas() {
+  const { user } = useAuth()
+  const [sales, setSales] = useState<Sale[]>([])
+
+  useEffect(() => {
+    if (!user) return
+    getSales({ sellerId: user.id }).then(setSales).catch(console.error)
+  }, [user])
+
   return (
     <SellerLayout>
       <div className="space-y-6">
@@ -16,25 +26,25 @@ export function VendasEntregas() {
                   <th className="px-6 py-4 font-medium">Data</th>
                   <th className="px-6 py-4 font-medium">Comprador</th>
                   <th className="px-6 py-4 font-medium">Produto</th>
-                  <th className="px-6 py-4 font-medium">Status de Entrega</th>
+                  <th className="px-6 py-4 font-medium">Status</th>
                   <th className="px-6 py-4 font-medium text-right">Valor</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                <tr className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-6 py-4 text-gray-500">Hoje, 14:30</td>
-                  <td className="px-6 py-4 font-medium text-ml-dark">João Silva</td>
-                  <td className="px-6 py-4">BM Infinita Facebook Ads</td>
-                  <td className="px-6 py-4"><span className="text-green-500 font-medium">Entregue via API</span></td>
-                  <td className="px-6 py-4 text-right">R$ 349,90</td>
-                </tr>
-                <tr className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-6 py-4 text-gray-500">Ontem, 09:15</td>
-                  <td className="px-6 py-4 font-medium text-ml-dark">Maria Antonieta</td>
-                  <td className="px-6 py-4">Perfil Aquecido Facebook BR</td>
-                  <td className="px-6 py-4"><span className="text-green-500 font-medium">Entregue via API</span></td>
-                  <td className="px-6 py-4 text-right">R$ 89,90</td>
-                </tr>
+                {sales.map((sale) => (
+                  <tr key={sale.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-6 py-4 text-gray-500">{formatDate(sale.created_at)}</td>
+                    <td className="px-6 py-4 font-medium text-ml-dark">{sale.buyer?.full_name ?? 'Comprador'}</td>
+                    <td className="px-6 py-4">{sale.products?.title ?? 'Produto removido'}</td>
+                    <td className="px-6 py-4"><span className="text-green-500 font-medium">{sale.status}</span></td>
+                    <td className="px-6 py-4 text-right">{formatCurrency(sale.amount)}</td>
+                  </tr>
+                ))}
+                {sales.length === 0 && (
+                  <tr>
+                    <td className="px-6 py-8 text-center text-gray-500" colSpan={5}>Nenhuma venda encontrada.</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

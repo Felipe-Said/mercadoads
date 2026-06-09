@@ -1,38 +1,93 @@
-import React, { useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { PRODUCTS, Product } from '../components/ProductCard'
+import React, { useEffect, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import { Check, MapPin, MessageSquare, Shield, Star, Trophy } from 'lucide-react'
 import { RegistrationModal } from '../components/RegistrationModal'
 import { Button } from '../components/ui/button'
-import { Shield, Trophy, MapPin, MessageSquare, Star, ThumbsUp, Search, Check } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
 import { useCart } from '../contexts/CartContext'
+import { formatCurrency, getProduct, type Product } from '../lib/data'
+import { supabase } from '../lib/supabase'
+
+type Question = {
+  id: string
+  question: string
+  answer: string | null
+  created_at: string
+}
 
 export function ProductPage() {
   const { id } = useParams<{ id: string }>()
-  const product = PRODUCTS.find(p => p.id === id)
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [question, setQuestion] = useState('')
-  const [addedToCart, setAddedToCart] = useState(false)
+  const { user } = useAuth()
   const { addToCart } = useCart()
+  const [product, setProduct] = useState<Product | null>(null)
+  const [questions, setQuestions] = useState<Question[]>([])
+  const [question, setQuestion] = useState('')
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [addedToCart, setAddedToCart] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleAddToCart = () => {
-    if (product) {
-      addToCart({
-        id: parseInt(product.id),
-        title: product.title,
-        price: product.price,
-        image: product.image,
-        quantity: 1
-      });
-      setAddedToCart(true);
-      setTimeout(() => setAddedToCart(false), 2000);
+  useEffect(() => {
+    if (!id) return
+
+    async function load() {
+      setLoading(true)
+      const [productData, questionsResult] = await Promise.all([
+        getProduct(id),
+        supabase.from('product_questions').select('id, question, answer, created_at').eq('product_id', id).order('created_at', { ascending: false }).limit(5),
+      ])
+
+      setProduct(productData)
+      if (questionsResult.error) throw questionsResult.error
+      setQuestions((questionsResult.data ?? []) as Question[])
     }
+
+    load()
+      .catch((err: Error) => setError(err.message))
+      .finally(() => setLoading(false))
+  }, [id])
+
+  const handleAddToCart = async () => {
+    if (!product) return
+    await addToCart({
+      id: Number(product.id),
+      title: product.title,
+      price: product.price,
+      image: product.image,
+      quantity: 1,
+    })
+    setAddedToCart(true)
+    setTimeout(() => setAddedToCart(false), 2000)
+  }
+
+  const handleQuestion = async () => {
+    if (!product || !question.trim()) return
+
+    const { data, error: insertError } = await supabase
+      .from('product_questions')
+      .insert({ product_id: product.id, user_id: user?.id ?? null, question: question.trim() })
+      .select('id, question, answer, created_at')
+      .single()
+
+    if (insertError) {
+      setError(insertError.message)
+      return
+    }
+
+    setQuestions((current) => [data as Question, ...current])
+    setQuestion('')
+  }
+
+  if (loading) {
+    return <div className="max-w-7xl mx-auto px-4 py-16 text-center text-gray-500">Carregando produto...</div>
   }
 
   if (!product) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-16 text-center">
-        <h1 className="text-2xl font-light text-ml-dark mb-4">Produto não encontrado</h1>
-        <Link to="/" className="text-ml-blue hover:underline">Voltar à página inicial</Link>
+        <h1 className="text-2xl font-light text-ml-dark mb-4">Produto nao encontrado</h1>
+        {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
+        <Link to="/" className="text-ml-blue hover:underline">Voltar a pagina inicial</Link>
       </div>
     )
   }
@@ -41,238 +96,87 @@ export function ProductPage() {
     <div className="bg-[#ededed] min-h-screen pb-16">
       <div className="max-w-7xl mx-auto px-4 pt-4 pb-2">
         <div className="text-sm text-ml-dark flex items-center gap-2 mb-2">
-          <Link to="/" className="font-semibold hover:underline">Voltar à lista</Link>
+          <Link to="/" className="font-semibold hover:underline">Voltar a lista</Link>
           <span className="text-gray-400">|</span>
-          <Link to="/" className="text-ml-blue hover:underline">Início</Link>
+          <Link to="/" className="text-ml-blue hover:underline">Inicio</Link>
           <span className="text-gray-400">&gt;</span>
-          <span className="text-gray-500">Ativos Digitais</span>
+          <span className="text-gray-500">{product.category ?? 'Ativos Digitais'}</span>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4">
+        {error && <p className="bg-red-50 text-red-600 border border-red-100 rounded-md p-3 mb-4 text-sm">{error}</p>}
+
         <div className="bg-white rounded-md shadow-sm p-4 md:p-0 flex flex-col md:flex-row">
-          
-          {/* Left Column: Image, Description, Q&A, Reviews */}
           <div className="md:w-2/3 md:border-r border-gray-200">
             <div className="flex justify-center items-center p-8 h-[400px] md:h-[600px]">
-              <img 
-                src={product.image} 
-                alt={product.title} 
-                className="max-w-full max-h-full object-contain mix-blend-multiply"
-              />
+              <img src={product.image || '/favicon.svg'} alt={product.title} className="max-w-full max-h-full object-contain mix-blend-multiply" />
             </div>
-            
+
             <div className="border-t border-gray-200 p-8">
-              <h2 className="text-2xl font-normal text-ml-dark mb-6">Descrição</h2>
+              <h2 className="text-2xl font-normal text-ml-dark mb-6">Descricao</h2>
               <p className="text-gray-600 leading-relaxed whitespace-pre-line text-[17px]">
-                {product.title} de alta qualidade.
-                <br/><br/>
-                Compre com segurança na Mercado Ads. Nossos fornecedores são verificados e garantimos a entrega automática dos ativos imediatamente após a aprovação do pagamento.
-                <br/><br/>
-                Perfeito para escalar suas operações sem bloqueios ou interrupções. Ativos aquecidos e testados pela nossa equipe de qualidade antes da listagem.
+                {product.description || 'Este vendedor ainda nao cadastrou uma descricao detalhada para o anuncio.'}
               </p>
             </div>
 
-            {/* Q&A Section */}
             <div className="border-t border-gray-200 p-8">
               <h2 className="text-2xl font-normal text-ml-dark mb-6">Perguntas e respostas</h2>
-              
-              <div className="mb-8">
-                <p className="text-sm font-semibold text-ml-dark mb-3">Qual informação você precisa?</p>
-                <div className="flex gap-2">
-                  <span className="bg-blue-50 text-ml-blue font-semibold px-3 py-1.5 rounded-md text-sm cursor-pointer hover:bg-blue-100 transition-colors">Custo e prazo de envio</span>
-                  <span className="bg-blue-50 text-ml-blue font-semibold px-3 py-1.5 rounded-md text-sm cursor-pointer hover:bg-blue-100 transition-colors">Garantia</span>
-                  <span className="bg-blue-50 text-ml-blue font-semibold px-3 py-1.5 rounded-md text-sm cursor-pointer hover:bg-blue-100 transition-colors">Meios de pagamento</span>
-                </div>
-              </div>
 
               <div className="mb-8">
                 <p className="text-sm font-semibold text-ml-dark mb-3">Pergunte ao vendedor</p>
                 <div className="flex gap-4">
-                  <div className="flex-grow relative">
-                    <input 
-                      type="text" 
-                      placeholder="Escreva sua pergunta..."
-                      value={question}
-                      onChange={(e) => setQuestion(e.target.value)}
-                      className="w-full h-12 px-4 pr-12 border border-gray-300 rounded-md focus:outline-none focus:border-ml-blue focus:ring-1 focus:ring-ml-blue transition-colors text-sm"
-                    />
-                  </div>
-                  <Button className="bg-ml-blue text-white hover:bg-ml-hover font-semibold px-8 h-12 rounded-md transition-colors">
-                    Perguntar
-                  </Button>
+                  <input value={question} onChange={(event) => setQuestion(event.target.value)} type="text" placeholder="Escreva sua pergunta..." className="w-full h-12 px-4 border border-gray-300 rounded-md focus:outline-none focus:border-ml-blue focus:ring-1 focus:ring-ml-blue transition-colors text-sm" />
+                  <Button onClick={handleQuestion} className="bg-ml-blue text-white hover:bg-ml-hover font-semibold px-8 h-12 rounded-md transition-colors">Perguntar</Button>
                 </div>
               </div>
 
-              <div className="space-y-6">
-                <h3 className="font-semibold text-ml-dark mb-4">Últimas perguntas</h3>
-                
-                <div className="space-y-4">
-                  <div>
+              <div className="space-y-5">
+                <h3 className="font-semibold text-ml-dark">Ultimas perguntas</h3>
+                {questions.length === 0 && <p className="text-sm text-gray-500">Ainda nao existem perguntas para este produto.</p>}
+                {questions.map((item) => (
+                  <div key={item.id}>
                     <div className="flex items-start gap-2 mb-1">
                       <MessageSquare className="w-4 h-4 text-gray-400 mt-0.5" />
-                      <p className="text-sm text-ml-dark">O acesso é enviado na hora?</p>
+                      <p className="text-sm text-ml-dark">{item.question}</p>
                     </div>
-                    <div className="flex items-start gap-2 pl-6">
-                      <div className="w-3 h-3 border-l-2 border-b-2 border-gray-300 rounded-bl-sm mt-1"></div>
-                      <p className="text-sm text-gray-500">Sim! A entrega é 100% automática logo após a aprovação do PIX. 12/10/2026</p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex items-start gap-2 mb-1">
-                      <MessageSquare className="w-4 h-4 text-gray-400 mt-0.5" />
-                      <p className="text-sm text-ml-dark">Vem com garantia caso tome block rápido?</p>
-                    </div>
-                    <div className="flex items-start gap-2 pl-6">
-                      <div className="w-3 h-3 border-l-2 border-b-2 border-gray-300 rounded-bl-sm mt-1"></div>
-                      <p className="text-sm text-gray-500">Nossa garantia cobre login. O uso e aquecimento a partir do primeiro acesso é de responsabilidade do comprador. 11/10/2026</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <button className="text-ml-blue font-semibold text-sm hover:underline mt-2">
-                  Ver todas as perguntas
-                </button>
-              </div>
-            </div>
-
-            {/* Reviews Section */}
-            <div className="border-t border-gray-200 p-8">
-              <h2 className="text-2xl font-normal text-ml-dark mb-6">Opiniões sobre o produto</h2>
-              
-              <div className="flex flex-col md:flex-row gap-8 mb-8">
-                <div className="md:w-1/3">
-                  <div className="text-6xl font-light text-ml-dark">4.8</div>
-                  <div className="flex text-ml-blue my-2">
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current opacity-50" />
-                  </div>
-                  <p className="text-sm text-gray-500">124 avaliações</p>
-                </div>
-                
-                <div className="md:w-2/3 space-y-2">
-                  {[
-                    { stars: 5, pct: '85%' },
-                    { stars: 4, pct: '10%' },
-                    { stars: 3, pct: '3%' },
-                    { stars: 2, pct: '1%' },
-                    { stars: 1, pct: '1%' },
-                  ].map((row) => (
-                    <div key={row.stars} className="flex items-center gap-2 text-sm text-gray-500">
-                      <span className="w-4">{row.stars}</span>
-                      <Star className="w-3 h-3 text-gray-400 fill-current" />
-                      <div className="flex-grow h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                        <div className="h-full bg-ml-blue" style={{ width: row.pct }}></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                {[
-                  { title: "Excelente ativo, recomendo!", desc: "Comprei e recebi na mesma hora. A BM estava redondinha, subiu campanha de primeira sem problemas.", date: "10 out. 2026" },
-                  { title: "Muito bom", desc: "Perfil bem aquecido, parece real. Único detalhe foi que demorou uns 5 minutos pra chegar no email, mas fora isso tudo perfeito.", date: "05 out. 2026" }
-                ].map((review, i) => (
-                  <div key={i} className="border-b border-gray-100 pb-6 last:border-0 last:pb-0">
-                    <div className="flex text-ml-blue mb-2">
-                      <Star className="w-4 h-4 fill-current" />
-                      <Star className="w-4 h-4 fill-current" />
-                      <Star className="w-4 h-4 fill-current" />
-                      <Star className="w-4 h-4 fill-current" />
-                      <Star className="w-4 h-4 fill-current" />
-                    </div>
-                    <h4 className="font-semibold text-ml-dark mb-1">{review.title}</h4>
-                    <p className="text-gray-600 text-sm mb-3">{review.desc}</p>
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <div className="flex gap-4">
-                        <button className="flex items-center gap-1 hover:text-ml-blue transition-colors">
-                          <ThumbsUp className="w-4 h-4" /> Útil
-                        </button>
-                      </div>
-                      <span>{review.date}</span>
-                    </div>
+                    {item.answer && <p className="text-sm text-gray-500 pl-6">{item.answer}</p>}
                   </div>
                 ))}
               </div>
             </div>
-
           </div>
 
-          {/* Right Column: Checkout Info & Seller Info */}
           <div className="md:w-1/3 p-6 md:p-8 flex flex-col gap-6">
-            
-            {/* Purchase Box */}
             <div className="border border-gray-200 rounded-md p-4">
-              <div className="text-sm text-gray-500 mb-2">Novo  |  +100 vendidos</div>
+              <div className="text-sm text-gray-500 mb-2">Novo | +{product.sales_count} vendidos</div>
               <h1 className="text-xl font-bold text-ml-dark mb-4 leading-tight">{product.title}</h1>
-              
+
               <div className="flex text-ml-blue text-sm mb-4">
-                <Star className="w-4 h-4 fill-current" />
-                <Star className="w-4 h-4 fill-current" />
-                <Star className="w-4 h-4 fill-current" />
-                <Star className="w-4 h-4 fill-current" />
-                <Star className="w-4 h-4 fill-current opacity-50" />
-                <span className="text-gray-400 ml-1">(124)</span>
+                {[1, 2, 3, 4, 5].map((star) => <Star key={star} className="w-4 h-4 fill-current" />)}
               </div>
 
-              {product.originalPrice && (
-                <div className="text-[14px] text-gray-500 line-through mb-1">
-                  R$ {product.originalPrice.toFixed(2).replace('.', ',')}
-                </div>
-              )}
-              
+              {product.originalPrice && <div className="text-[14px] text-gray-500 line-through mb-1">{formatCurrency(product.originalPrice)}</div>}
               <div className="flex items-center gap-3 mb-2">
-                <span className="text-4xl font-light text-ml-dark">
-                  R$ {product.price.toFixed(2).replace('.', ',')}
-                </span>
-                {product.originalPrice && (
-                  <span className="text-[16px] font-medium text-green-500">
-                    {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF
-                  </span>
-                )}
+                <span className="text-4xl font-light text-ml-dark">{formatCurrency(product.price)}</span>
               </div>
-              
               <div className="text-[16px] text-ml-dark mb-6">
                 <span className="text-green-500 font-medium">Pagamento via PIX</span>
               </div>
-              
-              <div className="mb-6 flex gap-3 items-start">
-                <div className="mt-1">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-6 h-6 text-green-500" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-green-500 font-semibold text-[15px]">{product.shipping}</p>
-                  <p className="text-gray-500 text-[13px]">O acesso será enviado para o seu e-mail imediatamente após a compra.</p>
-                </div>
+
+              <div className="mb-6">
+                <p className="text-green-500 font-semibold text-[15px]">{product.shipping}</p>
+                <p className="text-gray-500 text-[13px]">O acesso sera enviado conforme a configuracao de entrega do vendedor.</p>
               </div>
 
               <div className="mb-6">
-                <p className="text-ml-dark font-semibold mb-2 text-[15px]">Estoque disponível</p>
-                <div className="flex items-center text-[15px]">
-                  <span className="text-gray-500">Quantidade:</span>
-                  <span className="font-semibold mx-2">1 unidade</span>
-                  <span className="text-gray-400 text-sm">(23 disponíveis)</span>
-                </div>
+                <p className="text-ml-dark font-semibold mb-2 text-[15px]">Estoque disponivel</p>
+                <span className="text-gray-500 text-sm">{product.stock ?? 0} unidades</span>
               </div>
 
               <div className="flex flex-col gap-2 mb-6">
-                <Button 
-                  onClick={() => setIsModalOpen(true)}
-                  className="w-full h-12 bg-ml-blue hover:bg-ml-hover text-white font-semibold text-base transition-colors rounded-md shadow-sm"
-                >
-                  Comprar agora
-                </Button>
-                <Button 
-                  onClick={handleAddToCart}
-                  className={`w-full h-12 font-semibold text-base transition-colors rounded-md flex items-center justify-center gap-2 ${addedToCart ? 'bg-green-100 text-green-700 hover:bg-green-100' : 'bg-ml-blue/10 hover:bg-ml-blue/20 text-ml-blue'}`}
-                >
+                <Button onClick={() => setIsModalOpen(true)} className="w-full h-12 bg-ml-blue hover:bg-ml-hover text-white font-semibold text-base transition-colors rounded-md shadow-sm">Comprar agora</Button>
+                <Button onClick={handleAddToCart} className={`w-full h-12 font-semibold text-base transition-colors rounded-md flex items-center justify-center gap-2 ${addedToCart ? 'bg-green-100 text-green-700 hover:bg-green-100' : 'bg-ml-blue/10 hover:bg-ml-blue/20 text-ml-blue'}`}>
                   {addedToCart ? <><Check className="w-5 h-5" /> Adicionado</> : 'Adicionar ao carrinho'}
                 </Button>
               </div>
@@ -280,80 +184,38 @@ export function ProductPage() {
               <div className="space-y-4">
                 <div className="flex gap-3">
                   <Shield className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                  <p className="text-[13px] text-gray-500 leading-tight">
-                    <span className="text-ml-blue hover:underline cursor-pointer font-medium">Compra Garantida</span>, receba o produto que está esperando ou devolvemos o dinheiro.
-                  </p>
+                  <p className="text-[13px] text-gray-500 leading-tight"><span className="text-ml-blue font-medium">Compra Garantida</span>, receba o produto combinado ou solicite suporte.</p>
                 </div>
                 <div className="flex gap-3">
                   <Trophy className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                  <p className="text-[13px] text-gray-500 leading-tight">
-                    <span className="text-ml-dark font-medium">Mercado Pontos</span>. Você acumula 45 pontos.
-                  </p>
+                  <p className="text-[13px] text-gray-500 leading-tight">Pedido registrado com rastreio interno da plataforma.</p>
                 </div>
               </div>
             </div>
 
-            {/* Seller Info Box */}
             <div className="border border-gray-200 rounded-md p-6">
-              <h3 className="text-[17px] font-normal text-ml-dark mb-4">Informações sobre o vendedor</h3>
-              
+              <h3 className="text-[17px] font-normal text-ml-dark mb-4">Informacoes sobre o vendedor</h3>
               <div className="flex items-start gap-3 mb-5">
                 <MapPin className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-ml-dark">Agência XYZ Digital</p>
-                  <p className="text-[13px] text-gray-500">São Paulo, São Paulo</p>
+                  <p className="text-sm font-medium text-ml-dark">{product.seller?.full_name ?? 'Vendedor verificado'}</p>
+                  <p className="text-[13px] text-gray-500">Mercado Ads</p>
                 </div>
               </div>
-
-              {/* Reputation Thermometer */}
-              <div className="flex justify-between items-center gap-1 mb-2">
-                <div className="h-2 flex-1 bg-red-100"></div>
-                <div className="h-2 flex-1 bg-orange-100"></div>
-                <div className="h-2 flex-1 bg-yellow-100"></div>
-                <div className="h-2 flex-1 bg-green-100"></div>
-                <div className="h-3 flex-1 bg-green-500 relative">
-                  <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-ml-dark absolute -top-1.5 left-1/2 -translate-x-1/2"></div>
-                </div>
-              </div>
-
-              <div className="flex gap-2 items-center mb-6">
-                <Trophy className="w-4 h-4 text-green-500" />
-                <span className="text-[13px] text-green-500 font-medium">MercadoLíder Platinum</span>
-              </div>
-
               <div className="grid grid-cols-3 gap-2 text-center text-[13px] text-gray-500 divide-x divide-gray-200">
                 <div className="px-1">
-                  <p className="text-xl font-normal text-ml-dark mb-1">1005</p>
-                  <p className="leading-tight">Vendas nos últimos 60 dias</p>
+                  <p className="text-xl font-normal text-ml-dark mb-1">{product.sales_count}</p>
+                  <p className="leading-tight">Vendas registradas</p>
                 </div>
-                <div className="px-1">
-                  <div className="flex justify-center mb-1">
-                    <MessageSquare className="w-5 h-5 text-ml-dark" />
-                  </div>
-                  <p className="leading-tight">Presta bom atendimento</p>
-                </div>
-                <div className="px-1">
-                  <div className="flex justify-center mb-1">
-                    <Shield className="w-5 h-5 text-ml-dark" />
-                  </div>
-                  <p className="leading-tight">Entrega os produtos no prazo</p>
-                </div>
+                <div className="px-1">Bom atendimento</div>
+                <div className="px-1">Entrega no prazo</div>
               </div>
-
-              <button className="text-ml-blue font-semibold text-sm mt-6 hover:underline">
-                Ver mais dados deste vendedor
-              </button>
             </div>
-
           </div>
         </div>
       </div>
 
-      <RegistrationModal 
-        open={isModalOpen} 
-        onOpenChange={setIsModalOpen} 
-        product={product} 
-      />
+      <RegistrationModal open={isModalOpen} onOpenChange={setIsModalOpen} product={product} />
     </div>
   )
 }

@@ -1,29 +1,25 @@
-import React from 'react'
-import { PRODUCTS } from '../components/ProductCard'
+import React, { useEffect, useState } from 'react'
 import { ProductItem } from '../components/ProductItem'
+import { getProducts, type Product } from '../lib/data'
 
 export function History() {
-  const viewed = PRODUCTS.slice(0, 3);
-  const bought = PRODUCTS.slice(3, 5);
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const renderGrid = (items: typeof PRODUCTS) => (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-      {items.map((product) => (
-        <ProductItem key={product.id} product={product} />
-      ))}
-    </div>
-  );
+  useEffect(() => {
+    getProducts()
+      .then((items) => setProducts(items.slice(0, 5)))
+      .catch(console.error)
+      .finally(() => setLoading(false))
+  }, [])
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 mb-16 space-y-12">
-      <div>
-        <h2 className="text-2xl font-light text-ml-dark mb-6">Últimas compras</h2>
-        {renderGrid(bought)}
-      </div>
-      
-      <div>
-        <h2 className="text-2xl font-light text-ml-dark mb-6">Últimos produtos acessados</h2>
-        {renderGrid(viewed)}
+    <div className="max-w-7xl mx-auto px-4 py-8 mb-16">
+      <h1 className="text-2xl font-light text-ml-dark mb-6">Historico</h1>
+      {loading && <p className="text-sm text-gray-500">Carregando historico...</p>}
+      {!loading && products.length === 0 && <p className="bg-white rounded-md p-8 text-center text-gray-500 shadow-sm">Nenhum produto encontrado para exibir.</p>}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        {products.map((product) => <ProductItem key={product.id} product={product} />)}
       </div>
     </div>
   )
