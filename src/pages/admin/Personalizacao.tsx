@@ -39,6 +39,7 @@ export function Personalizacao() {
   const [bannerMessage, setBannerMessage] = useState<string | null>(null)
   const [bannerLoading, setBannerLoading] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [saveMessage, setSaveMessage] = useState<string | null>(null)
 
   useEffect(() => {
     Promise.all([
@@ -64,7 +65,10 @@ export function Personalizacao() {
   }, [])
 
   const save = async () => {
-    const { error } = await supabase.from('platform_settings').update({
+    setSaveMessage(null)
+
+    const { error } = await supabase.from('platform_settings').upsert({
+      id: 1,
       primary_color: primaryColor,
       secondary_color: secondaryColor,
       logo_url: logoUrl || null,
@@ -75,9 +79,13 @@ export function Personalizacao() {
         text: headerPromo.text,
         link: headerPromo.link,
       },
-    }).eq('id', 1)
+    }, { onConflict: 'id' }).select('id').single()
 
-    if (error) throw error
+    if (error) {
+      setSaveMessage(error.message)
+      return
+    }
+
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
@@ -364,6 +372,7 @@ export function Personalizacao() {
         </Card>
 
         <div className="flex items-center justify-end gap-3">
+          {saveMessage && <span className="text-sm text-red-600">{saveMessage}</span>}
           {saved && <span className="text-sm text-green-600">Publicado.</span>}
           <Button onClick={save} className="bg-ml-blue text-white hover:bg-ml-hover font-semibold py-6 px-10 text-base rounded-sm shadow-md">Publicar alteracoes</Button>
         </div>
