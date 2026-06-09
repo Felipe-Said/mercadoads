@@ -15,6 +15,7 @@ interface CartContextType {
   cart: CartItem[]
   addToCart: (item: CartItem) => Promise<void>
   removeFromCart: (id: number) => Promise<void>
+  updateQuantity: (id: number, quantity: number) => Promise<void>
   clearCart: () => Promise<void>
   totalItems: number
 }
@@ -23,6 +24,7 @@ const CartContext = createContext<CartContextType>({
   cart: [],
   addToCart: async () => {},
   removeFromCart: async () => {},
+  updateQuantity: async () => {},
   clearCart: async () => {},
   totalItems: 0,
 })
@@ -94,6 +96,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setCart((prev) => prev.filter((item) => item.id !== id))
   }, [user])
 
+  const updateQuantity = useCallback(async (id: number, quantity: number) => {
+    if (quantity < 1) return;
+
+    if (user) {
+      const { error } = await supabase
+        .from('cart_items')
+        .update({ quantity, updated_at: new Date().toISOString() })
+        .eq('user_id', user.id)
+        .eq('product_id', id)
+      
+      if (error) throw error
+    }
+
+    setCart((prev) => prev.map((item) => item.id === id ? { ...item, quantity } : item))
+  }, [user])
+
   const clearCart = useCallback(async () => {
     if (user) {
       const { error } = await supabase.from('cart_items').delete().eq('user_id', user.id)
@@ -106,9 +124,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     cart,
     addToCart,
     removeFromCart,
+    updateQuantity,
     clearCart,
     totalItems: cart.reduce((acc, item) => acc + item.quantity, 0),
-  }), [addToCart, cart, clearCart, removeFromCart])
+  }), [addToCart, cart, clearCart, removeFromCart, updateQuantity])
 
   return (
     <CartContext.Provider value={value}>

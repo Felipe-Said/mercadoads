@@ -10,6 +10,7 @@ import { Contact } from './pages/Contact'
 import { ProductPage } from './pages/ProductPage'
 import { Login } from './pages/Login'
 import { Register } from './pages/Register'
+import { Cart } from './pages/Cart'
 import { DashboardGlobal } from './pages/admin/DashboardGlobal'
 import { Usuarios } from './pages/admin/Usuarios'
 import { Moderacao } from './pages/admin/Moderacao'
@@ -51,6 +52,7 @@ function App() {
           <Route path="/produto/:id" element={<ProductPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/cadastro" element={<Register />} />
+          <Route path="/carrinho" element={<Cart />} />
           <Route path="/painel/usuario" element={<Resumo />} />
           <Route path="/painel/usuario/compras" element={<Compras />} />
           <Route path="/painel/usuario/configuracoes" element={<Configuracoes />} />

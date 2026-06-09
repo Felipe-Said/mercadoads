@@ -58,7 +58,9 @@ export function Header() {
             
             <Link to="/ofertas" className="hidden md:block hover:text-black/80 py-2">Ofertas do dia</Link>
             <Link to="/historico" className="hidden md:block hover:text-black/80 py-2">Histórico</Link>
-            <Link to="/vender" className="hidden md:block hover:text-black/80 py-2">Vender</Link>
+            {!role && (
+              <Link to="/vender" className="hidden md:block hover:text-black/80 py-2">Vender</Link>
+            )}
             <Link to="/contato" className="hidden md:block hover:text-black/80 py-2">Contato</Link>
           </div>
           
@@ -95,7 +97,7 @@ export function Header() {
                 <path d="M13.73 21a2 2 0 0 1-3.46 0" />
               </svg>
             </button>
-            <button className="relative p-1 text-ml-dark hover:text-black/70 transition-colors">
+            <Link to="/carrinho" className="relative p-1 text-ml-dark hover:text-black/70 transition-colors">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="9" cy="21" r="1"></circle>
                 <circle cx="20" cy="21" r="1"></circle>
@@ -106,7 +108,7 @@ export function Header() {
                   {totalItems}
                 </span>
               )}
-            </button>
+            </Link>
           </div>
         </div>
       </div>
