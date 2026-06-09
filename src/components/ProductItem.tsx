@@ -42,12 +42,6 @@ export function ProductItem({ product }: ProductItemProps) {
             <div className="text-[13px] text-green-500 font-medium mb-3">
               Pagamento via PIX
             </div>
-            
-            <div className="text-[12px] font-semibold text-green-500 mb-3 flex items-center gap-1">
-              <span className="font-bold text-green-500">✓</span>
-              <span className="font-semibold">Entrega digital</span>
-            </div>
-            
             <p className="text-[14px] text-gray-500 font-light leading-snug group-hover:text-ml-blue transition-colors line-clamp-2">
               {product.title}
             </p>

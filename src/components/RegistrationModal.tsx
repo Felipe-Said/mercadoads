@@ -1,4 +1,5 @@
-import React from "react"
+import React, { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import {
   Dialog,
   DialogContent,
@@ -8,7 +9,9 @@ import {
 } from "./ui/dialog"
 import { Input } from "./ui/input"
 import { Button } from "./ui/button"
-import type { Product } from "./ProductCard"
+import { useAuth } from "../contexts/AuthContext"
+import { supabase } from "../lib/supabase"
+import type { Product } from "../lib/data"
 
 interface RegistrationModalProps {
   open: boolean
@@ -16,42 +19,133 @@ interface RegistrationModalProps {
   product: Product | null
 }
 
+type AuthMode = "register" | "login"
+
 export function RegistrationModal({ open, onOpenChange, product }: RegistrationModalProps) {
+  const navigate = useNavigate()
+  const { signIn, signUp } = useAuth()
+  const [mode, setMode] = useState<AuthMode>("register")
+  const [fullName, setFullName] = useState("")
+  const [email, setEmail] = useState("")
+  const [phone, setPhone] = useState("")
+  const [password, setPassword] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  const createPendingPurchase = async (buyerId: string) => {
+    if (!product) throw new Error("Produto indisponivel.")
+
+    const { error: saleError } = await supabase.from("sales").insert({
+      product_id: Number(product.id),
+      buyer_id: buyerId,
+      seller_id: product.seller_id,
+      amount: product.price,
+      status: "pending",
+    })
+
+    if (saleError) throw saleError
+  }
+
+  const getCurrentUserId = async () => {
+    const { data, error: userError } = await supabase.auth.getUser()
+    if (userError) throw userError
+    return data.user?.id ?? null
+  }
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setError(null)
+    setLoading(true)
+
+    try {
+      if (mode === "register") {
+        await signUp(fullName, email, password, "user")
+      } else {
+        await signIn(email, password)
+      }
+
+      const userId = await getCurrentUserId()
+      if (!userId) {
+        throw new Error("Nao foi possivel confirmar a sessao. Tente entrar com sua conta.")
+      }
+
+      if (mode === "register" && phone.trim()) {
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .update({ phone: phone.trim() })
+          .eq("id", userId)
+
+        if (profileError) throw profileError
+      }
+
+      await createPendingPurchase(userId)
+      onOpenChange(false)
+      navigate("/painel/usuario/compras")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Nao foi possivel continuar a compra.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-ml-dark">Crie sua conta para comprar</DialogTitle>
+          <DialogTitle className="text-2xl font-bold text-ml-dark">
+            {mode === "register" ? "Crie sua conta para comprar" : "Entre para continuar"}
+          </DialogTitle>
           <DialogDescription>
-            Para continuar com a compra de <span className="font-semibold text-ml-dark">{product?.title}</span>, você precisa se cadastrar na Mercado Ads.
+            {mode === "register" ? "Cadastre-se" : "Entre"} para continuar com a compra de{" "}
+            <span className="font-semibold text-ml-dark">{product?.title}</span>.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
+
+        <form className="flex flex-col gap-4 py-4" onSubmit={handleSubmit}>
+          {mode === "register" && (
+            <div className="grid gap-2">
+              <label htmlFor="checkout-name" className="text-sm font-medium">Nome completo</label>
+              <Input id="checkout-name" value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Ex: Joao da Silva" required />
+            </div>
+          )}
+
           <div className="grid gap-2">
-            <label htmlFor="name" className="text-sm font-medium">Nome completo</label>
-            <Input id="name" placeholder="Ex: João da Silva" />
+            <label htmlFor="checkout-email" className="text-sm font-medium">E-mail</label>
+            <Input id="checkout-email" value={email} onChange={(event) => setEmail(event.target.value)} type="email" placeholder="Seu melhor e-mail" required />
           </div>
+
+          {mode === "register" && (
+            <div className="grid gap-2">
+              <label htmlFor="checkout-phone" className="text-sm font-medium">WhatsApp</label>
+              <Input id="checkout-phone" value={phone} onChange={(event) => setPhone(event.target.value)} type="tel" placeholder="(11) 99999-9999" />
+            </div>
+          )}
+
           <div className="grid gap-2">
-            <label htmlFor="email" className="text-sm font-medium">E-mail</label>
-            <Input id="email" type="email" placeholder="Seu melhor e-mail" />
+            <label htmlFor="checkout-password" className="text-sm font-medium">Senha</label>
+            <Input id="checkout-password" value={password} onChange={(event) => setPassword(event.target.value)} type="password" minLength={6} required />
           </div>
-          <div className="grid gap-2">
-            <label htmlFor="phone" className="text-sm font-medium">WhatsApp</label>
-            <Input id="phone" type="tel" placeholder="(11) 99999-9999" />
-          </div>
-          <div className="grid gap-2">
-            <label htmlFor="password" className="text-sm font-medium">Senha</label>
-            <Input id="password" type="password" />
-          </div>
-        </div>
-        <div className="flex flex-col gap-3">
-          <Button className="w-full bg-ml-blue hover:bg-ml-hover text-white py-6 text-lg font-semibold" onClick={() => onOpenChange(false)}>
-            Criar conta e continuar
+
+          {error && <p className="text-sm text-red-500">{error}</p>}
+
+          <Button type="submit" disabled={loading} className="w-full bg-ml-blue hover:bg-ml-hover text-white py-6 text-lg font-semibold">
+            {loading ? "Processando..." : mode === "register" ? "Criar conta e continuar" : "Entrar e continuar"}
           </Button>
-          <p className="text-center text-sm text-gray-500">
-            Já tem uma conta? <a href="#" className="text-ml-blue hover:underline">Faça login</a>
-          </p>
-        </div>
+        </form>
+
+        <p className="text-center text-sm text-gray-500">
+          {mode === "register" ? "Ja tem uma conta?" : "Ainda nao tem conta?"}{" "}
+          <button
+            type="button"
+            className="text-ml-blue hover:underline"
+            onClick={() => {
+              setError(null)
+              setMode((current) => current === "register" ? "login" : "register")
+            }}
+          >
+            {mode === "register" ? "Faca login" : "Criar conta"}
+          </button>
+        </p>
       </DialogContent>
     </Dialog>
   )

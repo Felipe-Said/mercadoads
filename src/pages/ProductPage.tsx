@@ -202,11 +202,6 @@ export function ProductPage() {
               </div>
 
               <div className="mb-6">
-                <p className="text-green-500 font-semibold text-[15px]">Entrega digital na plataforma</p>
-                <p className="text-gray-500 text-[13px]">O acesso sera liberado dentro da plataforma apos a confirmacao.</p>
-              </div>
-
-              <div className="mb-6">
                 <p className="text-ml-dark font-semibold mb-2 text-[15px]">Estoque disponivel</p>
                 <span className="text-gray-500 text-sm">{product.stock ?? 0} unidades</span>
               </div>
@@ -247,7 +242,7 @@ export function ProductPage() {
                   <p className="leading-tight">Vendas registradas</p>
                 </div>
                 <div className="px-1">Bom atendimento</div>
-                <div className="px-1">Entrega digital</div>
+                <div className="px-1">Suporte interno</div>
               </div>
             </div>
           </div>

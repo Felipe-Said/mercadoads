@@ -94,9 +94,6 @@ export function Cart() {
                   ))}
                 </div>
                 
-                <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex justify-between items-center text-sm">
-                  <span className="text-gray-500">Todos os produtos sao digitais e entregues dentro da plataforma.</span>
-                </div>
               </div>
             </div>
 
@@ -109,14 +106,6 @@ export function Cart() {
                   <div className="flex justify-between text-gray-600 text-sm">
                     <span>Produtos ({totalItems})</span>
                     <span>R$ {subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                  </div>
-                  <div className="flex justify-between text-gray-600 text-sm">
-                    <span>Entrega digital</span>
-                    <span className="text-[#00a650] font-medium">Inclusa</span>
-                  </div>
-                  <div className="text-xs text-[#00a650] mt-1 bg-[#e6f7ee] p-2 rounded flex items-center gap-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5l10 -10"/></svg>
-                    Entrega liberada dentro da plataforma apos a confirmacao
                   </div>
                 </div>
 
