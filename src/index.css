@@ -11,7 +11,11 @@
   --color-popover: hsl(0 0% 100%);
   --color-popover-foreground: hsl(0 0% 20%);
   
-  --color-primary: hsl(54 100% 50%);
+  --platform-primary: #ffe600;
+  --platform-secondary: #3483fa;
+  --platform-secondary-hover: #2968c8;
+
+  --color-primary: var(--platform-primary);
   --color-primary-foreground: hsl(0 0% 20%);
   
   --color-secondary: hsl(210 40% 96.1%);
@@ -30,11 +34,11 @@
   --color-input: hsl(214.3 31.8% 91.4%);
   --color-ring: hsl(222.2 84% 4.9%);
 
-  --color-ml-yellow: #ffe600;
-  --color-ml-blue: #3483fa;
+  --color-ml-yellow: var(--platform-primary);
+  --color-ml-blue: var(--platform-secondary);
   --color-ml-dark: #333333;
   --color-ml-bg: #ebebeb;
-  --color-ml-hover: #2968c8;
+  --color-ml-hover: var(--platform-secondary-hover);
 
   --radius-lg: 0.5rem;
   --radius-md: calc(0.5rem - 2px);

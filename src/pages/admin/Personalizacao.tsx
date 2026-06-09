@@ -4,6 +4,7 @@ import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { getBanners, type Banner } from '../../lib/data'
 import { supabase } from '../../lib/supabase'
+import { applyPlatformTheme } from '../../lib/theme'
 
 type BannerForm = {
   title: string
@@ -86,6 +87,7 @@ export function Personalizacao() {
       return
     }
 
+    applyPlatformTheme({ primaryColor, secondaryColor })
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
