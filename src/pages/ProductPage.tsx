@@ -99,10 +99,18 @@ export function ProductPage() {
 
   const handleQuestion = async () => {
     if (!product || !question.trim()) return
+    if (authLoading) return
+
+    if (!user) {
+      setError('Entre na sua conta para perguntar ao vendedor.')
+      return
+    }
+
+    setError(null)
 
     const { data, error: insertError } = await supabase
       .from('product_questions')
-      .insert({ product_id: product.id, user_id: user?.id ?? null, question: question.trim() })
+      .insert({ product_id: product.id, user_id: user.id, question: question.trim() })
       .select('id, question, answer, created_at')
       .single()
 
