@@ -102,8 +102,14 @@ export function Personalizacao() {
     setBannerMessage(null)
     setBannerLoading(true)
 
+    if (!bannerForm.title.trim() && !bannerForm.image_url.trim() && !bannerForm.mobile_image_url.trim()) {
+      setBannerMessage('Informe uma imagem ou um titulo para o banner.')
+      setBannerLoading(false)
+      return
+    }
+
     const { error } = await supabase.from('marketing_banners').insert({
-      title: bannerForm.title,
+      title: bannerForm.title.trim(),
       subtitle: bannerForm.subtitle || null,
       image_url: bannerForm.image_url || null,
       mobile_image_url: bannerForm.mobile_image_url || null,
@@ -248,10 +254,10 @@ export function Personalizacao() {
             {banners.map((banner) => (
               <div key={banner.id} className="p-4 flex items-center gap-4">
                 <div className="w-32 h-16 bg-gray-100 rounded-sm overflow-hidden flex items-center justify-center">
-                  {banner.image ? <img src={banner.image} alt={banner.title} className="w-full h-full object-cover" /> : <span className="text-xs text-gray-400">Sem imagem</span>}
+                  {banner.image ? <img src={banner.image} alt={banner.title || 'Banner'} className="w-full h-full object-cover" /> : <span className="text-xs text-gray-400">Sem imagem</span>}
                 </div>
                 <div className="flex-grow">
-                  <p className="font-medium text-ml-dark">{banner.title}</p>
+                  <p className="font-medium text-ml-dark">{banner.title || 'Banner sem texto'}</p>
                   <p className="text-xs text-gray-500">{banner.position} | {banner.link}</p>
                 </div>
                 <Button type="button" variant="outline" onClick={() => deactivateBanner(banner.id)} className="border-red-200 text-red-600 hover:bg-red-50 rounded-sm">
@@ -275,7 +281,6 @@ export function Personalizacao() {
                   value={bannerForm.title}
                   onChange={(event) => setBannerForm((current) => ({ ...current, title: event.target.value }))}
                   className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue"
-                  required
                 />
               </div>
 

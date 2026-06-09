@@ -26,13 +26,14 @@ export function Banners() {
 
   const next = () => setCurrent((prev) => (prev === heroBanners.length - 1 ? 0 : prev + 1))
   const prev = () => setCurrent((prev) => (prev === 0 ? heroBanners.length - 1 : prev - 1))
+  const hasText = (banner: Banner) => Boolean(banner.title?.trim() || banner.subtitle?.trim())
 
   return (
     <div className="relative w-full mb-8">
       <div className="max-w-[1600px] mx-auto relative flex justify-center">
         {leftFlyer && (
           <a href={leftFlyer.link} className="hidden 2xl:flex absolute left-0 top-0 h-[340px] md:h-[400px] w-[150px] rounded-sm shadow-md flex-col justify-center items-center overflow-hidden" style={{ backgroundColor: leftFlyer.color }}>
-            {leftFlyer.image ? <img src={leftFlyer.image} alt={leftFlyer.title} className="w-full h-full object-cover" /> : <span className="bg-white text-ml-dark px-3 py-1 font-bold rounded-sm shadow-sm rotate-[-90deg] whitespace-nowrap">{leftFlyer.title}</span>}
+            {leftFlyer.image ? <img src={leftFlyer.image} alt={leftFlyer.title || 'Banner lateral'} className="w-full h-full object-cover" /> : <span className="bg-white text-ml-dark px-3 py-1 font-bold rounded-sm shadow-sm rotate-[-90deg] whitespace-nowrap">{leftFlyer.title || 'Banner'}</span>}
           </a>
         )}
 
@@ -40,13 +41,17 @@ export function Banners() {
           <div className="flex transition-transform duration-500 ease-in-out h-[340px] md:h-[400px]" style={{ transform: `translateX(-${current * 100}%)` }}>
             {heroBanners.map((banner) => (
               <a key={banner.id} href={banner.link} className="w-full flex-shrink-0 relative flex items-center justify-center" style={{ backgroundColor: banner.color }}>
-                {banner.image && <img src={banner.image} alt="" className="absolute inset-0 w-full h-full object-cover opacity-70" />}
-                <div className="absolute inset-0 bg-black/25" />
-                <div className="z-20 text-white text-center p-8">
-                  <h2 className="text-4xl md:text-6xl font-bold mb-4 drop-shadow-lg">{banner.title}</h2>
-                  {banner.subtitle && <p className="text-lg md:text-2xl mb-6">{banner.subtitle}</p>}
-                  <span className="inline-flex bg-white text-ml-blue font-bold px-6 py-3 rounded-md hover:bg-gray-100 transition-colors shadow-lg">Ver ofertas</span>
-                </div>
+                {banner.image && <img src={banner.image} alt={banner.title || 'Banner principal'} className={`absolute inset-0 w-full h-full object-cover ${hasText(banner) ? 'opacity-70' : ''}`} />}
+                {hasText(banner) && (
+                  <>
+                    <div className="absolute inset-0 bg-black/25" />
+                    <div className="z-20 text-white text-center p-8">
+                      {banner.title && <h2 className="text-4xl md:text-6xl font-bold mb-4 drop-shadow-lg">{banner.title}</h2>}
+                      {banner.subtitle && <p className="text-lg md:text-2xl mb-6">{banner.subtitle}</p>}
+                      <span className="inline-flex bg-white text-ml-blue font-bold px-6 py-3 rounded-md hover:bg-gray-100 transition-colors shadow-lg">Ver ofertas</span>
+                    </div>
+                  </>
+                )}
               </a>
             ))}
           </div>
@@ -65,7 +70,7 @@ export function Banners() {
 
         {rightFlyer && (
           <a href={rightFlyer.link} className="hidden 2xl:flex absolute right-0 top-0 h-[340px] md:h-[400px] w-[150px] rounded-sm shadow-md flex-col justify-center items-center overflow-hidden" style={{ backgroundColor: rightFlyer.color }}>
-            {rightFlyer.image ? <img src={rightFlyer.image} alt={rightFlyer.title} className="w-full h-full object-cover" /> : <span className="bg-white text-ml-dark px-3 py-1 font-bold rounded-sm shadow-sm rotate-90 whitespace-nowrap">{rightFlyer.title}</span>}
+            {rightFlyer.image ? <img src={rightFlyer.image} alt={rightFlyer.title || 'Banner lateral'} className="w-full h-full object-cover" /> : <span className="bg-white text-ml-dark px-3 py-1 font-bold rounded-sm shadow-sm rotate-90 whitespace-nowrap">{rightFlyer.title || 'Banner'}</span>}
           </a>
         )}
       </div>
