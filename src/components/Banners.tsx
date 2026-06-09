@@ -33,16 +33,30 @@ export function Banners() {
       <div className="max-w-[1600px] mx-auto relative flex justify-center">
         {leftFlyer && (
           <a href={leftFlyer.link} className="hidden 2xl:flex absolute left-0 top-0 h-[340px] md:h-[400px] w-[150px] rounded-sm shadow-md flex-col justify-center items-center overflow-hidden" style={{ backgroundColor: leftFlyer.color }}>
-            {leftFlyer.image ? <img src={leftFlyer.image} alt={leftFlyer.title || 'Banner lateral'} className="w-full h-full object-cover" /> : <span className="bg-white text-ml-dark px-3 py-1 font-bold rounded-sm shadow-sm rotate-[-90deg] whitespace-nowrap">{leftFlyer.title || 'Banner'}</span>}
+            {leftFlyer.image ? <img src={leftFlyer.image} alt={leftFlyer.title || 'Banner lateral'} className="w-full h-full object-contain" /> : <span className="bg-white text-ml-dark px-3 py-1 font-bold rounded-sm shadow-sm rotate-[-90deg] whitespace-nowrap">{leftFlyer.title || 'Banner'}</span>}
           </a>
         )}
 
         <div className="relative w-full max-w-7xl overflow-hidden group">
-          <div className="flex transition-transform duration-500 ease-in-out h-[340px] md:h-[400px]" style={{ transform: `translateX(-${current * 100}%)` }}>
-            {heroBanners.map((banner) => (
-              <a key={banner.id} href={banner.link} className="w-full flex-shrink-0 relative flex items-center justify-center" style={{ backgroundColor: banner.color }}>
-                {banner.image && <img src={banner.image} alt={banner.title || 'Banner principal'} className={`absolute inset-0 w-full h-full object-cover ${hasText(banner) ? 'opacity-70' : ''}`} />}
-                {hasText(banner) && (
+          <div className="flex transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${current * 100}%)` }}>
+            {heroBanners.map((banner) => {
+              const showText = hasText(banner)
+
+              return (
+                <a
+                  key={banner.id}
+                  href={banner.link}
+                  className={`w-full flex-shrink-0 relative flex items-center justify-center overflow-hidden ${showText || !banner.image ? 'h-[340px] md:h-[400px]' : ''}`}
+                  style={{ backgroundColor: banner.color }}
+                >
+                  {banner.image && (
+                    <img
+                      src={banner.image}
+                      alt={banner.title || 'Banner principal'}
+                      className={showText ? 'absolute inset-0 w-full h-full object-cover opacity-70' : 'relative block w-full h-auto object-contain'}
+                    />
+                  )}
+                  {showText && (
                   <>
                     <div className="absolute inset-0 bg-black/25" />
                     <div className="z-20 text-white text-center p-8">
@@ -51,9 +65,10 @@ export function Banners() {
                       <span className="inline-flex bg-white text-ml-blue font-bold px-6 py-3 rounded-md hover:bg-gray-100 transition-colors shadow-lg">Ver ofertas</span>
                     </div>
                   </>
-                )}
-              </a>
-            ))}
+                  )}
+                </a>
+              )
+            })}
           </div>
 
           {heroBanners.length > 1 && (
@@ -70,7 +85,7 @@ export function Banners() {
 
         {rightFlyer && (
           <a href={rightFlyer.link} className="hidden 2xl:flex absolute right-0 top-0 h-[340px] md:h-[400px] w-[150px] rounded-sm shadow-md flex-col justify-center items-center overflow-hidden" style={{ backgroundColor: rightFlyer.color }}>
-            {rightFlyer.image ? <img src={rightFlyer.image} alt={rightFlyer.title || 'Banner lateral'} className="w-full h-full object-cover" /> : <span className="bg-white text-ml-dark px-3 py-1 font-bold rounded-sm shadow-sm rotate-90 whitespace-nowrap">{rightFlyer.title || 'Banner'}</span>}
+            {rightFlyer.image ? <img src={rightFlyer.image} alt={rightFlyer.title || 'Banner lateral'} className="w-full h-full object-contain" /> : <span className="bg-white text-ml-dark px-3 py-1 font-bold rounded-sm shadow-sm rotate-90 whitespace-nowrap">{rightFlyer.title || 'Banner'}</span>}
           </a>
         )}
       </div>
