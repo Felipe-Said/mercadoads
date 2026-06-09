@@ -117,7 +117,7 @@ export function ProductPage() {
 
     const { data, error: insertError } = await supabase
       .from('product_questions')
-      .insert({ product_id: product.id, user_id: sessionUser.id, question: question.trim() })
+      .insert({ product_id: product.id, question: question.trim() })
       .select('id, question, answer, created_at')
       .single()
 
