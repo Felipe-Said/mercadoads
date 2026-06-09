@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Check, MapPin, MessageSquare, Shield, Star, Trophy } from 'lucide-react'
 import { RegistrationModal } from '../components/RegistrationModal'
 import { Button } from '../components/ui/button'
@@ -17,13 +17,15 @@ type Question = {
 
 export function ProductPage() {
   const { id } = useParams<{ id: string }>()
-  const { user } = useAuth()
+  const navigate = useNavigate()
+  const { user, loading: authLoading } = useAuth()
   const { addToCart } = useCart()
   const [product, setProduct] = useState<Product | null>(null)
   const [questions, setQuestions] = useState<Question[]>([])
   const [question, setQuestion] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [addedToCart, setAddedToCart] = useState(false)
+  const [buying, setBuying] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -49,15 +51,50 @@ export function ProductPage() {
 
   const handleAddToCart = async () => {
     if (!product) return
-    await addToCart({
-      id: Number(product.id),
-      title: product.title,
-      price: product.price,
-      image: product.image,
-      quantity: 1,
+    setError(null)
+
+    try {
+      await addToCart({
+        id: Number(product.id),
+        title: product.title,
+        price: product.price,
+        image: product.image,
+        quantity: 1,
+      })
+      setAddedToCart(true)
+      setTimeout(() => setAddedToCart(false), 2000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Nao foi possivel adicionar ao carrinho.')
+    }
+  }
+
+  const handleBuyNow = async () => {
+    if (!product || authLoading || buying) return
+
+    if (!user) {
+      setIsModalOpen(true)
+      return
+    }
+
+    setError(null)
+    setBuying(true)
+
+    const { error: saleError } = await supabase.from('sales').insert({
+      product_id: Number(product.id),
+      buyer_id: user.id,
+      seller_id: product.seller_id,
+      amount: product.price,
+      status: 'pending',
     })
-    setAddedToCart(true)
-    setTimeout(() => setAddedToCart(false), 2000)
+
+    setBuying(false)
+
+    if (saleError) {
+      setError(saleError.message)
+      return
+    }
+
+    navigate('/painel/usuario/compras')
   }
 
   const handleQuestion = async () => {
@@ -175,7 +212,9 @@ export function ProductPage() {
               </div>
 
               <div className="flex flex-col gap-2 mb-6">
-                <Button onClick={() => setIsModalOpen(true)} className="w-full h-12 bg-ml-blue hover:bg-ml-hover text-white font-semibold text-base transition-colors rounded-md shadow-sm">Comprar agora</Button>
+                <Button onClick={handleBuyNow} disabled={authLoading || buying} className="w-full h-12 bg-ml-blue hover:bg-ml-hover text-white font-semibold text-base transition-colors rounded-md shadow-sm">
+                  {buying ? 'Registrando compra...' : 'Comprar agora'}
+                </Button>
                 <Button onClick={handleAddToCart} className={`w-full h-12 font-semibold text-base transition-colors rounded-md flex items-center justify-center gap-2 ${addedToCart ? 'bg-green-100 text-green-700 hover:bg-green-100' : 'bg-ml-blue/10 hover:bg-ml-blue/20 text-ml-blue'}`}>
                   {addedToCart ? <><Check className="w-5 h-5" /> Adicionado</> : 'Adicionar ao carrinho'}
                 </Button>
