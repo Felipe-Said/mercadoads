@@ -29,10 +29,10 @@ export function Header() {
           </div>
           
           <div className="hidden md:flex items-center text-sm font-medium gap-6 ml-auto">
-            <div className="flex items-center gap-2 cursor-pointer hover:text-black/70">
-              <img src="https://http2.mlstatic.com/frontend-assets/ml-web-navigation/ui-navigation/5.19.1/mercadolibre/disney-plus-novo-v1.png" alt="Disney+" className="h-6 object-contain" />
+            <Link to="/meliplus" className="flex items-center gap-2 cursor-pointer hover:text-black/70">
+              <img src="https://http2.mlstatic.com/frontend-assets/ml-web-navigation/ui-navigation/5.19.1/mercadolibre/mplus-icon.svg" alt="Meli+" className="h-6 object-contain" />
               <span>Assine o Meli+</span>
-            </div>
+            </Link>
           </div>
         </div>
 
