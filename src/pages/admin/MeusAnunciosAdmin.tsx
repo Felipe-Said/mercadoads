@@ -4,10 +4,19 @@ import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Search, Plus, Filter } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
-import { formatCurrency, type Product } from '../../lib/data'
+import { formatCurrency } from '../../lib/data'
+
+type AdminProduct = {
+  id: string
+  title: string
+  price: number
+  image_url: string | null
+  stock: number | null
+  status: string
+}
 
 export function MeusAnunciosAdmin() {
-  const [products, setProducts] = useState<Product[]>([])
+  const [products, setProducts] = useState<AdminProduct[]>([])
 
   useEffect(() => {
     supabase
@@ -16,7 +25,12 @@ export function MeusAnunciosAdmin() {
       .order('created_at', { ascending: false })
       .then(({ data, error }) => {
         if (!error && data) {
-          setProducts(data as Product[])
+          setProducts((data ?? []).map((product) => ({
+            ...product,
+            id: String(product.id),
+            price: Number(product.price ?? 0),
+            stock: product.stock == null ? null : Number(product.stock),
+          })) as AdminProduct[])
         }
       })
   }, [])
@@ -63,7 +77,7 @@ export function MeusAnunciosAdmin() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-12 h-12 bg-gray-100 rounded-sm overflow-hidden flex-shrink-0">
-                          <img src={product.image_url || 'https://via.placeholder.com/150'} alt="Produto" className="w-full h-full object-cover" />
+                          <img src={product.image_url || '/favicon.svg'} alt="Produto" className="w-full h-full object-cover" />
                         </div>
                         <div>
                           <p className="font-medium text-ml-dark line-clamp-1">{product.title}</p>
@@ -72,7 +86,7 @@ export function MeusAnunciosAdmin() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-ml-dark font-medium">{formatCurrency(product.price)}</td>
-                    <td className="px-6 py-4 text-gray-600">Ilimitado</td>
+                    <td className="px-6 py-4 text-gray-600">{product.stock ?? 0} unidades</td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-1 rounded-sm text-xs font-semibold ${product.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
                         {product.status === 'active' ? 'Ativo' : 'Pendente'}

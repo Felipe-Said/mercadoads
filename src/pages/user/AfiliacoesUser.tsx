@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/button'
 import { Copy, CheckCircle2, Clock } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
+import { formatCurrency } from '../../lib/data'
 
 type Affiliate = {
   id: string
@@ -34,6 +35,7 @@ export function AfiliacoesUser() {
   const [withdrawAmount, setWithdrawAmount] = useState('')
   const [withdrawMessage, setWithdrawMessage] = useState<string | null>(null)
   const [isWithdrawing, setIsWithdrawing] = useState(false)
+  const availableBalance = 0
 
   const loadData = useCallback(async () => {
     if (!user) return
@@ -84,8 +86,7 @@ export function AfiliacoesUser() {
       return
     }
 
-    // Simulando saldo máximo de 1250
-    if (amountNum > 1250) {
+    if (amountNum > availableBalance) {
       setWithdrawMessage('Saldo insuficiente.')
       return
     }
@@ -207,8 +208,8 @@ export function AfiliacoesUser() {
                   <h3 className="text-xl font-light text-ml-dark mb-6">Solicitar Saque</h3>
                   
                   <div className="bg-blue-50 border border-blue-100 rounded-md p-4 mb-6">
-                    <p className="text-sm text-blue-600 font-medium mb-1">Saldo Disponível (Simulado)</p>
-                    <p className="text-3xl font-bold text-ml-blue">R$ 1.250,00</p>
+                    <p className="text-sm text-blue-600 font-medium mb-1">Saldo Disponivel</p>
+                    <p className="text-3xl font-bold text-ml-blue">{formatCurrency(availableBalance)}</p>
                   </div>
 
                   <div className="space-y-4">

@@ -16,7 +16,7 @@ export function Moderacao() {
     const { data, error } = await supabase
       .from('products')
       .select('*, seller:seller_id(full_name)')
-      .eq('status', 'pending')
+      .eq('status', 'draft')
       .order('created_at', { ascending: false })
     
     if (!error && data) {

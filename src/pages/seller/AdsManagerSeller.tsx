@@ -1,17 +1,59 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { SellerLayout } from '../../components/layouts/SellerLayout'
 import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Megaphone, Star, Users, LayoutTemplate } from 'lucide-react'
+import { useAuth } from '../../contexts/AuthContext'
+import { getProducts, type Product } from '../../lib/data'
+import { supabase } from '../../lib/supabase'
 
 export function AdsManagerSeller() {
+  const { user } = useAuth()
   const [selectedAd, setSelectedAd] = useState('produto')
+  const [products, setProducts] = useState<Product[]>([])
+  const [selectedProductId, setSelectedProductId] = useState('')
+  const [prices, setPrices] = useState({
+    produto: 5,
+    grupo: 10,
+    flyerLeft: 50,
+    flyerRight: 50,
+  })
+  const [flyerPosition, setFlyerPosition] = useState<'left' | 'right'>('left')
   const [days, setDays] = useState(7)
 
+  useEffect(() => {
+    if (!user) return
+
+    getProducts({ sellerId: user.id, includeInactive: true })
+      .then((sellerProducts) => {
+        setProducts(sellerProducts)
+        setSelectedProductId((current) => current || sellerProducts[0]?.id || '')
+      })
+      .catch(console.error)
+  }, [user])
+
+  useEffect(() => {
+    supabase
+      .from('platform_settings')
+      .select('ads_product_daily_price, ads_group_daily_price, ads_left_flyer_daily_price, ads_right_flyer_daily_price')
+      .eq('id', 1)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error) throw error
+        setPrices({
+          produto: Number(data?.ads_product_daily_price ?? 5),
+          grupo: Number(data?.ads_group_daily_price ?? 10),
+          flyerLeft: Number(data?.ads_left_flyer_daily_price ?? 50),
+          flyerRight: Number(data?.ads_right_flyer_daily_price ?? 50),
+        })
+      })
+      .catch(console.error)
+  }, [])
+
   const getDailyPrice = () => {
-    if (selectedAd === 'produto') return 5;
-    if (selectedAd === 'grupo') return 10;
-    if (selectedAd === 'flyer') return 50;
+    if (selectedAd === 'produto') return prices.produto;
+    if (selectedAd === 'grupo') return prices.grupo;
+    if (selectedAd === 'flyer') return flyerPosition === 'left' ? prices.flyerLeft : prices.flyerRight;
     return 0;
   }
 
@@ -61,9 +103,15 @@ export function AdsManagerSeller() {
                   {selectedAd === 'produto' && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Selecione o Produto</label>
-                      <select className="w-full h-12 px-4 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-ml-blue bg-white">
-                        <option>BM Infinita Facebook Ads</option>
-                        <option>Perfil Aquecido Facebook BR</option>
+                      <select
+                        value={selectedProductId}
+                        onChange={(event) => setSelectedProductId(event.target.value)}
+                        className="w-full h-12 px-4 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-ml-blue bg-white"
+                      >
+                        {products.map((product) => (
+                          <option key={product.id} value={product.id}>{product.title}</option>
+                        ))}
+                        {products.length === 0 && <option value="">Nenhum produto cadastrado</option>}
                       </select>
                     </div>
                   )}
@@ -79,9 +127,13 @@ export function AdsManagerSeller() {
                     <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Posição do Flyer</label>
-                        <select className="w-full h-12 px-4 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-ml-blue bg-white">
-                          <option>Lateral Esquerda</option>
-                          <option>Lateral Direita</option>
+                        <select
+                          value={flyerPosition}
+                          onChange={(event) => setFlyerPosition(event.target.value as 'left' | 'right')}
+                          className="w-full h-12 px-4 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-ml-blue bg-white"
+                        >
+                          <option value="left">Lateral Esquerda</option>
+                          <option value="right">Lateral Direita</option>
                         </select>
                       </div>
                       <div>

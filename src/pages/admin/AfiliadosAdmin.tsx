@@ -15,6 +15,8 @@ type Affiliate = {
 
 export function AfiliadosAdmin() {
   const [affiliates, setAffiliates] = useState<Affiliate[]>([])
+  const activeAffiliates = affiliates.filter((affiliate) => affiliate.status === 'active')
+  const affiliateSalesVolume = 0
 
   useEffect(() => {
     supabase
@@ -40,7 +42,7 @@ export function AfiliadosAdmin() {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <p className="text-sm font-medium text-gray-500 mb-1">Total de Afiliados</p>
-                  <h3 className="text-2xl font-light text-ml-dark">{affiliates.length} ativos</h3>
+                  <h3 className="text-2xl font-light text-ml-dark">{activeAffiliates.length} ativos</h3>
                 </div>
                 <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-ml-blue">
                   <Users className="w-5 h-5" />
@@ -55,13 +57,15 @@ export function AfiliadosAdmin() {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <p className="text-sm font-medium text-gray-500 mb-1">Vendas por Afiliados (30 dias)</p>
-                  <h3 className="text-2xl font-light text-ml-dark">R$ 28.450,00</h3>
+                  <h3 className="text-2xl font-light text-ml-dark">
+                    {affiliateSalesVolume.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </h3>
                 </div>
                 <div className="w-10 h-10 bg-green-50 rounded-full flex items-center justify-center text-green-500">
                   <TrendingUp className="w-5 h-5" />
                 </div>
               </div>
-              <p className="text-xs text-gray-400">Total simulado</p>
+              <p className="text-xs text-gray-400">Sem vendas atribuidas a afiliados registradas</p>
             </CardContent>
           </Card>
         </div>
