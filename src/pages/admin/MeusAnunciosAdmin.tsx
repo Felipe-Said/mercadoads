@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react'
 import { AdminLayout } from '../../components/layouts/AdminLayout'
 import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
-import { Search, Plus, Filter } from 'lucide-react'
+import { Search, Plus, Filter, Edit, Trash2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { formatCurrency } from '../../lib/data'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../../components/ui/dialog'
 
 type AdminProduct = {
   id: string
@@ -13,12 +14,39 @@ type AdminProduct = {
   image_url: string | null
   stock: number | null
   status: string
+  category: string
+  description: string
+  delivery_type: string
+  credentials_data: string[] | null
+  file_url: string | null
+  seller_note: string | null
 }
 
 export function MeusAnunciosAdmin() {
   const [products, setProducts] = useState<AdminProduct[]>([])
+  const [activeTab, setActiveTab] = useState<'com-estoque' | 'sem-estoque'>('com-estoque')
+  
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingProduct, setEditingProduct] = useState<Partial<AdminProduct> | null>(null)
+  
+  // Form State
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [price, setPrice] = useState(0)
+  const [imageUrl, setImageUrl] = useState('')
+  const [category, setCategory] = useState('')
+  const [deliveryMode, setDeliveryMode] = useState<'bms' | 'files'>('bms')
+  const [stockInput, setStockInput] = useState(0)
+  const [credentialsText, setCredentialsText] = useState('')
+  const [fileUrl, setFileUrl] = useState('')
+  const [sellerNote, setSellerNote] = useState('')
 
   useEffect(() => {
+    fetchProducts()
+  }, [])
+
+  const fetchProducts = () => {
     supabase
       .from('products')
       .select('*')
@@ -30,22 +58,119 @@ export function MeusAnunciosAdmin() {
             id: String(product.id),
             price: Number(product.price ?? 0),
             stock: product.stock == null ? null : Number(product.stock),
+            credentials_data: product.credentials_data ? (Array.isArray(product.credentials_data) ? product.credentials_data : JSON.parse(product.credentials_data as string)) : [],
           })) as AdminProduct[])
         }
       })
-  }, [])
+  }
+
+  const openNewModal = () => {
+    setEditingProduct(null)
+    setTitle('')
+    setDescription('')
+    setPrice(0)
+    setImageUrl('')
+    setCategory('')
+    setDeliveryMode('bms')
+    setStockInput(0)
+    setCredentialsText('')
+    setFileUrl('')
+    setSellerNote('')
+    setIsModalOpen(true)
+  }
+
+  const openEditModal = (p: AdminProduct) => {
+    setEditingProduct(p)
+    setTitle(p.title)
+    setDescription(p.description || '')
+    setPrice(p.price)
+    setImageUrl(p.image_url || '')
+    setCategory(p.category || '')
+    const isFile = p.stock === null
+    setDeliveryMode(isFile ? 'files' : 'bms')
+    setStockInput(p.stock || 0)
+    setCredentialsText(p.credentials_data ? p.credentials_data.join('\n') : '')
+    setFileUrl(p.file_url || '')
+    setSellerNote(p.seller_note || '')
+    setIsModalOpen(true)
+  }
+
+  const handleSave = async () => {
+    let finalStock: number | null = null
+    let finalCredentials: string[] = []
+
+    if (deliveryMode === 'bms') {
+      const lines = credentialsText.split('\n').map(l => l.trim()).filter(l => l.length > 0)
+      if (lines.length !== stockInput) {
+        alert(`O estoque informado é ${stockInput}, mas você forneceu ${lines.length} credenciais. Eles precisam ser iguais.`)
+        return
+      }
+      finalStock = stockInput
+      finalCredentials = lines
+    } else {
+      finalStock = null // Sem estoque
+      if (!fileUrl.trim()) {
+        alert('Você precisa informar a URL do Arquivo/Tema.')
+        return
+      }
+    }
+
+    const payload = {
+      title,
+      description,
+      price,
+      image_url: imageUrl,
+      category,
+      stock: finalStock,
+      credentials_data: finalCredentials,
+      file_url: deliveryMode === 'files' ? fileUrl : null,
+      seller_note: sellerNote,
+      status: 'active' // Admin products auto-approve
+    }
+
+    if (editingProduct?.id) {
+      await supabase.from('products').update(payload).eq('id', editingProduct.id)
+    } else {
+      // User is admin, but we need their seller_id
+      const { data: { user } } = await supabase.auth.getUser()
+      await supabase.from('products').insert({ ...payload, seller_id: user?.id })
+    }
+
+    setIsModalOpen(false)
+    fetchProducts()
+  }
+
+  const filteredProducts = products.filter(p => {
+    if (activeTab === 'com-estoque') return p.stock !== null
+    return p.stock === null
+  })
 
   return (
     <AdminLayout>
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <h2 className="text-xl font-light text-ml-dark">Meus Anúncios (Admin)</h2>
-          <Button className="bg-ml-blue hover:bg-ml-hover text-white font-semibold rounded-sm shadow-sm transition-colors flex items-center gap-2">
-            <Plus className="w-4 h-4" /> Novo Anúncio
+          <h2 className="text-xl font-light text-ml-dark">Meus Produtos (Admin)</h2>
+          <Button onClick={openNewModal} className="bg-ml-blue hover:bg-ml-hover text-white font-semibold rounded-sm shadow-sm transition-colors flex items-center gap-2">
+            <Plus className="w-4 h-4" /> Novo Produto
           </Button>
         </div>
 
-        <Card className="bg-white border-none shadow-sm rounded-md overflow-hidden">
+        <div className="flex gap-1 bg-white p-1 rounded-md shadow-sm w-max border border-gray-100">
+          <button
+            onClick={() => setActiveTab('com-estoque')}
+            className={`px-6 py-2 text-sm font-medium rounded-sm transition-colors ${activeTab === 'com-estoque' ? 'bg-ml-blue/10 text-ml-blue' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            Com Estoque (Contas/BMs)
+          </button>
+          <button
+            onClick={() => setActiveTab('sem-estoque')}
+            className={`px-6 py-2 text-sm font-medium rounded-sm transition-colors ${activeTab === 'sem-estoque' ? 'bg-ml-blue/10 text-ml-blue' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            Sem Estoque (Arquivos/Temas)
+          </button>
+        </div>
+
+        <Card className="bg-white border-none shadow-sm rounded-md overflow-hidden animate-in fade-in duration-300">
           <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row gap-4 justify-between bg-gray-50/50">
             <div className="relative w-full max-w-md">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -55,9 +180,6 @@ export function MeusAnunciosAdmin() {
                 className="w-full h-10 pl-9 pr-4 border border-gray-200 rounded-sm focus:outline-none focus:ring-1 focus:ring-ml-blue text-sm"
               />
             </div>
-            <Button variant="outline" className="border-gray-200 text-gray-600 rounded-sm hover:bg-gray-100 flex items-center gap-2">
-              <Filter className="w-4 h-4" /> Filtrar
-            </Button>
           </div>
 
           <div className="overflow-x-auto">
@@ -66,13 +188,13 @@ export function MeusAnunciosAdmin() {
                 <tr>
                   <th className="px-6 py-4 font-medium">Produto</th>
                   <th className="px-6 py-4 font-medium">Preço</th>
-                  <th className="px-6 py-4 font-medium">Estoque</th>
+                  <th className="px-6 py-4 font-medium">Estoque / Tipo</th>
                   <th className="px-6 py-4 font-medium">Status</th>
                   <th className="px-6 py-4 font-medium text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {products.map((product) => (
+                {filteredProducts.map((product) => (
                   <tr key={product.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -86,36 +208,137 @@ export function MeusAnunciosAdmin() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-ml-dark font-medium">{formatCurrency(product.price)}</td>
-                    <td className="px-6 py-4 text-gray-600">{product.stock ?? 0} unidades</td>
+                    <td className="px-6 py-4 text-gray-600">
+                      {product.stock !== null ? (
+                        <span className="font-medium">{product.stock} unidades</span>
+                      ) : (
+                        <span className="text-purple-600 font-medium bg-purple-50 px-2 py-1 rounded-sm text-xs">Ilimitado (Arquivo)</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-1 rounded-sm text-xs font-semibold ${product.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
                         {product.status === 'active' ? 'Ativo' : 'Pendente'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button className="text-ml-blue hover:text-ml-hover font-medium text-sm transition-colors">
+                      <button onClick={() => openEditModal(product)} className="text-ml-blue hover:text-ml-hover font-medium text-sm transition-colors">
                         Editar
                       </button>
                     </td>
                   </tr>
                 ))}
-                {products.length === 0 && (
+                {filteredProducts.length === 0 && (
                   <tr>
-                    <td className="px-6 py-8 text-center text-gray-500" colSpan={5}>Nenhum produto cadastrado.</td>
+                    <td className="px-6 py-8 text-center text-gray-500" colSpan={5}>Nenhum produto cadastrado nesta categoria.</td>
                   </tr>
                 )}
-                
-                {/* Note about auto-approval */}
-                <tr className="bg-blue-50/50 border-l-4 border-ml-blue">
-                  <td colSpan={5} className="px-6 py-4 text-sm text-ml-blue">
-                    <strong>Nota do Sistema:</strong> Como Administrador, seus anúncios pulam a fase de Moderação e entram "Ativos" imediatamente após a criação.
-                  </td>
-                </tr>
               </tbody>
             </table>
           </div>
         </Card>
       </div>
+
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold">{editingProduct ? 'Editar Produto' : 'Novo Produto'}</DialogTitle>
+            <DialogDescription>Preencha os detalhes do produto e configure o método de entrega.</DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Título</label>
+                <input value={title} onChange={e => setTitle(e.target.value)} type="text" className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
+              </div>
+              <div className="col-span-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Preço (R$)</label>
+                <input value={price} onChange={e => setPrice(Number(e.target.value))} type="number" step="0.01" className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
+              </div>
+              <div className="col-span-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                <input value={category} onChange={e => setCategory(e.target.value)} type="text" className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">URL da Imagem</label>
+                <input value={imageUrl} onChange={e => setImageUrl(e.target.value)} type="text" className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+                <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} className="w-full p-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
+              </div>
+            </div>
+
+            <div className="border-t border-gray-200 pt-4 mt-6">
+              <h3 className="text-md font-semibold text-gray-900 mb-4">Configuração de Entrega</h3>
+              
+              <div className="flex gap-4 mb-6">
+                <label className={`flex-1 border p-4 rounded-md cursor-pointer transition-colors ${deliveryMode === 'bms' ? 'border-ml-blue bg-blue-50/30 ring-1 ring-ml-blue' : 'border-gray-200'}`}>
+                  <input type="radio" name="deliveryMode" checked={deliveryMode === 'bms'} onChange={() => setDeliveryMode('bms')} className="hidden" />
+                  <div className="font-semibold text-sm mb-1 text-ml-dark">Contas e BMs</div>
+                  <div className="text-xs text-gray-500">Exige estoque. O cliente recebe 1 login por unidade comprada.</div>
+                </label>
+                <label className={`flex-1 border p-4 rounded-md cursor-pointer transition-colors ${deliveryMode === 'files' ? 'border-ml-blue bg-blue-50/30 ring-1 ring-ml-blue' : 'border-gray-200'}`}>
+                  <input type="radio" name="deliveryMode" checked={deliveryMode === 'files'} onChange={() => setDeliveryMode('files')} className="hidden" />
+                  <div className="font-semibold text-sm mb-1 text-ml-dark">Temas e Arquivos</div>
+                  <div className="text-xs text-gray-500">Estoque infinito. O cliente recebe o link de download fixo.</div>
+                </label>
+              </div>
+
+              {deliveryMode === 'bms' && (
+                <div className="space-y-4 bg-gray-50 p-4 rounded-md border border-gray-100">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Estoque Disponível (Unidades)</label>
+                    <input value={stockInput} onChange={e => setStockInput(Number(e.target.value))} type="number" min="0" className="w-full max-w-[200px] h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
+                  </div>
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <label className="block text-sm font-medium text-gray-700">Lista de Credenciais</label>
+                      <span className="text-xs font-semibold text-ml-blue">Insira 1 credencial por linha</span>
+                    </div>
+                    <textarea 
+                      value={credentialsText} 
+                      onChange={e => setCredentialsText(e.target.value)} 
+                      rows={5} 
+                      placeholder={`email1@gmail.com:senha1:2FA\nemail2@gmail.com:senha2:2FA`}
+                      className="w-full p-3 font-mono text-sm border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" 
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      A quantidade de linhas preenchidas acima deve ser <strong>exatamente igual</strong> ao estoque de {stockInput} unidades.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {deliveryMode === 'files' && (
+                <div className="space-y-4 bg-gray-50 p-4 rounded-md border border-gray-100">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">URL do Arquivo (Google Drive, Dropbox, etc)</label>
+                    <input value={fileUrl} onChange={e => setFileUrl(e.target.value)} type="text" placeholder="https://..." className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Observação Adicional do Vendedor</label>
+                <textarea 
+                  value={sellerNote} 
+                  onChange={e => setSellerNote(e.target.value)} 
+                  rows={2} 
+                  placeholder="Ex: Não altere o email principal da conta nos primeiros 3 dias."
+                  className="w-full p-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" 
+                />
+                <p className="text-xs text-gray-500 mt-1">Enviado junto com o acesso ao cliente.</p>
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSave} className="bg-ml-blue text-white hover:bg-ml-hover">Salvar Produto</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   )
 }
