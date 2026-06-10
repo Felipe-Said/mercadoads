@@ -2,6 +2,7 @@ import React from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { Header } from './components/Header'
 import { PlatformTheme } from './components/PlatformTheme'
+import { ProtectedRoute } from './components/ProtectedRoute'
 import { Home } from './pages/Home'
 import { Groups } from './pages/Groups'
 import { Offers } from './pages/Offers'
@@ -55,31 +56,31 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/cadastro" element={<Register />} />
           <Route path="/carrinho" element={<Cart />} />
-          <Route path="/painel/usuario" element={<Resumo />} />
-          <Route path="/painel/usuario/compras" element={<Compras />} />
-          <Route path="/painel/usuario/configuracoes" element={<Configuracoes />} />
-          <Route path="/painel/usuario/afiliacoes" element={<AfiliacoesUser />} />
+          <Route path="/painel/usuario" element={<ProtectedRoute allowedRoles={['user']}><Resumo /></ProtectedRoute>} />
+          <Route path="/painel/usuario/compras" element={<ProtectedRoute allowedRoles={['user']}><Compras /></ProtectedRoute>} />
+          <Route path="/painel/usuario/configuracoes" element={<ProtectedRoute allowedRoles={['user']}><Configuracoes /></ProtectedRoute>} />
+          <Route path="/painel/usuario/afiliacoes" element={<ProtectedRoute allowedRoles={['user']}><AfiliacoesUser /></ProtectedRoute>} />
 
-          <Route path="/painel/vendedor" element={<ResumoVendas />} />
-          <Route path="/painel/vendedor/anuncios" element={<MeusAnuncios />} />
-          <Route path="/painel/vendedor/vendas" element={<VendasEntregas />} />
-          <Route path="/painel/vendedor/financeiro" element={<Financeiro />} />
-          <Route path="/painel/vendedor/ads" element={<AdsManagerSeller />} />
-          <Route path="/painel/vendedor/afiliados" element={<AfiliadosSeller />} />
+          <Route path="/painel/vendedor" element={<ProtectedRoute allowedRoles={['seller']}><ResumoVendas /></ProtectedRoute>} />
+          <Route path="/painel/vendedor/anuncios" element={<ProtectedRoute allowedRoles={['seller']}><MeusAnuncios /></ProtectedRoute>} />
+          <Route path="/painel/vendedor/vendas" element={<ProtectedRoute allowedRoles={['seller']}><VendasEntregas /></ProtectedRoute>} />
+          <Route path="/painel/vendedor/financeiro" element={<ProtectedRoute allowedRoles={['seller']}><Financeiro /></ProtectedRoute>} />
+          <Route path="/painel/vendedor/ads" element={<ProtectedRoute allowedRoles={['seller']}><AdsManagerSeller /></ProtectedRoute>} />
+          <Route path="/painel/vendedor/afiliados" element={<ProtectedRoute allowedRoles={['seller']}><AfiliadosSeller /></ProtectedRoute>} />
 
-          <Route path="/painel/admin" element={<DashboardGlobal />} />
-          <Route path="/painel/admin/usuarios" element={<Usuarios />} />
-          <Route path="/painel/admin/moderacao" element={<Moderacao />} />
-          <Route path="/painel/admin/configuracoes" element={<Taxas />} />
-          <Route path="/painel/admin/gateway" element={<Gateway />} />
-          <Route path="/painel/admin/ads" element={<AdsManagerAdmin />} />
-          <Route path="/painel/admin/personalizacao" element={<Personalizacao />} />
+          <Route path="/painel/admin" element={<ProtectedRoute allowedRoles={['admin']}><DashboardGlobal /></ProtectedRoute>} />
+          <Route path="/painel/admin/usuarios" element={<ProtectedRoute allowedRoles={['admin']}><Usuarios /></ProtectedRoute>} />
+          <Route path="/painel/admin/moderacao" element={<ProtectedRoute allowedRoles={['admin']}><Moderacao /></ProtectedRoute>} />
+          <Route path="/painel/admin/configuracoes" element={<ProtectedRoute allowedRoles={['admin']}><Taxas /></ProtectedRoute>} />
+          <Route path="/painel/admin/gateway" element={<ProtectedRoute allowedRoles={['admin']}><Gateway /></ProtectedRoute>} />
+          <Route path="/painel/admin/ads" element={<ProtectedRoute allowedRoles={['admin']}><AdsManagerAdmin /></ProtectedRoute>} />
+          <Route path="/painel/admin/personalizacao" element={<ProtectedRoute allowedRoles={['admin']}><Personalizacao /></ProtectedRoute>} />
           
-          <Route path="/painel/admin/financeiro" element={<FinanceiroAdmin />} />
-          <Route path="/painel/admin/meus-anuncios" element={<MeusAnunciosAdmin />} />
-          <Route path="/painel/admin/entregas" element={<VendasEntregasAdmin />} />
-          <Route path="/painel/admin/perguntas" element={<PerguntasAdmin />} />
-          <Route path="/painel/admin/afiliados" element={<AfiliadosAdmin />} />
+          <Route path="/painel/admin/financeiro" element={<ProtectedRoute allowedRoles={['admin']}><FinanceiroAdmin /></ProtectedRoute>} />
+          <Route path="/painel/admin/meus-anuncios" element={<ProtectedRoute allowedRoles={['admin']}><MeusAnunciosAdmin /></ProtectedRoute>} />
+          <Route path="/painel/admin/entregas" element={<ProtectedRoute allowedRoles={['admin']}><VendasEntregasAdmin /></ProtectedRoute>} />
+          <Route path="/painel/admin/perguntas" element={<ProtectedRoute allowedRoles={['admin']}><PerguntasAdmin /></ProtectedRoute>} />
+          <Route path="/painel/admin/afiliados" element={<ProtectedRoute allowedRoles={['admin']}><AfiliadosAdmin /></ProtectedRoute>} />
         </Routes>
       </main>
       
