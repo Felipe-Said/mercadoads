@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Card, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { useAuth } from '../contexts/AuthContext'
+import { PlatformLogo } from '../components/PlatformLogo'
 
 export function Login() {
   const [email, setEmail] = useState('')
@@ -32,9 +33,8 @@ export function Login() {
   return (
     <div className="bg-[#ededed] min-h-screen py-16 px-4">
       <div className="max-w-[420px] mx-auto">
-        <div className="text-center mb-8 flex items-center justify-center font-bold text-2xl tracking-tight">
-          <span className="text-ml-blue mr-1">Mercado</span>
-          <span className="text-ml-dark">Ads</span>
+        <div className="text-center mb-8 flex items-center justify-center">
+          <PlatformLogo fallbackClassName="text-2xl" imageClassName="max-h-16" />
         </div>
 
         <Card className="bg-white border-none shadow-sm rounded-md overflow-hidden">

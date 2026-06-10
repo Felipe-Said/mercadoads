@@ -4,11 +4,9 @@ import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
 import { useCart } from "../contexts/CartContext"
 import { supabase } from "../lib/supabase"
+import { PlatformLogo } from "./PlatformLogo"
 
 type HeaderSettings = {
-  logoUrl: string
-  logoDesktopSize: number
-  logoMobileSize: number
   headerPromo: { gifUrl: string; text: string; link: string }
 }
 
@@ -17,9 +15,6 @@ export function Header() {
   const { totalItems } = useCart();
   const navigate = useNavigate()
   const [settings, setSettings] = useState<HeaderSettings>({
-    logoUrl: '',
-    logoDesktopSize: 130,
-    logoMobileSize: 80,
     headerPromo: {
       gifUrl: 'https://http2.mlstatic.com/frontend-assets/ml-web-navigation/ui-navigation/5.19.1/mercadolibre/mplus-icon.svg',
       text: 'Assine o Meli+',
@@ -30,15 +25,12 @@ export function Header() {
   useEffect(() => {
     supabase
       .from('platform_settings')
-      .select('logo_url, logo_desktop_size, logo_mobile_size, header_promo_json')
+      .select('header_promo_json')
       .eq('id', 1)
       .maybeSingle()
       .then(({ data, error }) => {
         if (error || !data) return
         setSettings({
-          logoUrl: data.logo_url ?? '',
-          logoDesktopSize: Number(data.logo_desktop_size ?? 130),
-          logoMobileSize: Number(data.logo_mobile_size ?? 80),
           headerPromo: {
             gifUrl: data.header_promo_json?.gifUrl ?? '',
             text: data.header_promo_json?.text ?? '',
@@ -60,19 +52,7 @@ export function Header() {
         {/* Top Row: Logo & Search */}
         <div className="flex items-center gap-4">
           <Link to="/" className="flex-shrink-0 flex items-center font-bold text-xl tracking-tight cursor-pointer">
-            {settings.logoUrl ? (
-              <img
-                src={settings.logoUrl}
-                alt="Mercado Ads"
-                className="object-contain max-h-12"
-                style={{ width: `clamp(${settings.logoMobileSize}px, 12vw, ${settings.logoDesktopSize}px)` }}
-              />
-            ) : (
-              <>
-                <span className="text-ml-blue mr-1">Mercado</span>
-                <span>Ads</span>
-              </>
-            )}
+            <PlatformLogo fallbackClassName="text-xl" imageClassName="max-h-12" />
           </Link>
           
           <div className="flex-grow max-w-2xl relative">
