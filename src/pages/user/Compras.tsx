@@ -32,6 +32,11 @@ export function Compras() {
     return state?.checkoutSaleIds ?? []
   }, [location.state])
 
+  const checkoutSales = useMemo(() => {
+    if (checkoutSaleIds.length === 0) return []
+    return sales.filter((sale) => checkoutSaleIds.includes(sale.id))
+  }, [sales, checkoutSaleIds])
+
   const loadSales = async () => {
     if (!user) return
     const nextSales = await getSales({ buyerId: user.id })
@@ -115,7 +120,7 @@ export function Compras() {
       <div className="space-y-6">
         <h2 className="text-xl font-light text-ml-dark mb-4">Minhas Compras</h2>
 
-        {checkoutSaleIds.length > 0 && (
+        {checkoutSales.some((sale) => sale.status === 'pending') && (
           <div className="rounded-md border border-blue-100 bg-blue-50 p-4 text-sm text-blue-700">
             Seu pedido foi gerado. Se o Pix ainda nao apareceu, a plataforma esta atualizando os dados agora.
           </div>
