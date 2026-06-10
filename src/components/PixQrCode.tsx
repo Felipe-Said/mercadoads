@@ -34,7 +34,7 @@ export function PixQrCode({ value }: PixQrCodeProps) {
 
   if (!dataUrl) {
     return (
-      <div className="w-40 h-40 rounded-md border border-yellow-200 bg-white flex items-center justify-center text-xs text-gray-400">
+      <div className="h-44 w-44 rounded-md border border-yellow-200 bg-white flex items-center justify-center text-xs text-gray-400">
         Gerando QR...
       </div>
     )
@@ -44,7 +44,7 @@ export function PixQrCode({ value }: PixQrCodeProps) {
     <img
       src={dataUrl}
       alt="QR Code Pix"
-      className="w-40 h-40 rounded-md border border-yellow-200 bg-white p-2"
+      className="h-44 w-44 rounded-md border border-yellow-200 bg-white p-2"
     />
   )
 }
