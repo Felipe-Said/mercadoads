@@ -1,13 +1,86 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
+import React, { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useCart } from '../contexts/CartContext'
 import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
+import { supabase } from '../lib/supabase'
+import { createWestPayPixIn } from '../lib/westpay'
 
 export function Cart() {
-  const { cart, removeFromCart, updateQuantity, totalItems } = useCart()
+  const navigate = useNavigate()
+  const { user, profile } = useAuth()
+  const { cart, removeFromCart, updateQuantity, totalItems, clearCart } = useCart()
+  const [checkoutLoading, setCheckoutLoading] = useState(false)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
 
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0)
   const total = subtotal
+
+  const handleContinuePurchase = async () => {
+    if (checkoutLoading) return
+
+    if (!user) {
+      navigate('/login', { state: { from: '/carrinho' } })
+      return
+    }
+
+    if (cart.length === 0) return
+
+    setCheckoutLoading(true)
+    setCheckoutError(null)
+
+    try {
+      const productIds = cart.map((item) => item.id)
+      const { data: products, error } = await supabase
+        .from('products')
+        .select('id, title, price, seller_id, status, hidden_by_admin')
+        .in('id', productIds)
+
+      if (error) throw error
+
+      const productMap = new Map((products ?? []).map((product) => [Number(product.id), product]))
+      const missingIds = productIds.filter((id) => !productMap.has(id))
+      if (missingIds.length > 0) {
+        throw new Error('Alguns produtos do carrinho nao estao mais disponiveis.')
+      }
+
+      for (const item of cart) {
+        const product = productMap.get(item.id)
+        if (!product) continue
+
+        const amount = Number(product.price ?? item.price) * item.quantity
+        const { data: saleData, error: saleError } = await supabase.from('sales').insert({
+          product_id: product.id,
+          buyer_id: user.id,
+          seller_id: product.seller_id,
+          amount,
+          status: 'pending',
+        }).select('id').single()
+
+        if (saleError) throw saleError
+
+        if (saleData?.id) {
+          await createWestPayPixIn({
+            saleId: String(saleData.id),
+            amount,
+            customer: {
+              name: profile?.full_name ?? user.user_metadata?.full_name ?? user.email ?? 'Cliente',
+              email: user.email ?? '',
+              phone: profile?.phone ?? null,
+            },
+            itemTitle: product.title,
+          })
+        }
+      }
+
+      await clearCart()
+      navigate('/painel/usuario/compras')
+    } catch (err) {
+      setCheckoutError(err instanceof Error ? err.message : 'Nao foi possivel concluir a compra.')
+    } finally {
+      setCheckoutLoading(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#ebebeb]">
@@ -116,8 +189,14 @@ export function Cart() {
                   </span>
                 </div>
 
-                <button className="w-full bg-ml-blue text-white py-3.5 rounded-md font-semibold hover:bg-ml-hover transition-colors shadow-sm">
-                  Continuar a compra
+                {checkoutError && <p className="text-sm text-red-600 mb-3">{checkoutError}</p>}
+                <button
+                  type="button"
+                  onClick={handleContinuePurchase}
+                  disabled={checkoutLoading}
+                  className="w-full bg-ml-blue text-white py-3.5 rounded-md font-semibold hover:bg-ml-hover transition-colors shadow-sm disabled:opacity-60"
+                >
+                  {checkoutLoading ? 'Processando...' : 'Continuar a compra'}
                 </button>
               </div>
             </div>
