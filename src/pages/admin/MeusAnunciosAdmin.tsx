@@ -40,6 +40,8 @@ export function MeusAnunciosAdmin() {
   const [stockInput, setStockInput] = useState(0)
   const [credentialsText, setCredentialsText] = useState('')
   const [fileUrl, setFileUrl] = useState('')
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
   const [sellerNote, setSellerNote] = useState('')
 
   useEffect(() => {
@@ -75,6 +77,7 @@ export function MeusAnunciosAdmin() {
     setStockInput(0)
     setCredentialsText('')
     setFileUrl('')
+    setSelectedFile(null)
     setSellerNote('')
     setIsModalOpen(true)
   }
@@ -91,6 +94,7 @@ export function MeusAnunciosAdmin() {
     setStockInput(p.stock || 0)
     setCredentialsText(p.credentials_data ? p.credentials_data.join('\n') : '')
     setFileUrl(p.file_url || '')
+    setSelectedFile(null)
     setSellerNote(p.seller_note || '')
     setIsModalOpen(true)
   }
@@ -109,10 +113,26 @@ export function MeusAnunciosAdmin() {
       finalCredentials = lines
     } else {
       finalStock = null // Sem estoque
-      if (!fileUrl.trim()) {
-        alert('Você precisa informar a URL do Arquivo/Tema.')
+      if (!fileUrl.trim() && !selectedFile) {
+        alert('Você precisa anexar um arquivo para este tema/produto.')
         return
       }
+    }
+
+    setIsUploading(true)
+    let finalFileUrl = fileUrl
+
+    if (deliveryMode === 'files' && selectedFile) {
+      const fileExt = selectedFile.name.split('.').pop()
+      const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`
+      const { data, error } = await supabase.storage.from('product_files').upload(`uploads/${fileName}`, selectedFile)
+      
+      if (error) {
+        alert('Erro ao fazer upload. Verifique se o bucket "product_files" foi criado no Supabase.')
+        setIsUploading(false)
+        return
+      }
+      finalFileUrl = data.path
     }
 
     const payload = {
@@ -123,7 +143,7 @@ export function MeusAnunciosAdmin() {
       category,
       stock: finalStock,
       credentials_data: finalCredentials,
-      file_url: deliveryMode === 'files' ? fileUrl : null,
+      file_url: deliveryMode === 'files' ? finalFileUrl : null,
       seller_note: sellerNote,
       status: 'active' // Admin products auto-approve
     }
@@ -136,6 +156,7 @@ export function MeusAnunciosAdmin() {
       await supabase.from('products').insert({ ...payload, seller_id: user?.id })
     }
 
+    setIsUploading(false)
     setIsModalOpen(false)
     fetchProducts()
   }
@@ -313,8 +334,32 @@ export function MeusAnunciosAdmin() {
               {deliveryMode === 'files' && (
                 <div className="space-y-4 bg-gray-50 p-4 rounded-md border border-gray-100">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">URL do Arquivo (Google Drive, Dropbox, etc)</label>
-                    <input value={fileUrl} onChange={e => setFileUrl(e.target.value)} type="text" placeholder="https://..." className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Arquivo do Produto (.zip, .rar, etc)</label>
+                    
+                    {fileUrl && !selectedFile && (
+                      <div className="mb-3 p-3 bg-white border border-gray-200 rounded-sm flex items-center justify-between">
+                        <span className="text-sm text-gray-600 truncate max-w-xs">Arquivo salvo: {fileUrl}</span>
+                        <Button variant="outline" size="sm" onClick={() => setFileUrl('')} className="h-7 text-xs text-red-500 border-red-200 hover:bg-red-50">Remover</Button>
+                      </div>
+                    )}
+
+                    {(!fileUrl || selectedFile) && (
+                      <div className="flex items-center justify-center w-full">
+                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-md cursor-pointer bg-white hover:bg-gray-50 transition-colors">
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            <svg className="w-8 h-8 mb-3 text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
+                              <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/>
+                            </svg>
+                            <p className="mb-1 text-sm text-gray-500"><span className="font-semibold">Clique para enviar</span> ou arraste o arquivo</p>
+                            <p className="text-xs text-gray-500">ZIP, RAR, PDF (Max. 50MB)</p>
+                          </div>
+                          <input type="file" className="hidden" onChange={e => e.target.files && setSelectedFile(e.target.files[0])} />
+                        </label>
+                      </div>
+                    )}
+                    {selectedFile && (
+                      <p className="mt-2 text-sm text-green-600 font-medium">Arquivo selecionado: {selectedFile.name}</p>
+                    )}
                   </div>
                 </div>
               )}
@@ -334,8 +379,10 @@ export function MeusAnunciosAdmin() {
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave} className="bg-ml-blue text-white hover:bg-ml-hover">Salvar Produto</Button>
+            <Button variant="outline" onClick={() => setIsModalOpen(false)} disabled={isUploading}>Cancelar</Button>
+            <Button onClick={handleSave} disabled={isUploading} className="bg-ml-blue text-white hover:bg-ml-hover">
+              {isUploading ? 'Salvando...' : 'Salvar Produto'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
