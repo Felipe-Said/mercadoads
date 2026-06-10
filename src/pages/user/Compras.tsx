@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/button'
 import { supabase } from '../../lib/supabase'
 import { formatCurrency, formatDate, getSales, type Sale } from '../../lib/data'
 import { useAuth } from '../../contexts/AuthContext'
+import { PixQrCode } from '../../components/PixQrCode'
 
 export function Compras() {
   const { user } = useAuth()
@@ -160,7 +161,12 @@ export function Compras() {
                             {copiedSaleId === sale.id ? 'Copiado' : 'Copiar Pix'}
                           </Button>
                         </div>
-                        <p className="break-all text-xs text-gray-700 font-mono">{sale.payment_qrcode_text || sale.payment_qrcode}</p>
+                        <div className="flex flex-col md:flex-row gap-4">
+                          <PixQrCode value={(sale.payment_qrcode_text || sale.payment_qrcode) as string} />
+                          <div className="min-w-0 flex-1">
+                            <p className="break-all text-xs text-gray-700 font-mono">{sale.payment_qrcode_text || sale.payment_qrcode}</p>
+                          </div>
+                        </div>
                         {sale.payment_qrcode_expires_at && (
                           <p className="text-xs text-gray-500">
                             Expira em {new Date(sale.payment_qrcode_expires_at).toLocaleString('pt-BR')}
