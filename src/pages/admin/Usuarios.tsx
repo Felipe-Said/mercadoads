@@ -213,6 +213,29 @@ export function Usuarios() {
     setModalMessage(null)
 
     const isSelf = selectedUser.id === currentUser?.id
+
+    if (isSelf) {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          store_name: editForm.storeName.trim() || null,
+          seller_category: editForm.sellerCategory.trim() || null,
+        })
+        .eq('id', selectedUser.id)
+
+      if (error) {
+        setModalMessage(error.message)
+        setSaving(false)
+        return
+      }
+
+      await loadUsers()
+      closeEditor()
+      setSaving(false)
+      setMessage('Usuario atualizado.')
+      return
+    }
+
     const nextRole = isSelf ? selectedUser.role : editForm.role
     const nextStatus = isSelf ? selectedUser.status : editForm.status
 
