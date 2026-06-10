@@ -19,12 +19,14 @@ type Withdrawal = {
   id: number
   amount: number
   pix_key: string
+  destination_name?: string | null
+  destination_document?: string | null
   status: string
   created_at: string
 }
 
 export function AfiliacoesUser() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const [activeTab, setActiveTab] = useState<'geral' | 'saques'>('geral')
   const [copiedLink, setCopiedLink] = useState<string | null>(null)
   
@@ -32,10 +34,18 @@ export function AfiliacoesUser() {
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([])
   
   const [pixKey, setPixKey] = useState('')
+  const [destinationName, setDestinationName] = useState('')
+  const [destinationDocument, setDestinationDocument] = useState('')
   const [withdrawAmount, setWithdrawAmount] = useState('')
   const [withdrawMessage, setWithdrawMessage] = useState<string | null>(null)
   const [isWithdrawing, setIsWithdrawing] = useState(false)
   const availableBalance = 0
+
+  useEffect(() => {
+    if (profile?.full_name && !destinationName) {
+      setDestinationName(profile.full_name)
+    }
+  }, [destinationName, profile])
 
   const loadData = useCallback(async () => {
     if (!user) return
@@ -75,7 +85,7 @@ export function AfiliacoesUser() {
 
   const handleWithdrawRequest = async () => {
     if (!user) return
-    if (!pixKey || !withdrawAmount) {
+    if (!pixKey || !destinationName || !destinationDocument || !withdrawAmount) {
       setWithdrawMessage('Preencha todos os campos.')
       return
     }
@@ -100,6 +110,8 @@ export function AfiliacoesUser() {
         user_id: user.id,
         amount: amountNum,
         pix_key: pixKey,
+        destination_name: destinationName,
+        destination_document: destinationDocument,
         status: 'pending'
       })
 
@@ -107,6 +119,8 @@ export function AfiliacoesUser() {
       setWithdrawMessage('Erro ao solicitar saque.')
     } else {
       setPixKey('')
+      setDestinationName(profile?.full_name ?? '')
+      setDestinationDocument('')
       setWithdrawAmount('')
       setWithdrawMessage('Saque solicitado com sucesso!')
       await loadData() // recarrega o histórico
@@ -213,6 +227,26 @@ export function AfiliacoesUser() {
                   </div>
 
                   <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Nome do destinatario</label>
+                      <input 
+                        type="text" 
+                        value={destinationName}
+                        onChange={(e) => setDestinationName(e.target.value)}
+                        placeholder="Nome completo do titular" 
+                        className="w-full h-12 px-4 border border-gray-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-ml-blue text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Documento do destinatario</label>
+                      <input 
+                        type="text" 
+                        value={destinationDocument}
+                        onChange={(e) => setDestinationDocument(e.target.value)}
+                        placeholder="CPF ou CNPJ" 
+                        className="w-full h-12 px-4 border border-gray-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-ml-blue text-sm"
+                      />
+                    </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Chave PIX (Destino)</label>
                       <input 

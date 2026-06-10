@@ -12,6 +12,7 @@ import { Button } from "./ui/button"
 import { useAuth } from "../contexts/AuthContext"
 import { supabase } from "../lib/supabase"
 import type { Product } from "../lib/data"
+import { createWestPayPixIn } from "../lib/westpay"
 
 interface RegistrationModalProps {
   open: boolean
@@ -35,15 +36,17 @@ export function RegistrationModal({ open, onOpenChange, product }: RegistrationM
   const createPendingPurchase = async (buyerId: string) => {
     if (!product) throw new Error("Produto indisponivel.")
 
-    const { error: saleError } = await supabase.from("sales").insert({
+    const { data: saleData, error: saleError } = await supabase.from("sales").insert({
       product_id: Number(product.id),
       buyer_id: buyerId,
       seller_id: product.seller_id,
       amount: product.price,
       status: "pending",
-    })
+    }).select('id').single()
 
     if (saleError) throw saleError
+
+    return saleData?.id ? String(saleData.id) : null
   }
 
   const getCurrentUserId = async () => {
@@ -78,7 +81,26 @@ export function RegistrationModal({ open, onOpenChange, product }: RegistrationM
         if (profileError) throw profileError
       }
 
-      await createPendingPurchase(userId)
+      const saleId = await createPendingPurchase(userId)
+      if (saleId) {
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("full_name, phone")
+          .eq("id", userId)
+          .maybeSingle()
+
+        await createWestPayPixIn({
+          saleId,
+          amount: product?.price ?? 0,
+          customer: {
+            name: (profileData?.full_name as string | null) ?? fullName ?? email,
+            email,
+            phone: (profileData?.phone as string | null) ?? (phone.trim() || null),
+          },
+          itemTitle: product?.title ?? "Produto",
+        })
+      }
+
       onOpenChange(false)
       navigate("/painel/usuario/compras")
     } catch (err) {

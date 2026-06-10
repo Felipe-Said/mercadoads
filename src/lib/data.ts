@@ -62,6 +62,13 @@ export interface Sale {
   amount: number
   status: 'pending' | 'paid' | 'cancelled'
   created_at: string
+  payment_gateway?: string | null
+  payment_external_ref?: string | null
+  payment_transaction_id?: string | null
+  payment_qrcode?: string | null
+  payment_qrcode_text?: string | null
+  payment_qrcode_expires_at?: string | null
+  gateway_payload?: Record<string, unknown> | null
   products?: { title: string | null; image_url: string | null } | null
   buyer?: { full_name: string | null } | null
   seller?: { full_name: string | null } | null

@@ -6,6 +6,7 @@ import { Button } from '../components/ui/button'
 import { useAuth } from '../contexts/AuthContext'
 import { useCart } from '../contexts/CartContext'
 import { formatCurrency, getProduct, type Product } from '../lib/data'
+import { createWestPayPixIn } from '../lib/westpay'
 import { supabase } from '../lib/supabase'
 
 type Question = {
@@ -18,7 +19,7 @@ type Question = {
 export function ProductPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { user, loading: authLoading } = useAuth()
+  const { user, profile, loading: authLoading } = useAuth()
   const { addToCart } = useCart()
   const [product, setProduct] = useState<Product | null>(null)
   const [questions, setQuestions] = useState<Question[]>([])
@@ -79,19 +80,32 @@ export function ProductPage() {
     setError(null)
     setBuying(true)
 
-    const { error: saleError } = await supabase.from('sales').insert({
+    const { data: saleData, error: saleError } = await supabase.from('sales').insert({
       product_id: Number(product.id),
       buyer_id: user.id,
       seller_id: product.seller_id,
       amount: product.price,
       status: 'pending',
-    })
+    }).select('id').single()
 
     setBuying(false)
 
     if (saleError) {
       setError(saleError.message)
       return
+    }
+
+    if (saleData?.id) {
+      await createWestPayPixIn({
+        saleId: String(saleData.id),
+        amount: product.price,
+        customer: {
+          name: profile?.full_name ?? user.user_metadata?.full_name ?? user.email ?? 'Cliente',
+          email: user.email ?? '',
+          phone: profile?.phone ?? null,
+        },
+        itemTitle: product.title,
+      })
     }
 
     navigate('/painel/usuario/compras')

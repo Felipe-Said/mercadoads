@@ -5,11 +5,14 @@ import { Button } from '../../components/ui/button'
 import { DollarSign, CheckCircle2, Clock, Landmark, ArrowRightLeft } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { formatCurrency, formatDate } from '../../lib/data'
+import { createWestPayPixOut } from '../../lib/westpay'
 
 type Withdrawal = {
   id: number
   amount: number
   pix_key: string
+  destination_name?: string | null
+  destination_document?: string | null
   status: string
   created_at: string
   user?: { full_name: string | null; email: string | null } | null
@@ -35,7 +38,7 @@ export function FinanceiroAdmin() {
   const loadWithdrawals = async () => {
     const { data, error } = await supabase
       .from('withdrawals')
-      .select('id, amount, pix_key, status, created_at, user:user_id(full_name, email)')
+      .select('id, amount, pix_key, destination_name, destination_document, status, created_at, user:user_id(full_name, email)')
       .order('created_at', { ascending: false })
 
     if (error) throw error
@@ -83,6 +86,22 @@ export function FinanceiroAdmin() {
   }, [])
 
   const handleApprove = async (id: number) => {
+    const withdrawal = withdrawals.find((item) => item.id === id)
+    if (!withdrawal) return
+
+    const gatewayResult = await createWestPayPixOut({
+      withdrawalId: id,
+      amount: withdrawal.amount,
+      pixKey: withdrawal.pix_key,
+      destinationName: withdrawal.destination_name || withdrawal.user?.full_name || 'Usuario',
+      destinationDocument: withdrawal.destination_document || '',
+    })
+
+    if (gatewayResult) {
+      await loadWithdrawals()
+      return
+    }
+
     const { error } = await supabase
       .from('withdrawals')
       .update({ status: 'paid' })
