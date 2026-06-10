@@ -67,7 +67,7 @@ export async function invokeWestPayStrict(action: string, payload?: Record<strin
 }
 
 export async function ensureWestPayReady() {
-  await invokeWestPayStrict('balance')
+  await invokeWestPayStrict('status')
 }
 
 export async function createWestPayPixIn(payload: {
@@ -145,4 +145,8 @@ export async function createWestPayPixOut(payload: {
 
 export async function westPayBalance() {
   return invokeWestPay('balance')
+}
+
+export async function westPayStatus() {
+  return invokeWestPayStrict('status')
 }

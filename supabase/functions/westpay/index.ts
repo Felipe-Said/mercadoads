@@ -49,6 +49,7 @@ function inferPixKeyType(pixKey: string) {
 }
 
 function parseExternalRef(payload: Record<string, unknown>) {
+  const nested = unwrapPayload(payload)
   const candidates = [
     payload.externalRef,
     payload.external_ref,
@@ -58,12 +59,15 @@ function parseExternalRef(payload: Record<string, unknown>) {
     (payload.transaction as Record<string, unknown> | undefined)?.external_ref,
     (payload.payment as Record<string, unknown> | undefined)?.externalRef,
     (payload.payment as Record<string, unknown> | undefined)?.external_ref,
+    nested.externalRef,
+    nested.external_ref,
   ]
 
   return firstString(...candidates)
 }
 
 function parseStatus(payload: Record<string, unknown>) {
+  const nested = unwrapPayload(payload)
   const candidates = [
     payload.event,
     payload.status,
@@ -71,6 +75,8 @@ function parseStatus(payload: Record<string, unknown>) {
     (payload.data as Record<string, unknown> | undefined)?.status,
     (payload.transaction as Record<string, unknown> | undefined)?.status,
     (payload.transaction as Record<string, unknown> | undefined)?.event,
+    nested.event,
+    nested.status,
   ]
 
   return candidates
@@ -103,10 +109,39 @@ function mapWithdrawalStatus(statusText: string) {
 }
 
 function extractPixInfo(transaction: Record<string, unknown>) {
-  const pix = (transaction.pix as Record<string, unknown> | undefined) ?? {}
-  const qrcode = firstString(pix.qrcode, pix.code, pix.copyPaste, pix.copiaCola, pix.brCode)
-  const expiresAt = firstString(pix.expiresAt, pix.expires_at)
+  const source = unwrapPayload(transaction)
+  const pix = (source.pix as Record<string, unknown> | undefined) ?? {}
+  const qrcode = firstString(
+    pix.qrcode,
+    pix.qrCode,
+    pix.code,
+    pix.copyPaste,
+    pix.copiaCola,
+    pix.brCode,
+    source.pixQrCode,
+    source.pix_qr_code,
+    source.qrcode,
+    source.qrCode,
+    source.copyPaste,
+    source.copiaCola,
+    source.brCode,
+  )
+  const expiresAt = firstString(pix.expiresAt, pix.expires_at, source.pixExpiresAt, source.expiresAt, source.expires_at)
   return { qrcode, expiresAt }
+}
+
+function asRecord(value: unknown) {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null
+}
+
+function unwrapPayload(value: unknown): Record<string, unknown> {
+  const root = asRecord(value) ?? {}
+  return asRecord(root.data)
+    ?? asRecord(root.transaction)
+    ?? asRecord(root.payment)
+    ?? root
 }
 
 async function loadGatewaySettings(supabaseAdmin: ReturnType<typeof createClient>) {
@@ -287,6 +322,15 @@ Deno.serve(async (req) => {
     return json(westpayResult, westpayResult.success === false ? 400 : 200)
   }
 
+  if (action === 'status') {
+    return json({
+      success: true,
+      configured: Boolean(settings.westpay_api_key && settings.westpay_public_key),
+      active: settings.active,
+      provider: settings.provider,
+    })
+  }
+
   if (action === 'create_pix_in') {
     const saleId = String(body.saleId || '')
     const amount = Number(body.amount ?? 0)
@@ -299,21 +343,22 @@ Deno.serve(async (req) => {
 
     const westpayResult = await callWestPay(settings, '/api/v1/transactions', 'POST', {
       amount,
+      method: 'pix',
+      description: items.map((item) => firstString(item.title, item.name)).filter(Boolean).join(', ') || `Pedido ${saleId}`,
       customer,
       items,
-      paymentMethod: 'pix',
       externalRef: `sale-${saleId}`,
       postbackUrl: settings.westpay_webhook_secret
         ? `${getFunctionBaseUrl(supabaseUrl)}/westpay?action=webhook&token=${encodeURIComponent(settings.westpay_webhook_secret)}`
         : `${getFunctionBaseUrl(supabaseUrl)}/westpay?action=webhook`,
-      pix: { expiresInDays: 2 },
+      pixExpiresInDays: 2,
     })
 
     if (westpayResult.success === false) {
       return json(westpayResult, westpayResult.status ?? 400)
     }
 
-    const transaction = (westpayResult.data as Record<string, unknown> | undefined) ?? {}
+    const transaction = unwrapPayload(westpayResult.data)
     const { qrcode, expiresAt } = extractPixInfo(transaction)
 
     await supabaseAdmin.from('sales').update({
@@ -356,7 +401,7 @@ Deno.serve(async (req) => {
       return json(westpayResult, westpayResult.status ?? 400)
     }
 
-    const transaction = (westpayResult.data as Record<string, unknown> | undefined) ?? {}
+    const transaction = unwrapPayload(westpayResult.data)
 
     await supabaseAdmin.from('withdrawals').update({
       gateway_provider: 'westpay',

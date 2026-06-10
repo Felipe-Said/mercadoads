@@ -3,7 +3,7 @@ import { AdminLayout } from '../../components/layouts/AdminLayout'
 import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { supabase } from '../../lib/supabase'
-import { westPayBalance } from '../../lib/westpay'
+import { westPayStatus } from '../../lib/westpay'
 
 type GatewaySettings = {
   id: number
@@ -88,19 +88,38 @@ export function Gateway() {
       return
     }
 
-    setMessage('Gateway salvo com sucesso.')
+    const { data: savedSettings, error: reloadError } = await supabase
+      .from('payment_gateway_settings')
+      .select('active, westpay_api_key, westpay_public_key, westpay_user_agent, westpay_webhook_secret')
+      .eq('id', 1)
+      .maybeSingle()
+
+    if (reloadError) {
+      setMessage(`Gateway salvo, mas nao foi possivel confirmar no banco: ${reloadError.message}`)
+      setSaving(false)
+      return
+    }
+
+    const settings = savedSettings as Omit<GatewaySettings, 'id'> | null
+    setActive(settings?.active ?? active)
+    setApiKey(settings?.westpay_api_key ?? '')
+    setPublicKey(settings?.westpay_public_key ?? '')
+    setUserAgent(settings?.westpay_user_agent ?? defaultUserAgent)
+    setWebhookSecret(settings?.westpay_webhook_secret ?? '')
+    setMessage(settings?.westpay_api_key && settings?.westpay_public_key
+      ? 'Gateway salvo e credenciais confirmadas no banco.'
+      : 'Gateway salvo, mas API Key ou Public Key continuam vazias no banco.')
     setSaving(false)
   }
 
   const testConnection = async () => {
     setTestMessage('Testando conexao...')
-    const result = await westPayBalance()
-    if (!result) {
-      setTestMessage('Nao foi possivel validar a conexao. Verifique as credenciais e se o gateway esta ativo.')
-      return
+    try {
+      await westPayStatus()
+      setTestMessage('Funcao WestPay ativa e credenciais encontradas no banco.')
+    } catch (error) {
+      setTestMessage(error instanceof Error ? error.message : 'Nao foi possivel validar a conexao.')
     }
-
-    setTestMessage('Conexao com WestPay validada.')
   }
 
   return (
@@ -210,8 +229,8 @@ export function Gateway() {
               </Button>
             </div>
 
-            {message && <p className={`text-sm ${message.includes('sucesso') ? 'text-green-600' : 'text-red-600'}`}>{message}</p>}
-            {testMessage && <p className={`text-sm ${testMessage.includes('validada') ? 'text-green-600' : 'text-gray-600'}`}>{testMessage}</p>}
+            {message && <p className={`text-sm ${message.includes('confirmadas') ? 'text-green-600' : 'text-red-600'}`}>{message}</p>}
+            {testMessage && <p className={`text-sm ${testMessage.includes('ativa') ? 'text-green-600' : 'text-red-600'}`}>{testMessage}</p>}
           </CardContent>
         </Card>
       </div>
