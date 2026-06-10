@@ -6,7 +6,7 @@ import { Button } from '../components/ui/button'
 import { useAuth } from '../contexts/AuthContext'
 import { useCart } from '../contexts/CartContext'
 import { formatCurrency, getProduct, type Product } from '../lib/data'
-import { createWestPayPixInOrThrow, ensureWestPayReady } from '../lib/westpay'
+import { createWestPayPixInOrThrow } from '../lib/westpay'
 import { supabase } from '../lib/supabase'
 
 type Question = {
@@ -83,8 +83,6 @@ export function ProductPage() {
     let saleId: string | null = null
 
     try {
-      await ensureWestPayReady()
-
       const { data: saleData, error: saleError } = await supabase.from('sales').insert({
         product_id: Number(product.id),
         buyer_id: user.id,

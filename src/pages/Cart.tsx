@@ -4,7 +4,7 @@ import { useCart } from '../contexts/CartContext'
 import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
-import { createWestPayPixInOrThrow, ensureWestPayReady } from '../lib/westpay'
+import { createWestPayPixInOrThrow } from '../lib/westpay'
 
 export function Cart() {
   const navigate = useNavigate()
@@ -31,8 +31,6 @@ export function Cart() {
     const createdSaleIds: string[] = []
 
     try {
-      await ensureWestPayReady()
-
       const productIds = cart.map((item) => item.id)
       const { data: products, error } = await supabase
         .from('products')

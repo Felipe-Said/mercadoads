@@ -12,7 +12,7 @@ import { Button } from "./ui/button"
 import { useAuth } from "../contexts/AuthContext"
 import { supabase } from "../lib/supabase"
 import type { Product } from "../lib/data"
-import { createWestPayPixInOrThrow, ensureWestPayReady } from "../lib/westpay"
+import { createWestPayPixInOrThrow } from "../lib/westpay"
 
 interface RegistrationModalProps {
   open: boolean
@@ -85,8 +85,6 @@ export function RegistrationModal({ open, onOpenChange, product }: RegistrationM
 
         if (profileError) throw profileError
       }
-
-      await ensureWestPayReady()
 
       const saleId = await createPendingPurchase(userId)
       if (!saleId) throw new Error("Nao foi possivel gerar o pedido.")
