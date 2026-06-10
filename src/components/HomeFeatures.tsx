@@ -7,7 +7,7 @@ export function HomeFeatures() {
     {
       id: 1,
       title: 'Entrega Automática',
-      icon: <Zap className="w-8 h-8 text-ml-blue" strokeWidth={1.5} />,
+      icon: <Zap className="w-8 h-8 text-green-500" strokeWidth={1.5} />,
       description: 'Receba seus ativos digitais instantaneamente após a compra.',
       actionText: 'Ver produtos',
       link: '/'
@@ -15,7 +15,7 @@ export function HomeFeatures() {
     {
       id: 2,
       title: 'Ativos Verificados',
-      icon: <ShieldCheck className="w-8 h-8 text-ml-blue" strokeWidth={1.5} />,
+      icon: <ShieldCheck className="w-8 h-8 text-green-500" strokeWidth={1.5} />,
       description: 'BMs e perfis testados e garantidos pela plataforma.',
       actionText: 'Garantia total',
       link: '/'
@@ -23,7 +23,7 @@ export function HomeFeatures() {
     {
       id: 3,
       title: 'Pagamento Seguro',
-      icon: <Lock className="w-8 h-8 text-ml-blue" strokeWidth={1.5} />,
+      icon: <Lock className="w-8 h-8 text-green-500" strokeWidth={1.5} />,
       description: 'Transações protegidas via Gateway oficial criptografado.',
       actionText: 'Saiba mais',
       link: '/'
@@ -31,7 +31,7 @@ export function HomeFeatures() {
     {
       id: 4,
       title: 'Programa Afiliados',
-      icon: <Users className="w-8 h-8 text-ml-blue" strokeWidth={1.5} />,
+      icon: <Users className="w-8 h-8 text-green-500" strokeWidth={1.5} />,
       description: 'Revenda nossos ativos e ganhe comissões automaticamente.',
       actionText: 'Quero lucrar',
       link: '/painel/usuario/afiliacoes'
@@ -39,7 +39,7 @@ export function HomeFeatures() {
     {
       id: 5,
       title: 'Ofertas Exclusivas',
-      icon: <Tag className="w-8 h-8 text-ml-blue" strokeWidth={1.5} />,
+      icon: <Tag className="w-8 h-8 text-green-500" strokeWidth={1.5} />,
       description: 'Encontre os melhores preços do mercado digital aqui.',
       actionText: 'Ver ofertas',
       link: '/'
@@ -47,7 +47,7 @@ export function HomeFeatures() {
     {
       id: 6,
       title: 'Top Ativos',
-      icon: <TrendingUp className="w-8 h-8 text-ml-blue" strokeWidth={1.5} />,
+      icon: <TrendingUp className="w-8 h-8 text-green-500" strokeWidth={1.5} />,
       description: 'Explore as BMs e perfis mais vendidos do momento.',
       actionText: 'Mais vendidos',
       link: '/'
@@ -66,7 +66,7 @@ export function HomeFeatures() {
             <div>
               <h3 className="text-sm font-semibold text-ml-dark mb-4">{feature.title}</h3>
               
-              <div className="w-16 h-16 rounded-full border-2 border-gray-100 flex items-center justify-center mx-auto mb-4 group-hover:bg-blue-50/50 transition-colors">
+              <div className="w-16 h-16 rounded-full border-2 border-gray-100 flex items-center justify-center mx-auto mb-4 group-hover:bg-green-50/50 transition-colors">
                 {feature.icon}
               </div>
               
@@ -77,7 +77,7 @@ export function HomeFeatures() {
             
             <Link 
               to={feature.link}
-              className="mt-3 w-full block text-sm font-semibold text-ml-blue hover:text-ml-hover transition-colors bg-blue-50/50 hover:bg-blue-100/50 py-2 rounded-sm"
+              className="mt-3 w-full block text-sm font-semibold text-green-500 hover:text-green-600 transition-colors bg-gray-50 hover:bg-green-50/50 py-2 rounded-sm"
             >
               {feature.actionText}
             </Link>

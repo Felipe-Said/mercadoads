@@ -33,13 +33,13 @@ export function Banners() {
       <div className="max-w-[1600px] mx-auto relative flex justify-center">
         
         {leftFlyer && (
-          <a href={leftFlyer.link} className="hidden 2xl:flex absolute left-0 top-0 h-[400px] md:h-[500px] w-[150px] rounded-sm flex-col justify-center items-center overflow-hidden z-10" style={{ backgroundColor: leftFlyer.color }}>
-            {leftFlyer.image ? <img src={leftFlyer.image} alt={leftFlyer.title || 'Banner lateral'} className="absolute inset-0 w-full h-full object-cover object-top" /> : <span className="relative z-10 bg-white text-ml-dark px-3 py-1 font-bold rounded-sm shadow-sm rotate-[-90deg] whitespace-nowrap">{leftFlyer.title || 'Banner'}</span>}
+          <a href={leftFlyer.link} className="hidden 2xl:flex absolute left-0 top-0 h-[340px] md:h-[400px] w-[150px] rounded-sm flex-col justify-center items-center overflow-hidden z-10" style={{ backgroundColor: leftFlyer.color }}>
+            {leftFlyer.image ? <img src={leftFlyer.image} alt={leftFlyer.title || 'Banner lateral'} className="absolute inset-0 w-full h-full object-contain" /> : <span className="relative z-10 bg-white text-ml-dark px-3 py-1 font-bold rounded-sm shadow-sm rotate-[-90deg] whitespace-nowrap">{leftFlyer.title || 'Banner'}</span>}
             <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#ebebeb] to-transparent pointer-events-none z-10" />
           </a>
         )}
 
-        <div className="relative w-full overflow-hidden group">
+        <div className="relative w-full max-w-7xl overflow-hidden group">
           <div className="flex transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${current * 100}%)` }}>
             {heroBanners.map((banner) => {
               const showText = hasText(banner)
@@ -48,14 +48,14 @@ export function Banners() {
                 <a
                   key={banner.id}
                   href={banner.link}
-                  className={`w-full flex-shrink-0 relative flex items-center justify-center overflow-hidden h-[400px] md:h-[500px]`}
+                  className={`w-full flex-shrink-0 relative flex items-center justify-center overflow-hidden ${showText || !banner.image ? 'h-[340px] md:h-[400px]' : ''}`}
                   style={{ backgroundColor: banner.color }}
                 >
                   {banner.image && (
                     <img
                       src={banner.image}
                       alt={banner.title || 'Banner principal'}
-                      className={`absolute inset-0 w-full h-full object-cover object-top ${showText ? 'opacity-70' : ''}`}
+                      className={showText ? 'absolute inset-0 w-full h-full object-cover opacity-70' : 'relative block w-full h-auto object-contain'}
                     />
                   )}
                   {showText && (
@@ -77,10 +77,10 @@ export function Banners() {
 
           {heroBanners.length > 1 && (
             <>
-              <button onClick={prev} className="absolute left-4 top-1/3 -translate-y-1/2 bg-white/80 hover:bg-white text-ml-blue p-4 shadow-md rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-30">
+              <button onClick={prev} className="absolute left-0 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-ml-blue p-4 shadow-md rounded-r-full opacity-0 group-hover:opacity-100 transition-opacity z-30">
                 <ChevronLeft className="w-6 h-6" />
               </button>
-              <button onClick={next} className="absolute right-4 top-1/3 -translate-y-1/2 bg-white/80 hover:bg-white text-ml-blue p-4 shadow-md rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-30">
+              <button onClick={next} className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-ml-blue p-4 shadow-md rounded-l-full opacity-0 group-hover:opacity-100 transition-opacity z-30">
                 <ChevronRight className="w-6 h-6" />
               </button>
             </>
@@ -88,8 +88,8 @@ export function Banners() {
         </div>
 
         {rightFlyer && (
-          <a href={rightFlyer.link} className="hidden 2xl:flex absolute right-0 top-0 h-[400px] md:h-[500px] w-[150px] rounded-sm flex-col justify-center items-center overflow-hidden z-10" style={{ backgroundColor: rightFlyer.color }}>
-            {rightFlyer.image ? <img src={rightFlyer.image} alt={rightFlyer.title || 'Banner lateral'} className="absolute inset-0 w-full h-full object-cover object-top" /> : <span className="relative z-10 bg-white text-ml-dark px-3 py-1 font-bold rounded-sm shadow-sm rotate-90 whitespace-nowrap">{rightFlyer.title || 'Banner'}</span>}
+          <a href={rightFlyer.link} className="hidden 2xl:flex absolute right-0 top-0 h-[340px] md:h-[400px] w-[150px] rounded-sm flex-col justify-center items-center overflow-hidden z-10" style={{ backgroundColor: rightFlyer.color }}>
+            {rightFlyer.image ? <img src={rightFlyer.image} alt={rightFlyer.title || 'Banner lateral'} className="absolute inset-0 w-full h-full object-contain" /> : <span className="relative z-10 bg-white text-ml-dark px-3 py-1 font-bold rounded-sm shadow-sm rotate-90 whitespace-nowrap">{rightFlyer.title || 'Banner'}</span>}
             <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#ebebeb] to-transparent pointer-events-none z-10" />
           </a>
         )}
