@@ -32,6 +32,7 @@ export function Personalizacao() {
   const [primaryColor, setPrimaryColor] = useState('#fff159')
   const [secondaryColor, setSecondaryColor] = useState('#3483fa')
   const [logoUrl, setLogoUrl] = useState('')
+  const [faviconUrl, setFaviconUrl] = useState('')
   const [desktopLogoSize, setDesktopLogoSize] = useState(130)
   const [mobileLogoSize, setMobileLogoSize] = useState(80)
   const [headerPromo, setHeaderPromo] = useState({ gifUrl: '', text: '', link: '' })
@@ -53,6 +54,7 @@ export function Personalizacao() {
         setPrimaryColor(settings?.primary_color ?? '#fff159')
         setSecondaryColor(settings?.secondary_color ?? '#3483fa')
         setLogoUrl(settings?.logo_url ?? '')
+        setFaviconUrl(settings?.favicon_url ?? '')
         setDesktopLogoSize(Number(settings?.logo_desktop_size ?? 130))
         setMobileLogoSize(Number(settings?.logo_mobile_size ?? 80))
         setHeaderPromo({
@@ -73,6 +75,7 @@ export function Personalizacao() {
       primary_color: primaryColor,
       secondary_color: secondaryColor,
       logo_url: logoUrl || null,
+      favicon_url: faviconUrl || null,
       logo_desktop_size: desktopLogoSize,
       logo_mobile_size: mobileLogoSize,
       header_promo_json: {
@@ -87,7 +90,7 @@ export function Personalizacao() {
       return
     }
 
-    applyPlatformTheme({ primaryColor, secondaryColor })
+    applyPlatformTheme({ primaryColor, secondaryColor, faviconUrl })
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
@@ -179,6 +182,28 @@ export function Personalizacao() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Logo mobile ({mobileLogoSize}px)</label>
                   <input type="range" min="30" max="200" value={mobileLogoSize} onChange={(event) => setMobileLogoSize(Number(event.target.value))} className="w-full accent-ml-blue" />
                 </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-none shadow-sm rounded-md">
+          <CardContent className="p-6">
+            <h3 className="text-lg font-medium text-ml-dark mb-4">Favicon</h3>
+            <div className="grid grid-cols-1 md:grid-cols-[80px_1fr] gap-6">
+              <div className="border-2 border-dashed border-gray-300 rounded-md p-3 flex items-center justify-center bg-gray-50 h-20 w-20">
+                <img src={faviconUrl || '/favicon.svg'} alt="Preview do favicon" className="w-10 h-10 object-contain" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">URL do favicon (PNG/SVG/ICO)</label>
+                <input
+                  type="url"
+                  value={faviconUrl}
+                  onChange={(event) => setFaviconUrl(event.target.value)}
+                  placeholder="https://..."
+                  className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue"
+                />
+                <p className="text-xs text-gray-400 mt-1">Use uma imagem publica quadrada, idealmente 32x32 ou 64x64.</p>
               </div>
             </div>
           </CardContent>

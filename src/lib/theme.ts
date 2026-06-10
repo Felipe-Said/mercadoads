@@ -4,6 +4,7 @@ const DEFAULT_SECONDARY = '#3483fa'
 type PlatformTheme = {
   primaryColor?: string | null
   secondaryColor?: string | null
+  faviconUrl?: string | null
 }
 
 function normalizeHex(value: string | null | undefined, fallback: string) {
@@ -39,4 +40,18 @@ export function applyPlatformTheme(theme: PlatformTheme) {
   root.style.setProperty('--color-ml-yellow', primary)
   root.style.setProperty('--color-ml-blue', secondary)
   root.style.setProperty('--color-ml-hover', secondaryHover)
+
+  if (theme.faviconUrl !== undefined) {
+    const faviconUrl = theme.faviconUrl?.trim() || '/favicon.svg'
+    let favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]')
+
+    if (!favicon) {
+      favicon = document.createElement('link')
+      favicon.rel = 'icon'
+      document.head.appendChild(favicon)
+    }
+
+    favicon.href = faviconUrl
+    favicon.type = faviconUrl.endsWith('.svg') ? 'image/svg+xml' : 'image/png'
+  }
 }
