@@ -79,6 +79,7 @@ export function Usuarios() {
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null)
   const [editForm, setEditForm] = useState<EditForm | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+  const [modalMessage, setModalMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -146,6 +147,7 @@ export function Usuarios() {
 
   const openEditor = (nextUser: AdminUser) => {
     setMessage(null)
+    setModalMessage(null)
     setSelectedUser(nextUser)
     setEditForm({
       role: nextUser.role,
@@ -158,6 +160,49 @@ export function Usuarios() {
   const closeEditor = () => {
     setSelectedUser(null)
     setEditForm(null)
+    setModalMessage(null)
+  }
+
+  const saveUserWithFallback = async (
+    selectedUserId: string,
+    nextRole: Role,
+    nextStatus: UserStatus,
+    storeName: string,
+    sellerCategory: string,
+  ) => {
+    const rpcResult = await supabase.rpc('admin_update_user_controls', {
+      target_user_id: selectedUserId,
+      next_role: nextRole,
+      next_status: nextStatus,
+      next_store_name: storeName,
+      next_seller_category: sellerCategory,
+    })
+
+    if (!rpcResult.error) return null
+
+    const rpcErrorMessage = rpcResult.error.message.toLowerCase()
+    const canFallback = rpcErrorMessage.includes('function') || rpcErrorMessage.includes('schema cache')
+
+    if (!canFallback) return rpcResult.error
+
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({
+        role: nextRole,
+        status: nextStatus,
+        store_name: storeName.trim() || null,
+        seller_category: sellerCategory.trim() || null,
+      })
+      .eq('id', selectedUserId)
+
+    if (profileError) return profileError
+
+    const { error: productsError } = await supabase
+      .from('products')
+      .update({ hidden_by_admin: nextRole !== 'seller' || nextStatus === 'blocked' })
+      .eq('seller_id', selectedUserId)
+
+    return productsError ?? null
   }
 
   const saveUser = async () => {
@@ -165,21 +210,22 @@ export function Usuarios() {
 
     setSaving(true)
     setMessage(null)
+    setModalMessage(null)
 
     const isSelf = selectedUser.id === currentUser?.id
     const nextRole = isSelf ? selectedUser.role : editForm.role
     const nextStatus = isSelf ? selectedUser.status : editForm.status
 
-    const { error } = await supabase.rpc('admin_update_user_controls', {
-      target_user_id: selectedUser.id,
-      next_role: nextRole,
-      next_status: nextStatus,
-      next_store_name: editForm.storeName,
-      next_seller_category: editForm.sellerCategory,
-    })
+    const error = await saveUserWithFallback(
+      selectedUser.id,
+      nextRole,
+      nextStatus,
+      editForm.storeName,
+      editForm.sellerCategory,
+    )
 
     if (error) {
-      setMessage(error.message)
+      setModalMessage(error.message)
       setSaving(false)
       return
     }
@@ -343,6 +389,8 @@ export function Usuarios() {
                 {editForm.role !== 'seller' && selectedUser.product_count > 0 && <p>Ao salvar como usuario comum, os produtos saem da loja e voltam se ele for aprovado como vendedor novamente.</p>}
                 {editForm.status === 'blocked' && <p>Conta congelada perde acesso ao painel e seus produtos ficam ocultos.</p>}
               </div>
+
+              {modalMessage && <p className="text-sm text-red-600">{modalMessage}</p>}
             </div>
           )}
 
