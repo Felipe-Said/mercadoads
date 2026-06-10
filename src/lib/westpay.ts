@@ -24,6 +24,11 @@ function extractGatewayMessage(value: unknown) {
   if (typeof value !== 'object') return null
 
   const data = value as Record<string, unknown>
+  if (data.data && typeof data.data === 'object') {
+    const nested = extractGatewayMessage(data.data)
+    if (nested) return nested
+  }
+
   const detailList = Array.isArray(data.details) ? data.details : Array.isArray(data.errors) ? data.errors : null
   if (detailList && detailList.length > 0) {
     const messages = detailList

@@ -29,6 +29,17 @@ function normalizeDigits(value: string) {
   return value.replace(/\D/g, '')
 }
 
+function toCents(value: number) {
+  return Math.round(value * 100)
+}
+
+function normalizeItemsForWestPay(items: Array<Record<string, unknown>>) {
+  return items.map((item) => ({
+    ...item,
+    unitPrice: toCents(Number(item.unitPrice ?? item.price ?? 0)),
+  }))
+}
+
 function normalizeCustomer(customer: Record<string, unknown>) {
   const document = (customer.document as Record<string, unknown> | undefined) ?? {}
   const documentNumber = normalizeDigits(String(document.number ?? customer.documentNumber ?? customer.document_number ?? ''))
@@ -353,6 +364,8 @@ Deno.serve(async (req) => {
     const customer = (body.customer as Record<string, unknown> | undefined) ?? {}
     const items = (body.items as Array<Record<string, unknown>> | undefined) ?? []
     const normalizedCustomer = normalizeCustomer(customer)
+    const westPayAmount = toCents(amount)
+    const westPayItems = normalizeItemsForWestPay(items)
 
     if (!saleId || !amount || items.length === 0) {
       return json({ success: false, configured: true, error: 'Invalid Pix IN data.' }, 400)
@@ -363,11 +376,11 @@ Deno.serve(async (req) => {
     }
 
     const westpayResult = await callWestPay(settings, '/api/v1/transactions', 'POST', {
-      amount,
+      amount: westPayAmount,
       paymentMethod: 'pix',
       description: items.map((item) => firstString(item.title, item.name)).filter(Boolean).join(', ') || `Pedido ${saleId}`,
       customer: normalizedCustomer,
-      items,
+      items: westPayItems,
       externalRef: `sale-${saleId}`,
       postbackUrl: settings.westpay_webhook_secret
         ? `${getFunctionBaseUrl(supabaseUrl)}/westpay?action=webhook&token=${encodeURIComponent(settings.westpay_webhook_secret)}`
@@ -407,7 +420,7 @@ Deno.serve(async (req) => {
     }
 
     const westpayResult = await callWestPay(settings, '/api/v1/transactions/pix-out', 'POST', {
-      amount,
+      amount: toCents(amount),
       pixKey,
       pixKeyType: inferPixKeyType(pixKey),
       destinationName,
