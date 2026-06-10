@@ -28,6 +28,7 @@ export function Cart() {
 
     setCheckoutLoading(true)
     setCheckoutError(null)
+    const createdSaleIds: string[] = []
 
     try {
       const productIds = cart.map((item) => item.id)
@@ -59,23 +60,32 @@ export function Cart() {
 
         if (saleError) throw saleError
 
-        if (saleData?.id) {
-          await createWestPayPixIn({
-            saleId: String(saleData.id),
-            amount,
-            customer: {
-              name: profile?.full_name ?? user.user_metadata?.full_name ?? user.email ?? 'Cliente',
-              email: user.email ?? '',
-              phone: profile?.phone ?? null,
-            },
-            itemTitle: product.title,
-          })
+        const saleId = saleData?.id ? String(saleData.id) : null
+        if (!saleId) throw new Error('Nao foi possivel gerar o pedido.')
+        createdSaleIds.push(saleId)
+
+        const westPayResult = await createWestPayPixIn({
+          saleId,
+          amount,
+          customer: {
+            name: profile?.full_name ?? user.user_metadata?.full_name ?? user.email ?? 'Cliente',
+            email: user.email ?? '',
+            phone: profile?.phone ?? null,
+          },
+          itemTitle: product.title,
+        })
+
+        if (!westPayResult) {
+          throw new Error('Nao foi possivel gerar o Pix. Tente novamente em instantes.')
         }
       }
 
       await clearCart()
-      navigate('/painel/usuario/compras')
+      navigate('/painel/usuario/compras', { state: { checkoutSaleIds: createdSaleIds } })
     } catch (err) {
+      if (createdSaleIds.length > 0) {
+        await supabase.from('sales').delete().in('id', createdSaleIds)
+      }
       setCheckoutError(err instanceof Error ? err.message : 'Nao foi possivel concluir a compra.')
     } finally {
       setCheckoutLoading(false)

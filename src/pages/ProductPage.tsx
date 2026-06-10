@@ -95,17 +95,27 @@ export function ProductPage() {
       return
     }
 
-    if (saleData?.id) {
-      await createWestPayPixIn({
-        saleId: String(saleData.id),
-        amount: product.price,
-        customer: {
-          name: profile?.full_name ?? user.user_metadata?.full_name ?? user.email ?? 'Cliente',
-          email: user.email ?? '',
-          phone: profile?.phone ?? null,
-        },
-        itemTitle: product.title,
-      })
+    const saleId = saleData?.id ? String(saleData.id) : null
+    if (!saleId) {
+      setError('Nao foi possivel gerar o pedido.')
+      return
+    }
+
+    const westPayResult = await createWestPayPixIn({
+      saleId,
+      amount: product.price,
+      customer: {
+        name: profile?.full_name ?? user.user_metadata?.full_name ?? user.email ?? 'Cliente',
+        email: user.email ?? '',
+        phone: profile?.phone ?? null,
+      },
+      itemTitle: product.title,
+    })
+
+    if (!westPayResult) {
+      await supabase.from('sales').delete().eq('id', saleId)
+      setError('Nao foi possivel gerar o Pix. Tente novamente em instantes.')
+      return
     }
 
     navigate('/painel/usuario/compras')

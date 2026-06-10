@@ -87,23 +87,30 @@ export function RegistrationModal({ open, onOpenChange, product }: RegistrationM
       }
 
       const saleId = await createPendingPurchase(userId)
-      if (saleId) {
-        const { data: profileData } = await supabase
-          .from("profiles")
-          .select("full_name, phone")
-          .eq("id", userId)
-          .maybeSingle()
+      if (!saleId) {
+        throw new Error("Nao foi possivel gerar o pedido.")
+      }
 
-        await createWestPayPixIn({
-          saleId,
-          amount: product?.price ?? 0,
-          customer: {
-            name: (profileData?.full_name as string | null) ?? fullName ?? email,
-            email,
-            phone: (profileData?.phone as string | null) ?? (phone.trim() || null),
-          },
-          itemTitle: product?.title ?? "Produto",
-        })
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("full_name, phone")
+        .eq("id", userId)
+        .maybeSingle()
+
+      const westPayResult = await createWestPayPixIn({
+        saleId,
+        amount: product?.price ?? 0,
+        customer: {
+          name: (profileData?.full_name as string | null) ?? fullName ?? email,
+          email,
+          phone: (profileData?.phone as string | null) ?? (phone.trim() || null),
+        },
+        itemTitle: product?.title ?? "Produto",
+      })
+
+      if (!westPayResult) {
+        await supabase.from("sales").delete().eq("id", saleId)
+        throw new Error("Nao foi possivel gerar o Pix. Tente novamente em instantes.")
       }
 
       onOpenChange(false)

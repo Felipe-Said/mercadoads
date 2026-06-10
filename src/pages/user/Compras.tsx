@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { UserLayout } from '../../components/layouts/UserLayout'
-import { CheckCircle2, Copy, Package } from 'lucide-react'
+import { CheckCircle2, Clock, Copy, Package } from 'lucide-react'
 import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { formatCurrency, formatDate, getSales, type Sale } from '../../lib/data'
@@ -8,12 +9,29 @@ import { useAuth } from '../../contexts/AuthContext'
 
 export function Compras() {
   const { user } = useAuth()
+  const location = useLocation()
   const [sales, setSales] = useState<Sale[]>([])
   const [copiedSaleId, setCopiedSaleId] = useState<string | null>(null)
 
+  const checkoutSaleIds = useMemo(() => {
+    const state = location.state as { checkoutSaleIds?: string[] } | null
+    return state?.checkoutSaleIds ?? []
+  }, [location.state])
+
+  const loadSales = async () => {
+    if (!user) return
+    const nextSales = await getSales({ buyerId: user.id })
+    setSales(nextSales)
+  }
+
   useEffect(() => {
     if (!user) return
-    getSales({ buyerId: user.id }).then(setSales).catch(console.error)
+    loadSales().catch(console.error)
+    const timeout = window.setInterval(() => {
+      loadSales().catch(console.error)
+    }, 5000)
+
+    return () => window.clearInterval(timeout)
   }, [user])
 
   const handleCopy = async (sale: Sale) => {
@@ -28,6 +46,12 @@ export function Compras() {
     <UserLayout>
       <div className="space-y-6">
         <h2 className="text-xl font-light text-ml-dark mb-4">Minhas Compras</h2>
+
+        {checkoutSaleIds.length > 0 && (
+          <div className="rounded-md border border-blue-100 bg-blue-50 p-4 text-sm text-blue-700">
+            Seu pedido foi gerado. Se o Pix ainda nao apareceu, a plataforma esta atualizando os dados agora.
+          </div>
+        )}
 
         <div className="space-y-4">
           {sales.map((sale) => (
@@ -44,6 +68,14 @@ export function Compras() {
                   <div className="space-y-2">
                     <p className="text-ml-dark font-medium group-hover:text-ml-blue transition-colors">{sale.products?.title ?? 'Produto removido'}</p>
                     <p className="text-sm text-gray-500 mt-1">{formatCurrency(sale.amount)}</p>
+                    {sale.status === 'pending' && !(sale.payment_qrcode_text || sale.payment_qrcode) && (
+                      <div className="rounded-md border border-yellow-100 bg-yellow-50 p-3 max-w-2xl">
+                        <p className="text-sm font-semibold text-yellow-700">Gerando pagamento...</p>
+                        <p className="text-xs text-gray-600 mt-1">
+                          Estamos preparando o Pix deste pedido. A pagina atualiza sozinha.
+                        </p>
+                      </div>
+                    )}
                     {sale.status === 'pending' && (sale.payment_qrcode_text || sale.payment_qrcode) && (
                       <div className="rounded-md border border-yellow-100 bg-yellow-50 p-3 space-y-2 max-w-2xl">
                         <div className="flex items-center justify-between gap-3">
@@ -63,6 +95,15 @@ export function Compras() {
                             Expira em {new Date(sale.payment_qrcode_expires_at).toLocaleString('pt-BR')}
                           </p>
                         )}
+                      </div>
+                    )}
+                    {sale.status === 'paid' && sale.claim_until && (
+                      <div className="rounded-md border border-green-100 bg-green-50 p-3 max-w-2xl">
+                        <p className="text-sm font-semibold text-green-700">Pedido confirmado</p>
+                        <p className="text-xs text-gray-600 mt-1 flex items-center gap-2">
+                          <Clock className="w-3 h-3" />
+                          Cliente pode reclamar ate {new Date(sale.claim_until).toLocaleString('pt-BR')}.
+                        </p>
                       </div>
                     )}
                   </div>

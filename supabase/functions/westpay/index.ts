@@ -186,6 +186,11 @@ async function updateSaleFromWebhook(supabaseAdmin: ReturnType<typeof createClie
 
   if (mappedStatus) {
     updates.status = mappedStatus
+    if (mappedStatus === 'paid') {
+      const paidAt = new Date().toISOString()
+      updates.paid_at = paidAt
+      updates.claim_until = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+    }
   }
 
   const { error } = await supabaseAdmin.from('sales').update(updates).eq('id', saleId)

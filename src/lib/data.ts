@@ -62,6 +62,8 @@ export interface Sale {
   amount: number
   status: 'pending' | 'paid' | 'cancelled'
   created_at: string
+  paid_at?: string | null
+  claim_until?: string | null
   payment_gateway?: string | null
   payment_external_ref?: string | null
   payment_transaction_id?: string | null
