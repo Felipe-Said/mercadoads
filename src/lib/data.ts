@@ -9,6 +9,9 @@ export interface Profile {
   email?: string | null
   phone?: string | null
   pix_key?: string | null
+  status?: 'active' | 'blocked'
+  store_name?: string | null
+  seller_category?: string | null
   created_at: string
 }
 
@@ -26,6 +29,7 @@ export interface Product {
   stock: number | null
   sales_count: number
   status: 'draft' | 'active' | 'paused' | 'rejected'
+  hidden_by_admin?: boolean
   seller?: Profile | null
 }
 
@@ -88,6 +92,7 @@ function mapProduct(row: Record<string, unknown>): Product {
     stock: row.stock == null ? null : toNumber(row.stock),
     sales_count: toNumber(row.sales_count),
     status: (row.status as Product['status']) ?? 'active',
+    hidden_by_admin: Boolean(row.hidden_by_admin ?? false),
     seller: (row.profiles as Profile | null) ?? null,
   }
 }
@@ -99,6 +104,7 @@ export async function getProducts(options: { offersOnly?: boolean; category?: st
     .order('created_at', { ascending: false })
 
   if (!options.includeInactive) query = query.eq('status', 'active')
+  if (!options.includeInactive) query = query.eq('hidden_by_admin', false)
   if (options.offersOnly) query = query.not('original_price', 'is', null)
   if (options.category && options.category !== 'all') query = query.ilike('category', `%${options.category}%`)
   if (options.sellerId) query = query.eq('seller_id', options.sellerId)
@@ -114,6 +120,7 @@ export async function getProduct(id: string) {
     .select('*, profiles:seller_id(id, role, full_name, pix_key, created_at)')
     .eq('id', id)
     .eq('status', 'active')
+    .eq('hidden_by_admin', false)
     .maybeSingle()
 
   if (error) throw error

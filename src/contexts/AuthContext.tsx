@@ -32,6 +32,15 @@ async function loadProfile(userId: string) {
   return data as Profile | null
 }
 
+async function enforceActiveProfile(nextProfile: Profile | null) {
+  if (nextProfile?.status === 'blocked') {
+    await supabase.auth.signOut()
+    throw new Error('Conta congelada. Entre em contato com o suporte.')
+  }
+
+  return nextProfile
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -44,7 +53,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!mounted) return
       const sessionUser = data.session?.user ?? null
       setUser(sessionUser)
-      setProfile(sessionUser ? await loadProfile(sessionUser.id) : null)
+      try {
+        setProfile(sessionUser ? await enforceActiveProfile(await loadProfile(sessionUser.id)) : null)
+      } catch (error) {
+        console.error(error)
+        setUser(null)
+        setProfile(null)
+      }
       setLoading(false)
     })
 
@@ -58,7 +73,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       loadProfile(sessionUser.id)
+        .then(enforceActiveProfile)
         .then(setProfile)
+        .catch((error) => {
+          console.error(error)
+          setUser(null)
+          setProfile(null)
+        })
         .finally(() => setLoading(false))
     })
 
@@ -76,7 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signIn: async (email, password) => {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
-      const nextProfile = data.user ? await loadProfile(data.user.id) : null
+      const nextProfile = data.user ? await enforceActiveProfile(await loadProfile(data.user.id)) : null
       setUser(data.user)
       setProfile(nextProfile)
       return nextProfile
