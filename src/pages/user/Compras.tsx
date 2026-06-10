@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { UserLayout } from '../../components/layouts/UserLayout'
-import { CheckCircle2, Clock, Copy, Package } from 'lucide-react'
+import { CheckCircle2, Clock, Copy, Package, X } from 'lucide-react'
 import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
+import { supabase } from '../../lib/supabase'
 import { formatCurrency, formatDate, getSales, type Sale } from '../../lib/data'
 import { useAuth } from '../../contexts/AuthContext'
 
@@ -12,6 +13,7 @@ export function Compras() {
   const location = useLocation()
   const [sales, setSales] = useState<Sale[]>([])
   const [copiedSaleId, setCopiedSaleId] = useState<string | null>(null)
+  const [cancelingSaleId, setCancelingSaleId] = useState<string | null>(null)
 
   const checkoutSaleIds = useMemo(() => {
     const state = location.state as { checkoutSaleIds?: string[] } | null
@@ -42,6 +44,36 @@ export function Compras() {
     setTimeout(() => setCopiedSaleId(null), 2000)
   }
 
+  const handleCancel = async (sale: Sale) => {
+    if (!user || sale.status !== 'pending') return
+    if (!window.confirm('Cancelar este pedido?')) return
+
+    setCancelingSaleId(sale.id)
+    const { error } = await supabase
+      .from('sales')
+      .update({
+        status: 'cancelled',
+        payment_gateway: null,
+        payment_external_ref: null,
+        payment_transaction_id: null,
+        payment_qrcode: null,
+        payment_qrcode_text: null,
+        payment_qrcode_expires_at: null,
+        gateway_payload: null,
+        paid_at: null,
+        claim_until: null,
+      })
+      .eq('id', sale.id)
+      .eq('buyer_id', user.id)
+
+    if (error) {
+      console.error(error)
+    }
+
+    await loadSales()
+    setCancelingSaleId(null)
+  }
+
   return (
     <UserLayout>
       <div className="space-y-6">
@@ -54,7 +86,7 @@ export function Compras() {
         )}
 
         <div className="space-y-4">
-          {sales.map((sale) => (
+          {sales.filter((sale) => sale.status !== 'cancelled').map((sale) => (
             <Card key={sale.id} className="bg-white border-none shadow-sm rounded-md overflow-hidden hover:shadow-md transition-shadow group">
               <div className="border-b border-gray-100 px-6 py-3 flex justify-between items-center bg-gray-50/50">
                 <span className="text-sm font-semibold text-green-500">{sale.status}</span>
@@ -105,6 +137,18 @@ export function Compras() {
                           Cliente pode reclamar ate {new Date(sale.claim_until).toLocaleString('pt-BR')}.
                         </p>
                       </div>
+                    )}
+                    {sale.status === 'pending' && (
+                      <Button
+                        type="button"
+                        onClick={() => handleCancel(sale)}
+                        disabled={cancelingSaleId === sale.id}
+                        variant="outline"
+                        className="h-9 px-3 rounded-sm border-gray-300 text-gray-600 hover:bg-gray-50 text-xs font-semibold flex items-center gap-2 mt-2"
+                      >
+                        <X className="w-4 h-4" />
+                        {cancelingSaleId === sale.id ? 'Cancelando...' : 'Cancelar pedido'}
+                      </Button>
                     )}
                   </div>
                 </div>
