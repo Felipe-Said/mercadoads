@@ -100,7 +100,7 @@ function mapProduct(row: Record<string, unknown>): Product {
 export async function getProducts(options: { offersOnly?: boolean; category?: string; sellerId?: string; includeInactive?: boolean } = {}) {
   let query = supabase
     .from('products')
-    .select('*, profiles:seller_id(id, role, full_name, pix_key, created_at)')
+    .select('*, profiles:seller_id(id, role, full_name, store_name, seller_category, pix_key, created_at)')
     .order('created_at', { ascending: false })
 
   if (!options.includeInactive) query = query.eq('status', 'active')
@@ -117,7 +117,7 @@ export async function getProducts(options: { offersOnly?: boolean; category?: st
 export async function getProduct(id: string) {
   const { data, error } = await supabase
     .from('products')
-    .select('*, profiles:seller_id(id, role, full_name, pix_key, created_at)')
+    .select('*, profiles:seller_id(id, role, full_name, store_name, seller_category, pix_key, created_at)')
     .eq('id', id)
     .eq('status', 'active')
     .eq('hidden_by_admin', false)

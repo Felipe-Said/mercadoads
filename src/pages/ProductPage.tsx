@@ -144,6 +144,9 @@ export function ProductPage() {
     )
   }
 
+  const sellerStoreName = product.seller?.store_name || product.seller?.full_name || 'Vendedor verificado'
+  const sellerSubtitle = product.seller?.seller_category || product.seller?.full_name || 'Loja verificada'
+
   return (
     <div className="bg-[#ededed] min-h-screen pb-16">
       <div className="max-w-7xl mx-auto px-4 pt-4 pb-2">
@@ -257,8 +260,8 @@ export function ProductPage() {
               <div className="flex items-start gap-3 mb-5">
                 <Shield className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-ml-dark">{product.seller?.full_name ?? 'Vendedor verificado'}</p>
-                  <p className="text-[13px] text-gray-500">Mercado Ads</p>
+                  <p className="text-sm font-medium text-ml-dark">{sellerStoreName}</p>
+                  <p className="text-[13px] text-gray-500">{sellerSubtitle}</p>
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-2 text-center text-[13px] text-gray-500 divide-x divide-gray-200">
