@@ -4,6 +4,14 @@ import { UserLayout } from '../../components/layouts/UserLayout'
 import { CheckCircle2, Clock, Copy, Package, X } from 'lucide-react'
 import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../../components/ui/dialog'
 import { supabase } from '../../lib/supabase'
 import { formatCurrency, formatDate, getSales, type Sale } from '../../lib/data'
 import { useAuth } from '../../contexts/AuthContext'
@@ -16,6 +24,8 @@ export function Compras() {
   const [copiedSaleId, setCopiedSaleId] = useState<string | null>(null)
   const [cancelingSaleId, setCancelingSaleId] = useState<string | null>(null)
   const [purchaseError, setPurchaseError] = useState<string | null>(null)
+  const [saleToCancel, setSaleToCancel] = useState<Sale | null>(null)
+  const [cleanupPromptOpen, setCleanupPromptOpen] = useState(false)
 
   const checkoutSaleIds = useMemo(() => {
     const state = location.state as { checkoutSaleIds?: string[] } | null
@@ -48,7 +58,6 @@ export function Compras() {
 
   const handleCancel = async (sale: Sale) => {
     if (!user || sale.status !== 'pending') return
-    if (!window.confirm('Cancelar este pedido?')) return
 
     setCancelingSaleId(sale.id)
     setPurchaseError(null)
@@ -76,7 +85,6 @@ export function Compras() {
       .map((sale) => sale.id)
 
     if (unpaidIds.length === 0) return
-    if (!window.confirm(`Cancelar ${unpaidIds.length} pedido(s) sem Pix?`)) return
 
     setPurchaseError(null)
     const { error } = await supabase
@@ -93,6 +101,13 @@ export function Compras() {
 
     setSales((current) => current.filter((sale) => !unpaidIds.includes(sale.id)))
     await loadSales()
+    setCleanupPromptOpen(false)
+  }
+
+  const handleOpenCleanupPrompt = () => {
+    const unpaidExists = sales.some((sale) => sale.status === 'pending' && !sale.payment_qrcode_text && !sale.payment_qrcode)
+    if (!unpaidExists) return
+    setCleanupPromptOpen(true)
   }
 
   return (
@@ -116,7 +131,7 @@ export function Compras() {
           <div className="flex justify-end">
             <Button
               type="button"
-              onClick={handleClearUnpaid}
+              onClick={handleOpenCleanupPrompt}
               variant="outline"
               className="rounded-sm border-gray-300 text-gray-600 hover:bg-gray-50"
             >
@@ -200,7 +215,7 @@ export function Compras() {
                     {sale.status === 'pending' && (
                       <Button
                         type="button"
-                        onClick={() => handleCancel(sale)}
+                        onClick={() => setSaleToCancel(sale)}
                         disabled={cancelingSaleId === sale.id}
                         variant="outline"
                         className="h-9 px-3 rounded-sm border-gray-300 text-gray-600 hover:bg-gray-50 text-xs font-semibold flex items-center gap-2 mt-2"
@@ -217,6 +232,67 @@ export function Compras() {
           {sales.length === 0 && <p className="bg-white rounded-md p-8 text-center text-gray-500 shadow-sm">Nenhuma compra encontrada.</p>}
         </div>
       </div>
+
+      <Dialog open={Boolean(saleToCancel)} onOpenChange={(open) => !open && setSaleToCancel(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold text-ml-dark">Cancelar pedido</DialogTitle>
+            <DialogDescription>
+              Este pedido vai ser removido da sua lista e o Pix pendente será descartado.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setSaleToCancel(null)}
+              className="rounded-sm border-gray-300 text-gray-700"
+            >
+              Voltar
+            </Button>
+            <Button
+              type="button"
+              onClick={async () => {
+                if (!saleToCancel) return
+                const currentSale = saleToCancel
+                setSaleToCancel(null)
+                await handleCancel(currentSale)
+              }}
+              className="rounded-sm bg-red-600 text-white hover:bg-red-700"
+            >
+              Cancelar pedido
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={cleanupPromptOpen} onOpenChange={setCleanupPromptOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold text-ml-dark">Limpar pedidos sem Pix</DialogTitle>
+            <DialogDescription>
+              Remover pedidos pendentes sem código Pix gerado ainda.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCleanupPromptOpen(false)}
+              className="rounded-sm border-gray-300 text-gray-700"
+            >
+              Voltar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleClearUnpaid}
+              className="rounded-sm bg-ml-blue text-white hover:bg-ml-hover"
+            >
+              Confirmar limpeza
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </UserLayout>
   )
 }
