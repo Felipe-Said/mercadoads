@@ -7,9 +7,9 @@ import { HomeFeatures } from '../components/HomeFeatures'
 export function Home() {
   return (
     <>
+      <Stories />
       <Banners />
       <HomeFeatures />
-      <Stories />
       <ProductGrid />
     </>
   )
