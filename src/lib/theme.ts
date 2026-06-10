@@ -5,6 +5,8 @@ type PlatformTheme = {
   primaryColor?: string | null
   secondaryColor?: string | null
   faviconUrl?: string | null
+  browserTitle?: string | null
+  browserTitleInactive?: string | null
 }
 
 function normalizeHex(value: string | null | undefined, fallback: string) {
@@ -24,6 +26,30 @@ function darken(hex: string, amount: number) {
     return next.toString(16).padStart(2, '0')
   })
   return `#${channels.join('')}`
+}
+
+function getFallbackTitle(title: string | null | undefined) {
+  return title?.trim() || 'Mercado Ads'
+}
+
+export function setBrowserTitle(activeTitle?: string | null, inactiveTitle?: string | null) {
+  const isHidden = document.visibilityState === 'hidden'
+  document.title = isHidden ? getFallbackTitle(inactiveTitle ?? activeTitle) : getFallbackTitle(activeTitle)
+}
+
+export function bindBrowserTitle(activeTitle?: string | null, inactiveTitle?: string | null) {
+  const updateTitle = () => setBrowserTitle(activeTitle, inactiveTitle)
+
+  updateTitle()
+  document.addEventListener('visibilitychange', updateTitle)
+  window.addEventListener('focus', updateTitle)
+  window.addEventListener('blur', updateTitle)
+
+  return () => {
+    document.removeEventListener('visibilitychange', updateTitle)
+    window.removeEventListener('focus', updateTitle)
+    window.removeEventListener('blur', updateTitle)
+  }
 }
 
 export function applyPlatformTheme(theme: PlatformTheme) {
@@ -53,5 +79,9 @@ export function applyPlatformTheme(theme: PlatformTheme) {
 
     favicon.href = faviconUrl
     favicon.type = faviconUrl.endsWith('.svg') ? 'image/svg+xml' : 'image/png'
+  }
+
+  if (theme.browserTitle !== undefined) {
+    setBrowserTitle(theme.browserTitle, theme.browserTitleInactive)
   }
 }

@@ -31,6 +31,8 @@ const emptyBannerForm: BannerForm = {
 export function Personalizacao() {
   const [primaryColor, setPrimaryColor] = useState('#fff159')
   const [secondaryColor, setSecondaryColor] = useState('#3483fa')
+  const [browserTitle, setBrowserTitle] = useState('Mercado Ads')
+  const [browserTitleInactive, setBrowserTitleInactive] = useState('Mercado Ads')
   const [logoUrl, setLogoUrl] = useState('')
   const [faviconUrl, setFaviconUrl] = useState('')
   const [desktopLogoSize, setDesktopLogoSize] = useState(130)
@@ -53,6 +55,8 @@ export function Personalizacao() {
         const settings = settingsResult.data
         setPrimaryColor(settings?.primary_color ?? '#fff159')
         setSecondaryColor(settings?.secondary_color ?? '#3483fa')
+        setBrowserTitle(settings?.browser_title ?? 'Mercado Ads')
+        setBrowserTitleInactive(settings?.browser_title_inactive ?? settings?.browser_title ?? 'Mercado Ads')
         setLogoUrl(settings?.logo_url ?? '')
         setFaviconUrl(settings?.favicon_url ?? '')
         setDesktopLogoSize(Number(settings?.logo_desktop_size ?? 130))
@@ -74,6 +78,8 @@ export function Personalizacao() {
       id: 1,
       primary_color: primaryColor,
       secondary_color: secondaryColor,
+      browser_title: browserTitle || null,
+      browser_title_inactive: browserTitleInactive || null,
       logo_url: logoUrl || null,
       favicon_url: faviconUrl || null,
       logo_desktop_size: desktopLogoSize,
@@ -90,7 +96,8 @@ export function Personalizacao() {
       return
     }
 
-    applyPlatformTheme({ primaryColor, secondaryColor, faviconUrl })
+    applyPlatformTheme({ primaryColor, secondaryColor, faviconUrl, browserTitle, browserTitleInactive })
+    window.dispatchEvent(new Event('platform-settings-updated'))
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
@@ -182,6 +189,37 @@ export function Personalizacao() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Logo mobile ({mobileLogoSize}px)</label>
                   <input type="range" min="30" max="200" value={mobileLogoSize} onChange={(event) => setMobileLogoSize(Number(event.target.value))} className="w-full accent-ml-blue" />
                 </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-none shadow-sm rounded-md">
+          <CardContent className="p-6">
+            <h3 className="text-lg font-medium text-ml-dark mb-4">Titulo da aba do navegador</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Quando a pagina estiver aberta</label>
+                <input
+                  type="text"
+                  value={browserTitle}
+                  onChange={(event) => setBrowserTitle(event.target.value)}
+                  placeholder="Mercado Ads"
+                  className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Quando a pagina ficar em segundo plano</label>
+                <input
+                  type="text"
+                  value={browserTitleInactive}
+                  onChange={(event) => setBrowserTitleInactive(event.target.value)}
+                  placeholder="Volte para Mercado Ads"
+                  className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue"
+                />
+              </div>
+              <div className="md:col-span-2 text-xs text-gray-400">
+                O primeiro texto aparece quando o usuario esta na aba. O segundo aparece quando ele troca de pagina ou minimiza o navegador.
               </div>
             </div>
           </CardContent>
