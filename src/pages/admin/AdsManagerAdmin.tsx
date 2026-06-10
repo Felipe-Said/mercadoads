@@ -114,6 +114,21 @@ export function AdsManagerAdmin() {
     const payload = { ...editingGroup }
     delete payload.id
 
+    // Auto-fetch WhatsApp group image
+    if (payload.link && payload.link.includes('chat.whatsapp.com')) {
+      try {
+        const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(payload.link)}`)
+        const data = await response.json()
+        const html = data.contents
+        const match = html.match(/<meta\s+property="og:image"\s+content="([^"]+)"/i)
+        if (match && match[1]) {
+          payload.image_url = match[1]
+        }
+      } catch (error) {
+        console.error('Failed to fetch WhatsApp group image:', error)
+      }
+    }
+
     if (editingGroup.id) {
       await supabase.from('network_groups').update(payload).eq('id', editingGroup.id)
     } else {
@@ -291,11 +306,12 @@ export function AdsManagerAdmin() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <InputField label="Nome do Grupo" value={editingGroup.name || ''} onChange={v => setEditingGroup({...editingGroup, name: v})} />
                     <InputField label="Categoria" value={editingGroup.category || ''} onChange={v => setEditingGroup({...editingGroup, category: v})} />
-                    <InputField label="Link de Convite" value={editingGroup.link || ''} onChange={v => setEditingGroup({...editingGroup, link: v})} />
-                    <InputField label="URL da Imagem (Ícone)" value={editingGroup.image_url || ''} onChange={v => setEditingGroup({...editingGroup, image_url: v})} />
-                    <InputField label="Membros (Número)" type="number" value={editingGroup.members?.toString() || '0'} onChange={v => setEditingGroup({...editingGroup, members: Number(v)})} />
-                    <div className="flex flex-col justify-center pt-6">
-                      <label className="flex items-center gap-2 cursor-pointer">
+                    <div className="col-span-1 md:col-span-2">
+                      <InputField label="Link de Convite (WhatsApp)" value={editingGroup.link || ''} onChange={v => setEditingGroup({...editingGroup, link: v})} />
+                      <p className="text-xs text-gray-400 mt-1">A imagem do grupo será puxada automaticamente do link.</p>
+                    </div>
+                    <div className="flex flex-col justify-center pt-2 md:col-span-2">
+                      <label className="flex items-center gap-2 cursor-pointer w-max">
                         <input type="checkbox" checked={editingGroup.sponsored || false} onChange={e => setEditingGroup({...editingGroup, sponsored: e.target.checked})} className="rounded text-ml-blue focus:ring-ml-blue w-4 h-4" />
                         <span className="text-sm font-medium text-gray-700">Destacar como Patrocinado</span>
                       </label>
@@ -310,7 +326,7 @@ export function AdsManagerAdmin() {
             ) : (
               <>
                 <div className="flex justify-end">
-                  <Button onClick={() => setEditingGroup({ is_active: true, sponsored: false, members: 0 })} className="bg-ml-blue text-white hover:bg-ml-hover gap-2">
+                  <Button onClick={() => setEditingGroup({ is_active: true, sponsored: false })} className="bg-ml-blue text-white hover:bg-ml-hover gap-2">
                     <Plus className="w-4 h-4" /> Novo Grupo
                   </Button>
                 </div>
