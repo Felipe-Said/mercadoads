@@ -29,6 +29,22 @@ function normalizeDigits(value: string) {
   return value.replace(/\D/g, '')
 }
 
+function normalizeCustomer(customer: Record<string, unknown>) {
+  const document = (customer.document as Record<string, unknown> | undefined) ?? {}
+  const documentNumber = normalizeDigits(String(document.number ?? customer.documentNumber ?? customer.document_number ?? ''))
+  const documentType = firstString(document.type, customer.documentType, customer.document_type)?.toLowerCase()
+
+  return {
+    name: firstString(customer.name) ?? 'Cliente',
+    email: firstString(customer.email) ?? '',
+    phone: normalizeDigits(String(customer.phone ?? '')),
+    document: {
+      number: documentNumber,
+      type: documentType,
+    },
+  }
+}
+
 function firstString(...values: unknown[]) {
   const found = values.find((value) => {
     if (typeof value === 'string') return value.trim().length > 0
@@ -336,22 +352,27 @@ Deno.serve(async (req) => {
     const amount = Number(body.amount ?? 0)
     const customer = (body.customer as Record<string, unknown> | undefined) ?? {}
     const items = (body.items as Array<Record<string, unknown>> | undefined) ?? []
+    const normalizedCustomer = normalizeCustomer(customer)
 
     if (!saleId || !amount || items.length === 0) {
       return json({ success: false, configured: true, error: 'Invalid Pix IN data.' }, 400)
     }
 
+    if (!normalizedCustomer.phone || !normalizedCustomer.document.number || !normalizedCustomer.document.type) {
+      return json({ success: false, configured: true, error: 'Informe nome, WhatsApp e CPF/CNPJ para gerar o Pix.' }, 400)
+    }
+
     const westpayResult = await callWestPay(settings, '/api/v1/transactions', 'POST', {
       amount,
-      method: 'pix',
+      paymentMethod: 'pix',
       description: items.map((item) => firstString(item.title, item.name)).filter(Boolean).join(', ') || `Pedido ${saleId}`,
-      customer,
+      customer: normalizedCustomer,
       items,
       externalRef: `sale-${saleId}`,
       postbackUrl: settings.westpay_webhook_secret
         ? `${getFunctionBaseUrl(supabaseUrl)}/westpay?action=webhook&token=${encodeURIComponent(settings.westpay_webhook_secret)}`
         : `${getFunctionBaseUrl(supabaseUrl)}/westpay?action=webhook`,
-      pixExpiresInDays: 2,
+      pix: { expiresInDays: 2 },
     })
 
     if (westpayResult.success === false) {

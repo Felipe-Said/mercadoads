@@ -1,10 +1,10 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useCart } from '../contexts/CartContext'
 import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
-import { createWestPayPixInOrThrow } from '../lib/westpay'
+import { createWestPayPixInOrThrow, validateWestPayCustomer } from '../lib/westpay'
 
 export function Cart() {
   const navigate = useNavigate()
@@ -12,9 +12,17 @@ export function Cart() {
   const { cart, removeFromCart, updateQuantity, totalItems, clearCart } = useCart()
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  const [buyerName, setBuyerName] = useState('')
+  const [buyerPhone, setBuyerPhone] = useState('')
+  const [buyerDocument, setBuyerDocument] = useState('')
 
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0)
   const total = subtotal
+
+  useEffect(() => {
+    setBuyerName(profile?.full_name ?? user?.user_metadata?.full_name ?? '')
+    setBuyerPhone(profile?.phone ?? '')
+  }, [profile?.full_name, profile?.phone, user?.user_metadata?.full_name])
 
   const handleContinuePurchase = async () => {
     if (checkoutLoading) return
@@ -31,6 +39,13 @@ export function Cart() {
     const createdSaleIds: string[] = []
 
     try {
+      const westPayCustomer = validateWestPayCustomer({
+        name: buyerName,
+        email: user.email ?? '',
+        phone: buyerPhone,
+        documentNumber: buyerDocument,
+      })
+
       const productIds = cart.map((item) => item.id)
       const { data: products, error } = await supabase
         .from('products')
@@ -67,11 +82,7 @@ export function Cart() {
         await createWestPayPixInOrThrow({
           saleId,
           amount,
-          customer: {
-            name: profile?.full_name ?? user.user_metadata?.full_name ?? user.email ?? 'Cliente',
-            email: user.email ?? '',
-            phone: profile?.phone ?? null,
-          },
+          customer: westPayCustomer,
           itemTitle: product.title,
         })
       }
@@ -193,6 +204,36 @@ export function Cart() {
                   <span className="text-2xl font-medium text-gray-800">
                     R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
+                </div>
+
+                <div className="space-y-3 mb-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nome completo</label>
+                    <input
+                      value={buyerName}
+                      onChange={(event) => setBuyerName(event.target.value)}
+                      className="w-full h-11 px-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ml-blue"
+                      placeholder="Nome do comprador"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp</label>
+                    <input
+                      value={buyerPhone}
+                      onChange={(event) => setBuyerPhone(event.target.value)}
+                      className="w-full h-11 px-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ml-blue"
+                      placeholder="DDD + numero"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">CPF ou CNPJ</label>
+                    <input
+                      value={buyerDocument}
+                      onChange={(event) => setBuyerDocument(event.target.value)}
+                      className="w-full h-11 px-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ml-blue"
+                      placeholder="Somente numeros"
+                    />
+                  </div>
                 </div>
 
                 {checkoutError && <p className="text-sm text-red-600 mb-3">{checkoutError}</p>}

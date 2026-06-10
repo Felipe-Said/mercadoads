@@ -12,7 +12,7 @@ import { Button } from "./ui/button"
 import { useAuth } from "../contexts/AuthContext"
 import { supabase } from "../lib/supabase"
 import type { Product } from "../lib/data"
-import { createWestPayPixInOrThrow } from "../lib/westpay"
+import { createWestPayPixInOrThrow, validateWestPayCustomer } from "../lib/westpay"
 
 interface RegistrationModalProps {
   open: boolean
@@ -29,6 +29,7 @@ export function RegistrationModal({ open, onOpenChange, product }: RegistrationM
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
   const [phone, setPhone] = useState("")
+  const [documentNumber, setDocumentNumber] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -77,7 +78,7 @@ export function RegistrationModal({ open, onOpenChange, product }: RegistrationM
         throw new Error("Nao foi possivel confirmar a sessao. Tente entrar com sua conta.")
       }
 
-      if (mode === "register" && phone.trim()) {
+      if (phone.trim()) {
         const { error: profileError } = await supabase
           .from("profiles")
           .update({ phone: phone.trim() })
@@ -96,14 +97,17 @@ export function RegistrationModal({ open, onOpenChange, product }: RegistrationM
         .maybeSingle()
 
       try {
+        const westPayCustomer = validateWestPayCustomer({
+          name: (profileData?.full_name as string | null) ?? fullName ?? email,
+          email,
+          phone: (profileData?.phone as string | null) ?? phone,
+          documentNumber,
+        })
+
         await createWestPayPixInOrThrow({
           saleId,
           amount: product?.price ?? 0,
-          customer: {
-            name: (profileData?.full_name as string | null) ?? fullName ?? email,
-            email,
-            phone: (profileData?.phone as string | null) ?? (phone.trim() || null),
-          },
+          customer: westPayCustomer,
           itemTitle: product?.title ?? "Produto",
         })
       } catch (pixError) {
@@ -146,12 +150,15 @@ export function RegistrationModal({ open, onOpenChange, product }: RegistrationM
             <Input id="checkout-email" value={email} onChange={(event) => setEmail(event.target.value)} type="email" placeholder="Seu melhor e-mail" required />
           </div>
 
-          {mode === "register" && (
-            <div className="grid gap-2">
-              <label htmlFor="checkout-phone" className="text-sm font-medium">WhatsApp</label>
-              <Input id="checkout-phone" value={phone} onChange={(event) => setPhone(event.target.value)} type="tel" placeholder="(11) 99999-9999" />
-            </div>
-          )}
+          <div className="grid gap-2">
+            <label htmlFor="checkout-phone" className="text-sm font-medium">WhatsApp</label>
+            <Input id="checkout-phone" value={phone} onChange={(event) => setPhone(event.target.value)} type="tel" placeholder="DDD + numero" required />
+          </div>
+
+          <div className="grid gap-2">
+            <label htmlFor="checkout-document" className="text-sm font-medium">CPF ou CNPJ</label>
+            <Input id="checkout-document" value={documentNumber} onChange={(event) => setDocumentNumber(event.target.value)} placeholder="Somente numeros" required />
+          </div>
 
           <div className="grid gap-2">
             <label htmlFor="checkout-password" className="text-sm font-medium">Senha</label>

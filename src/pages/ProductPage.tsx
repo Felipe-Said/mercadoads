@@ -6,7 +6,7 @@ import { Button } from '../components/ui/button'
 import { useAuth } from '../contexts/AuthContext'
 import { useCart } from '../contexts/CartContext'
 import { formatCurrency, getProduct, type Product } from '../lib/data'
-import { createWestPayPixInOrThrow } from '../lib/westpay'
+import { createWestPayPixInOrThrow, validateWestPayCustomer } from '../lib/westpay'
 import { supabase } from '../lib/supabase'
 
 type Question = {
@@ -29,6 +29,9 @@ export function ProductPage() {
   const [buying, setBuying] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [buyerName, setBuyerName] = useState('')
+  const [buyerPhone, setBuyerPhone] = useState('')
+  const [buyerDocument, setBuyerDocument] = useState('')
 
   useEffect(() => {
     if (!id) return
@@ -49,6 +52,11 @@ export function ProductPage() {
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false))
   }, [id])
+
+  useEffect(() => {
+    setBuyerName(profile?.full_name ?? user?.user_metadata?.full_name ?? '')
+    setBuyerPhone(profile?.phone ?? '')
+  }, [profile?.full_name, profile?.phone, user?.user_metadata?.full_name])
 
   const handleAddToCart = async () => {
     if (!product) return
@@ -83,6 +91,13 @@ export function ProductPage() {
     let saleId: string | null = null
 
     try {
+      const westPayCustomer = validateWestPayCustomer({
+        name: buyerName,
+        email: user.email ?? '',
+        phone: buyerPhone,
+        documentNumber: buyerDocument,
+      })
+
       const { data: saleData, error: saleError } = await supabase.from('sales').insert({
         product_id: Number(product.id),
         buyer_id: user.id,
@@ -99,11 +114,7 @@ export function ProductPage() {
       await createWestPayPixInOrThrow({
         saleId,
         amount: product.price,
-        customer: {
-          name: profile?.full_name ?? user.user_metadata?.full_name ?? user.email ?? 'Cliente',
-          email: user.email ?? '',
-          phone: profile?.phone ?? null,
-        },
+        customer: westPayCustomer,
         itemTitle: product.title,
       })
     } catch (err) {
@@ -253,6 +264,38 @@ export function ProductPage() {
                 <p className="text-ml-dark font-semibold mb-2 text-[15px]">Estoque disponivel</p>
                 <span className="text-gray-500 text-sm">{product.stock ?? 0} unidades</span>
               </div>
+
+              {user && (
+                <div className="space-y-3 mb-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nome completo</label>
+                    <input
+                      value={buyerName}
+                      onChange={(event) => setBuyerName(event.target.value)}
+                      className="w-full h-11 px-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ml-blue"
+                      placeholder="Nome do comprador"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp</label>
+                    <input
+                      value={buyerPhone}
+                      onChange={(event) => setBuyerPhone(event.target.value)}
+                      className="w-full h-11 px-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ml-blue"
+                      placeholder="DDD + numero"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">CPF ou CNPJ</label>
+                    <input
+                      value={buyerDocument}
+                      onChange={(event) => setBuyerDocument(event.target.value)}
+                      className="w-full h-11 px-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ml-blue"
+                      placeholder="Somente numeros"
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="flex flex-col gap-2 mb-6">
                 <Button onClick={handleBuyNow} disabled={authLoading || buying} className="w-full h-12 bg-ml-blue hover:bg-ml-hover text-white font-semibold text-base transition-colors rounded-md shadow-sm">

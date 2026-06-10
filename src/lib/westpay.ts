@@ -7,6 +7,14 @@ type WestPayInvokeResult = {
   error?: string
 }
 
+export type WestPayCustomer = {
+  name: string
+  email: string
+  phone: string
+  documentNumber: string
+  documentType: 'cpf' | 'cnpj'
+}
+
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
 
@@ -16,14 +24,69 @@ function extractGatewayMessage(value: unknown) {
   if (typeof value !== 'object') return null
 
   const data = value as Record<string, unknown>
-  const direct = data.message || data.error || data.details
-  if (typeof direct === 'string') return direct
+  const detailList = Array.isArray(data.details) ? data.details : Array.isArray(data.errors) ? data.errors : null
+  if (detailList && detailList.length > 0) {
+    const messages = detailList
+      .map((item) => {
+        if (typeof item === 'string') return item
+        if (item && typeof item === 'object') {
+          const record = item as Record<string, unknown>
+          return typeof record.message === 'string' ? record.message : null
+        }
+        return null
+      })
+      .filter(Boolean)
+      .join(', ')
 
-  if (Array.isArray(data.errors) && data.errors.length > 0) {
-    return data.errors.map((item) => typeof item === 'string' ? item : JSON.stringify(item)).join(', ')
+    if (messages) return messages
   }
 
+  const direct = data.message || data.error
+  if (typeof direct === 'string') return direct
+
   return JSON.stringify(data)
+}
+
+export function onlyDigits(value: string) {
+  return value.replace(/\D/g, '')
+}
+
+export function detectDocumentType(value: string): 'cpf' | 'cnpj' | null {
+  const digits = onlyDigits(value)
+  if (digits.length === 11) return 'cpf'
+  if (digits.length === 14) return 'cnpj'
+  return null
+}
+
+export function validateWestPayCustomer(customer: {
+  name: string
+  email: string
+  phone: string
+  documentNumber: string
+}) {
+  const phone = onlyDigits(customer.phone)
+  const documentNumber = onlyDigits(customer.documentNumber)
+  const documentType = detectDocumentType(customer.documentNumber)
+
+  if (!customer.name.trim()) {
+    throw new Error('Informe o nome completo para gerar o Pix.')
+  }
+
+  if (phone.length < 10 || phone.length > 11) {
+    throw new Error('Informe um WhatsApp com DDD para gerar o Pix.')
+  }
+
+  if (!documentType) {
+    throw new Error('Informe um CPF com 11 digitos ou CNPJ com 14 digitos.')
+  }
+
+  return {
+    name: customer.name.trim(),
+    email: customer.email.trim(),
+    phone,
+    documentNumber,
+    documentType,
+  } satisfies WestPayCustomer
 }
 
 async function invokeWestPayDirect(action: string, payload?: Record<string, unknown>) {
@@ -138,13 +201,17 @@ export async function ensureWestPayReady() {
 export async function createWestPayPixIn(payload: {
   saleId: string
   amount: number
-  customer: { name: string; email: string; phone?: string | null }
+  customer: WestPayCustomer
   itemTitle: string
 }) {
   const customer = {
     name: payload.customer.name,
     email: payload.customer.email,
-    ...(payload.customer.phone ? { phone: payload.customer.phone } : {}),
+    phone: payload.customer.phone,
+    document: {
+      number: payload.customer.documentNumber,
+      type: payload.customer.documentType,
+    },
   }
 
   return invokeWestPay('create_pix_in', {
@@ -166,13 +233,17 @@ export async function createWestPayPixIn(payload: {
 export async function createWestPayPixInOrThrow(payload: {
   saleId: string
   amount: number
-  customer: { name: string; email: string; phone?: string | null }
+  customer: WestPayCustomer
   itemTitle: string
 }) {
   const customer = {
     name: payload.customer.name,
     email: payload.customer.email,
-    ...(payload.customer.phone ? { phone: payload.customer.phone } : {}),
+    phone: payload.customer.phone,
+    document: {
+      number: payload.customer.documentNumber,
+      type: payload.customer.documentType,
+    },
   }
 
   return invokeWestPayStrict('create_pix_in', {
