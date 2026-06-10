@@ -32,6 +32,28 @@ async function loadProfile(userId: string) {
   return data as Profile | null
 }
 
+async function ensureProfile(user: User) {
+  const existingProfile = await loadProfile(user.id)
+  if (existingProfile) return existingProfile
+
+  const nextProfile: Profile = {
+    id: user.id,
+    role: (user.user_metadata?.role as Role | undefined) ?? 'user',
+    full_name: (user.user_metadata?.full_name as string | undefined) ?? null,
+    email: user.email ?? null,
+    phone: null,
+    pix_key: null,
+    status: 'active',
+    store_name: null,
+    seller_category: null,
+    created_at: new Date().toISOString(),
+  }
+
+  const { error } = await supabase.from('profiles').upsert(nextProfile, { onConflict: 'id' })
+  if (error) throw error
+  return nextProfile
+}
+
 async function enforceActiveProfile(nextProfile: Profile | null) {
   if (nextProfile?.status === 'blocked') {
     await supabase.auth.signOut()
@@ -54,7 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const sessionUser = data.session?.user ?? null
       setUser(sessionUser)
       try {
-        setProfile(sessionUser ? await enforceActiveProfile(await loadProfile(sessionUser.id)) : null)
+        setProfile(sessionUser ? await enforceActiveProfile(await ensureProfile(sessionUser)) : null)
       } catch (error) {
         console.error(error)
         setUser(null)
@@ -72,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
-      loadProfile(sessionUser.id)
+      ensureProfile(sessionUser)
         .then(enforceActiveProfile)
         .then(setProfile)
         .catch((error) => {
@@ -97,7 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signIn: async (email, password) => {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
-      const nextProfile = data.user ? await enforceActiveProfile(await loadProfile(data.user.id)) : null
+      const nextProfile = data.user ? await enforceActiveProfile(await ensureProfile(data.user)) : null
       setUser(data.user)
       setProfile(nextProfile)
       return nextProfile

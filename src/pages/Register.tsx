@@ -4,6 +4,7 @@ import { Card, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { useAuth } from '../contexts/AuthContext'
 import { PlatformLogo } from '../components/PlatformLogo'
+import { supabase } from '../lib/supabase'
 
 export function Register() {
   const [fullName, setFullName] = useState('')
@@ -27,6 +28,12 @@ export function Register() {
     setLoading(true)
     try {
       await signUp(fullName, email, password, 'user')
+      const { data: sessionData } = await supabase.auth.getSession()
+      if (!sessionData.session?.user) {
+        setError('Conta criada. Confirme seu e-mail para entrar.')
+        return
+      }
+
       navigate('/painel/usuario')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Nao foi possivel criar a conta.')

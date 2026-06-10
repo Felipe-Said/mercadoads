@@ -63,6 +63,11 @@ export function RegistrationModal({ open, onOpenChange, product }: RegistrationM
     try {
       if (mode === "register") {
         await signUp(fullName, email, password, "user")
+        const { data: sessionData } = await supabase.auth.getSession()
+        if (!sessionData.session?.user) {
+          setError("Conta criada. Confirme seu e-mail para continuar.")
+          return
+        }
       } else {
         await signIn(email, password)
       }
