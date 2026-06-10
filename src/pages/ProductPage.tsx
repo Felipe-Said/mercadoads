@@ -6,7 +6,7 @@ import { Button } from '../components/ui/button'
 import { useAuth } from '../contexts/AuthContext'
 import { useCart } from '../contexts/CartContext'
 import { formatCurrency, getProduct, type Product } from '../lib/data'
-import { createWestPayPixIn } from '../lib/westpay'
+import { createWestPayPixInOrThrow, ensureWestPayReady } from '../lib/westpay'
 import { supabase } from '../lib/supabase'
 
 type Question = {
@@ -80,44 +80,42 @@ export function ProductPage() {
     setError(null)
     setBuying(true)
 
-    const { data: saleData, error: saleError } = await supabase.from('sales').insert({
-      product_id: Number(product.id),
-      buyer_id: user.id,
-      seller_id: product.seller_id,
-      amount: product.price,
-      status: 'pending',
-    }).select('id').single()
+    let saleId: string | null = null
+
+    try {
+      await ensureWestPayReady()
+
+      const { data: saleData, error: saleError } = await supabase.from('sales').insert({
+        product_id: Number(product.id),
+        buyer_id: user.id,
+        seller_id: product.seller_id,
+        amount: product.price,
+        status: 'pending',
+      }).select('id').single()
+
+      if (saleError) throw saleError
+
+      saleId = saleData?.id ? String(saleData.id) : null
+      if (!saleId) throw new Error('Nao foi possivel gerar o pedido.')
+
+      await createWestPayPixInOrThrow({
+        saleId,
+        amount: product.price,
+        customer: {
+          name: profile?.full_name ?? user.user_metadata?.full_name ?? user.email ?? 'Cliente',
+          email: user.email ?? '',
+          phone: profile?.phone ?? null,
+        },
+        itemTitle: product.title,
+      })
+    } catch (err) {
+      if (saleId) await supabase.from('sales').delete().eq('id', saleId)
+      setError(err instanceof Error ? err.message : 'Nao foi possivel gerar o Pix.')
+      setBuying(false)
+      return
+    }
 
     setBuying(false)
-
-    if (saleError) {
-      setError(saleError.message)
-      return
-    }
-
-    const saleId = saleData?.id ? String(saleData.id) : null
-    if (!saleId) {
-      setError('Nao foi possivel gerar o pedido.')
-      return
-    }
-
-    const westPayResult = await createWestPayPixIn({
-      saleId,
-      amount: product.price,
-      customer: {
-        name: profile?.full_name ?? user.user_metadata?.full_name ?? user.email ?? 'Cliente',
-        email: user.email ?? '',
-        phone: profile?.phone ?? null,
-      },
-      itemTitle: product.title,
-    })
-
-    if (!westPayResult) {
-      await supabase.from('sales').delete().eq('id', saleId)
-      setError('Nao foi possivel gerar o Pix. Tente novamente em instantes.')
-      return
-    }
-
     navigate('/painel/usuario/compras')
   }
 

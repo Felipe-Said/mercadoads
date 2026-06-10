@@ -14,6 +14,7 @@ export function Compras() {
   const [sales, setSales] = useState<Sale[]>([])
   const [copiedSaleId, setCopiedSaleId] = useState<string | null>(null)
   const [cancelingSaleId, setCancelingSaleId] = useState<string | null>(null)
+  const [purchaseError, setPurchaseError] = useState<string | null>(null)
 
   const checkoutSaleIds = useMemo(() => {
     const state = location.state as { checkoutSaleIds?: string[] } | null
@@ -49,29 +50,48 @@ export function Compras() {
     if (!window.confirm('Cancelar este pedido?')) return
 
     setCancelingSaleId(sale.id)
+    setPurchaseError(null)
     const { error } = await supabase
       .from('sales')
-      .update({
-        status: 'cancelled',
-        payment_gateway: null,
-        payment_external_ref: null,
-        payment_transaction_id: null,
-        payment_qrcode: null,
-        payment_qrcode_text: null,
-        payment_qrcode_expires_at: null,
-        gateway_payload: null,
-        paid_at: null,
-        claim_until: null,
-      })
+      .delete()
       .eq('id', sale.id)
       .eq('buyer_id', user.id)
+      .eq('status', 'pending')
 
     if (error) {
-      console.error(error)
+      setPurchaseError(error.message)
+    } else {
+      setSales((current) => current.filter((item) => item.id !== sale.id))
     }
 
     await loadSales()
     setCancelingSaleId(null)
+  }
+
+  const handleClearUnpaid = async () => {
+    if (!user) return
+    const unpaidIds = sales
+      .filter((sale) => sale.status === 'pending' && !sale.payment_qrcode_text && !sale.payment_qrcode)
+      .map((sale) => sale.id)
+
+    if (unpaidIds.length === 0) return
+    if (!window.confirm(`Cancelar ${unpaidIds.length} pedido(s) sem Pix?`)) return
+
+    setPurchaseError(null)
+    const { error } = await supabase
+      .from('sales')
+      .delete()
+      .in('id', unpaidIds)
+      .eq('buyer_id', user.id)
+      .eq('status', 'pending')
+
+    if (error) {
+      setPurchaseError(error.message)
+      return
+    }
+
+    setSales((current) => current.filter((sale) => !unpaidIds.includes(sale.id)))
+    await loadSales()
   }
 
   return (
@@ -82,6 +102,25 @@ export function Compras() {
         {checkoutSaleIds.length > 0 && (
           <div className="rounded-md border border-blue-100 bg-blue-50 p-4 text-sm text-blue-700">
             Seu pedido foi gerado. Se o Pix ainda nao apareceu, a plataforma esta atualizando os dados agora.
+          </div>
+        )}
+
+        {purchaseError && (
+          <div className="rounded-md border border-red-100 bg-red-50 p-4 text-sm text-red-700">
+            {purchaseError}
+          </div>
+        )}
+
+        {sales.some((sale) => sale.status === 'pending' && !sale.payment_qrcode_text && !sale.payment_qrcode) && (
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              onClick={handleClearUnpaid}
+              variant="outline"
+              className="rounded-sm border-gray-300 text-gray-600 hover:bg-gray-50"
+            >
+              Limpar pedidos sem Pix
+            </Button>
           </div>
         )}
 

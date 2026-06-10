@@ -12,7 +12,7 @@ import { Button } from "./ui/button"
 import { useAuth } from "../contexts/AuthContext"
 import { supabase } from "../lib/supabase"
 import type { Product } from "../lib/data"
-import { createWestPayPixIn } from "../lib/westpay"
+import { createWestPayPixInOrThrow, ensureWestPayReady } from "../lib/westpay"
 
 interface RegistrationModalProps {
   open: boolean
@@ -86,10 +86,10 @@ export function RegistrationModal({ open, onOpenChange, product }: RegistrationM
         if (profileError) throw profileError
       }
 
+      await ensureWestPayReady()
+
       const saleId = await createPendingPurchase(userId)
-      if (!saleId) {
-        throw new Error("Nao foi possivel gerar o pedido.")
-      }
+      if (!saleId) throw new Error("Nao foi possivel gerar o pedido.")
 
       const { data: profileData } = await supabase
         .from("profiles")
@@ -97,20 +97,20 @@ export function RegistrationModal({ open, onOpenChange, product }: RegistrationM
         .eq("id", userId)
         .maybeSingle()
 
-      const westPayResult = await createWestPayPixIn({
-        saleId,
-        amount: product?.price ?? 0,
-        customer: {
-          name: (profileData?.full_name as string | null) ?? fullName ?? email,
-          email,
-          phone: (profileData?.phone as string | null) ?? (phone.trim() || null),
-        },
-        itemTitle: product?.title ?? "Produto",
-      })
-
-      if (!westPayResult) {
+      try {
+        await createWestPayPixInOrThrow({
+          saleId,
+          amount: product?.price ?? 0,
+          customer: {
+            name: (profileData?.full_name as string | null) ?? fullName ?? email,
+            email,
+            phone: (profileData?.phone as string | null) ?? (phone.trim() || null),
+          },
+          itemTitle: product?.title ?? "Produto",
+        })
+      } catch (pixError) {
         await supabase.from("sales").delete().eq("id", saleId)
-        throw new Error("Nao foi possivel gerar o Pix. Tente novamente em instantes.")
+        throw pixError
       }
 
       onOpenChange(false)

@@ -4,7 +4,7 @@ import { useCart } from '../contexts/CartContext'
 import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
-import { createWestPayPixIn } from '../lib/westpay'
+import { createWestPayPixInOrThrow, ensureWestPayReady } from '../lib/westpay'
 
 export function Cart() {
   const navigate = useNavigate()
@@ -31,6 +31,8 @@ export function Cart() {
     const createdSaleIds: string[] = []
 
     try {
+      await ensureWestPayReady()
+
       const productIds = cart.map((item) => item.id)
       const { data: products, error } = await supabase
         .from('products')
@@ -64,7 +66,7 @@ export function Cart() {
         if (!saleId) throw new Error('Nao foi possivel gerar o pedido.')
         createdSaleIds.push(saleId)
 
-        const westPayResult = await createWestPayPixIn({
+        await createWestPayPixInOrThrow({
           saleId,
           amount,
           customer: {
@@ -74,10 +76,6 @@ export function Cart() {
           },
           itemTitle: product.title,
         })
-
-        if (!westPayResult) {
-          throw new Error('Nao foi possivel gerar o Pix. Tente novamente em instantes.')
-        }
       }
 
       await clearCart()
