@@ -18,14 +18,16 @@ export function DashboardLayout({ children, navItems, title }: DashboardLayoutPr
   const location = useLocation()
 
   return (
-    <div className="bg-[#ededed] min-h-[calc(100vh-100px)]">
-      <div className="max-w-7xl mx-auto px-4 py-8 flex flex-col md:flex-row gap-6">
-        
-        {/* Sidebar */}
-        <aside className="w-full md:w-64 flex-shrink-0">
-          <div className="bg-white rounded-md shadow-sm p-4 sticky top-24">
-            <h2 className="text-xl font-medium text-ml-dark mb-4 px-3">{title}</h2>
-            <nav className="space-y-1">
+    <div className="min-h-[calc(100vh-100px)] bg-[#e3e6e6]">
+      <div className="mx-auto flex max-w-[1440px] flex-col gap-5 px-4 py-5 lg:flex-row lg:items-start">
+        <aside className="w-full shrink-0 lg:w-[286px]">
+          <div className="sticky top-24 overflow-hidden rounded-sm border border-[#101820]/20 bg-[#131921] shadow-sm">
+            <div className="border-b border-white/10 bg-[#232f3e] px-5 py-5 text-white">
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#ff9900]">Cookie market</p>
+              <h2 className="mt-1 text-xl font-bold leading-tight">{title}</h2>
+              <p className="mt-2 text-xs text-white/65">Central de operacao e acompanhamento.</p>
+            </div>
+            <nav className="flex gap-2 overflow-x-auto p-3 [scrollbar-width:none] lg:block lg:space-y-1 lg:overflow-visible [&::-webkit-scrollbar]:hidden">
               {navItems.map((item) => {
                 const isActive = location.pathname === item.href;
                 const Icon = item.icon;
@@ -33,14 +35,14 @@ export function DashboardLayout({ children, navItems, title }: DashboardLayoutPr
                   <Link
                     key={item.href}
                     to={item.href}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-sm transition-colors ${
+                    className={`flex shrink-0 items-center gap-3 rounded-sm px-3 py-2.5 text-sm transition-colors lg:w-full ${
                       isActive 
-                        ? 'bg-ml-blue/10 text-ml-blue font-semibold' 
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-ml-dark'
+                        ? 'bg-[#ff9900] text-[#131921] font-bold shadow-sm' 
+                        : 'text-white/78 hover:bg-white/10 hover:text-white'
                     }`}
                   >
-                    <Icon className="w-5 h-5" />
-                    <span className="text-sm">{item.title}</span>
+                    <Icon className="h-5 w-5" />
+                    <span className="whitespace-nowrap">{item.title}</span>
                   </Link>
                 )
               })}
@@ -48,11 +50,20 @@ export function DashboardLayout({ children, navItems, title }: DashboardLayoutPr
           </div>
         </aside>
 
-        {/* Main Content */}
-        <main className="flex-1">
-          {children}
+        <main className="min-w-0 flex-1">
+          <div className="mb-4 rounded-sm border border-gray-200 bg-white px-5 py-4 shadow-sm">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#007185]">Painel</p>
+                <h1 className="text-2xl font-bold tracking-tight text-[#111827]">{title}</h1>
+              </div>
+              <p className="text-sm text-gray-500">Dados em tempo real conectados ao Supabase.</p>
+            </div>
+          </div>
+          <div className="dashboard-surface">
+            {children}
+          </div>
         </main>
-        
       </div>
     </div>
   )
