@@ -23,7 +23,7 @@ export function Resumo() {
 
         <Card className="bg-white border-none shadow-sm rounded-md">
           <CardContent className="p-6">
-            <h2 className="text-lg font-medium text-ml-dark mb-2">Bem-vindo(a) a Mercado Ads</h2>
+            <h2 className="text-lg font-medium text-ml-dark mb-2">Bem-vindo(a) a Cookie market</h2>
             <p className="text-sm text-gray-500">Navegue pelo painel lateral para acessar compras, afiliacoes ou atualizar suas informacoes.</p>
           </CardContent>
         </Card>

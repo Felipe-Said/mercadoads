@@ -14,7 +14,7 @@ type GatewaySettings = {
   westpay_webhook_secret: string | null
 }
 
-const defaultUserAgent = 'Mercado Ads/1.0 (+suporte@mercadoads.com)'
+const defaultUserAgent = 'Cookie market/1.0 (+suporte@mercadoads.com)'
 
 export function Gateway() {
   const [active, setActive] = useState(true)

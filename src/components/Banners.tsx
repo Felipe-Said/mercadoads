@@ -1,16 +1,84 @@
 import React, { useEffect, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { getBanners, type Banner } from '../lib/data'
+import { getBanners, type Banner, type BannerPosition } from '../lib/data'
 
-export function Banners({ position = 'home_hero' }: { position?: 'home_hero' | 'home_middle' | 'home_bottom' }) {
+type BannerSlotProps = {
+  position: BannerPosition
+  className?: string
+  imageClassName?: string
+  fallbackTitle?: string
+  fallbackSubtitle?: string
+  compact?: boolean
+}
+
+export function BannerSlot({
+  position,
+  className = '',
+  imageClassName = '',
+  fallbackTitle = 'Espaco para banner',
+  fallbackSubtitle = 'Adicione esta peca no painel de personalizacao.',
+  compact = false,
+}: BannerSlotProps) {
+  const [banner, setBanner] = useState<Banner | null>(null)
+
+  useEffect(() => {
+    getBanners(position)
+      .then((items) => setBanner(items[0] ?? null))
+      .catch(console.error)
+  }, [position])
+
+  const title = banner?.title?.trim()
+  const subtitle = banner?.subtitle?.trim()
+  const hasText = Boolean(title || subtitle)
+  const content = banner ? (
+    <>
+      {banner.image ? (
+        <img
+          src={banner.image}
+          alt={title || 'Banner'}
+          className={`h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02] ${imageClassName}`}
+        />
+      ) : (
+        <div className="h-full w-full" style={{ backgroundColor: banner.color }} />
+      )}
+      {hasText && (
+        <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/70 via-black/25 to-transparent p-4 text-white">
+          <div>
+            {title && <p className={`${compact ? 'text-sm' : 'text-xl'} font-bold leading-tight`}>{title}</p>}
+            {subtitle && <p className="mt-1 line-clamp-2 text-xs font-medium opacity-90">{subtitle}</p>}
+          </div>
+        </div>
+      )}
+    </>
+  ) : (
+    <div className="flex h-full w-full flex-col justify-between bg-gradient-to-br from-[#232f3e] via-[#2d425a] to-[#131921] p-4 text-white">
+      <span className="w-max rounded-sm bg-[#ff9900] px-2 py-1 text-[11px] font-bold text-[#131921]">Cookie market</span>
+      <div>
+        <p className={`${compact ? 'text-base' : 'text-2xl'} font-bold leading-tight`}>{fallbackTitle}</p>
+        <p className="mt-1 text-xs text-white/75">{fallbackSubtitle}</p>
+      </div>
+    </div>
+  )
+
+  return (
+    <a
+      href={banner?.link || '/'}
+      className={`group relative block overflow-hidden rounded-sm border border-black/10 bg-white shadow-sm ${className}`}
+      data-banner-position={position}
+    >
+      {content}
+    </a>
+  )
+}
+
+export function Banners({ position = 'home_hero' }: { position?: BannerPosition }) {
   const [banners, setBanners] = useState<Banner[]>([])
   const [current, setCurrent] = useState(0)
   const isHero = position === 'home_hero'
 
   useEffect(() => {
-    getBanners().then((allBanners) => {
-      setBanners(allBanners.filter((b) => b.position === position))
-    }).catch(console.error)
+    setCurrent(0)
+    getBanners(position).then(setBanners).catch(console.error)
   }, [position])
 
   useEffect(() => {
@@ -50,21 +118,21 @@ export function Banners({ position = 'home_hero' }: { position?: 'home_hero' | '
                     )}
                     {showText && (
                       <>
-                        <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/35 to-transparent" />
-                        <div className="z-20 mr-auto w-full max-w-3xl p-7 text-left text-white md:p-12">
-                          {banner.title && <h2 className="mb-3 text-3xl font-bold leading-tight drop-shadow-md md:text-5xl">{banner.title}</h2>}
-                          {banner.subtitle && <p className="mb-5 text-base font-normal opacity-95 md:text-lg">{banner.subtitle}</p>}
-                          <span className="inline-flex rounded-sm bg-white px-6 py-3 text-sm font-bold text-ml-blue shadow-sm transition hover:bg-gray-100">Explorar agora</span>
-                        </div>
-                      </>
+                <div className="absolute inset-0 bg-gradient-to-r from-[#131921]/80 via-[#131921]/35 to-transparent" />
+                <div className="z-20 mr-auto w-full max-w-3xl p-7 text-left text-white md:p-12">
+                  {banner.title && <h2 className="mb-3 text-3xl font-bold leading-tight drop-shadow-md md:text-5xl">{banner.title}</h2>}
+                  {banner.subtitle && <p className="mb-5 text-base font-normal opacity-95 md:text-lg">{banner.subtitle}</p>}
+                  <span className="inline-flex rounded-sm bg-[#ff9900] px-6 py-3 text-sm font-bold text-[#131921] shadow-sm transition hover:bg-[#ffb84d]">Explorar agora</span>
+                </div>
+              </>
                     )}
                   </a>
                 )
               })
             ) : (
-              <div className="relative flex h-[220px] w-full flex-shrink-0 items-center justify-center overflow-hidden bg-gradient-to-r from-ml-blue to-blue-600">
+              <div className="relative flex h-[220px] w-full flex-shrink-0 items-center justify-center overflow-hidden bg-gradient-to-r from-[#232f3e] to-[#131921]">
                 <div className="z-20 p-8 text-center text-white">
-                  <h2 className="mb-2 text-3xl font-bold drop-shadow-md md:text-4xl">Bem-vindo a nossa loja</h2>
+                  <h2 className="mb-2 text-3xl font-bold drop-shadow-md md:text-4xl">Cookie market</h2>
                   <p className="text-md opacity-90 md:text-lg">Navegue pelas ofertas verificadas abaixo.</p>
                 </div>
               </div>

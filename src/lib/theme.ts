@@ -29,7 +29,7 @@ function darken(hex: string, amount: number) {
 }
 
 function getFallbackTitle(title: string | null | undefined) {
-  return title?.trim() || 'Mercado Ads'
+  return title?.trim() || 'Cookie market'
 }
 
 export function setBrowserTitle(activeTitle?: string | null, inactiveTitle?: string | null) {

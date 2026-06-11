@@ -51,8 +51,23 @@ export interface Banner {
   mobile_image: string | null
   link: string
   color: string
-  position: 'home_hero' | 'left_flyer' | 'right_flyer'
+  position: BannerPosition
 }
+
+export type BannerPosition =
+  | 'home_hero'
+  | 'left_flyer'
+  | 'right_flyer'
+  | 'home_side_top'
+  | 'home_side_bottom'
+  | 'home_middle'
+  | 'home_bottom'
+  | 'home_deals_top'
+  | 'home_deals_bottom'
+  | 'home_grid_1'
+  | 'home_grid_2'
+  | 'home_grid_3'
+  | 'home_grid_4'
 
 export interface Sale {
   id: string

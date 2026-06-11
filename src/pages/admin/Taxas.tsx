@@ -50,7 +50,7 @@ export function Taxas() {
                   />
                   <span className="absolute right-4 top-3 text-gray-400">%</span>
                 </div>
-                <p className="text-xs text-gray-400 mt-2">Esta é a taxa que a Mercado Ads retém em cada venda de ativo.</p>
+                <p className="text-xs text-gray-400 mt-2">Esta é a taxa que a Cookie market retem em cada venda de ativo.</p>
               </div>
 
               <div>

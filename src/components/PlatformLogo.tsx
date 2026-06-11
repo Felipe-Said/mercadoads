@@ -67,8 +67,8 @@ export function PlatformLogo({ className = '', imageClassName = '', fallbackClas
 
   return (
     <span className={`inline-flex items-center font-bold tracking-tight ${className} ${fallbackClassName}`}>
-      <span className="text-ml-blue mr-1">Mercado</span>
-      <span className="text-ml-dark">Ads</span>
+      <span className="mr-1 text-[#ff9900]">Cookie</span>
+      <span className="text-ml-dark">market</span>
     </span>
   )
 }

@@ -41,7 +41,7 @@ export function SellerRegistration() {
       <Card className="bg-white border-none shadow-sm rounded-md">
         <CardHeader className="text-center pb-2 border-b border-gray-100">
           <CardTitle className="text-2xl font-light text-ml-dark">Comece a vender hoje mesmo</CardTitle>
-          <p className="text-gray-500 text-sm mt-2">Cadastre-se como vendedor na Mercado Ads e alcance compradores reais.</p>
+          <p className="text-gray-500 text-sm mt-2">Cadastre-se como vendedor na Cookie market e alcance compradores reais.</p>
         </CardHeader>
         <CardContent className="pt-8 px-8 pb-8">
           <form className="space-y-5" onSubmit={handleSubmit}>

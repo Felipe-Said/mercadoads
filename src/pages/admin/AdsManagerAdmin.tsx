@@ -29,6 +29,26 @@ interface Group {
   is_active: boolean
 }
 
+const bannerPositionOptions = [
+  { value: 'home_hero', label: 'Home | Banner principal' },
+  { value: 'home_side_top', label: 'Home | Lateral superior' },
+  { value: 'home_side_bottom', label: 'Home | Lateral inferior' },
+  { value: 'home_deals_top', label: 'Home | Ofertas esquerda' },
+  { value: 'home_deals_bottom', label: 'Home | Ofertas direita' },
+  { value: 'home_grid_1', label: 'Home | Grade 1' },
+  { value: 'home_grid_2', label: 'Home | Grade 2' },
+  { value: 'home_grid_3', label: 'Home | Grade 3' },
+  { value: 'home_grid_4', label: 'Home | Grade 4' },
+  { value: 'home_middle', label: 'Home | Banner central' },
+  { value: 'home_bottom', label: 'Home | Banner inferior' },
+  { value: 'left_flyer', label: 'Flyer esquerdo' },
+  { value: 'right_flyer', label: 'Flyer direito' },
+]
+
+const getBannerPositionLabel = (position: string) => (
+  bannerPositionOptions.find((option) => option.value === position)?.label ?? position
+)
+
 export function AdsManagerAdmin() {
   const [activeTab, setActiveTab] = useState<Tab>('taxas')
   
@@ -217,9 +237,9 @@ export function AdsManagerAdmin() {
                         value={editingBanner.position || 'home_hero'}
                         onChange={e => setEditingBanner({...editingBanner, position: e.target.value})}
                       >
-                        <option value="home_hero">Banner Central</option>
-                        <option value="left_flyer">Flyer Esquerdo</option>
-                        <option value="right_flyer">Flyer Direito</option>
+                        {bannerPositionOptions.map((option) => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
                       </select>
                     </div>
                   </div>
@@ -264,7 +284,7 @@ export function AdsManagerAdmin() {
                           </td>
                           <td className="px-6 py-4">
                             <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
-                              {banner.position === 'home_hero' ? 'Central' : banner.position === 'left_flyer' ? 'Esquerdo' : 'Direito'}
+                              {getBannerPositionLabel(banner.position)}
                             </span>
                           </td>
                           <td className="px-6 py-4">

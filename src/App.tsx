@@ -88,7 +88,7 @@ function App() {
       <footer className="bg-white py-8">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <p className="text-sm text-gray-500 mb-2">Trabalhe conosco Termos e condições Como cuidamos da sua privacidade Acessibilidade Contato</p>
-          <p className="text-xs text-gray-400">Copyright © 2026 Mercado Ads LTDA.</p>
+          <p className="text-xs text-gray-400">Copyright © 2026 Cookie market LTDA.</p>
         </div>
       </footer>
     </div>

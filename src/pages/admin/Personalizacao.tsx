@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { AdminLayout } from '../../components/layouts/AdminLayout'
 import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
-import { getBanners, type Banner } from '../../lib/data'
+import { getBanners, type Banner, type BannerPosition } from '../../lib/data'
 import { supabase } from '../../lib/supabase'
 import { applyPlatformTheme } from '../../lib/theme'
 
@@ -28,11 +28,31 @@ const emptyBannerForm: BannerForm = {
   sort_order: 0,
 }
 
+const bannerPositionOptions: { value: BannerPosition; label: string; helper: string }[] = [
+  { value: 'home_hero', label: 'Home | Banner principal', helper: 'Carrossel grande no topo da home.' },
+  { value: 'home_side_top', label: 'Home | Lateral superior', helper: 'Card lateral direito acima da dobra.' },
+  { value: 'home_side_bottom', label: 'Home | Lateral inferior', helper: 'Card lateral direito abaixo da dobra.' },
+  { value: 'home_deals_top', label: 'Home | Faixa de ofertas esquerda', helper: 'Banner medio na area de ofertas.' },
+  { value: 'home_deals_bottom', label: 'Home | Faixa de ofertas direita', helper: 'Banner medio ao lado da faixa de ofertas.' },
+  { value: 'home_grid_1', label: 'Home | Grade 1', helper: 'Primeiro card da grade de banners.' },
+  { value: 'home_grid_2', label: 'Home | Grade 2', helper: 'Segundo card da grade de banners.' },
+  { value: 'home_grid_3', label: 'Home | Grade 3', helper: 'Terceiro card da grade de banners.' },
+  { value: 'home_grid_4', label: 'Home | Grade 4', helper: 'Quarto card da grade de banners.' },
+  { value: 'home_middle', label: 'Home | Banner horizontal central', helper: 'Faixa larga no meio da home.' },
+  { value: 'home_bottom', label: 'Home | Banner inferior', helper: 'Faixa larga perto do fim da home.' },
+  { value: 'left_flyer', label: 'Flyer lateral esquerdo', helper: 'Mantem compatibilidade com banners laterais antigos.' },
+  { value: 'right_flyer', label: 'Flyer lateral direito', helper: 'Mantem compatibilidade com banners laterais antigos.' },
+]
+
+const getBannerPositionLabel = (position: BannerPosition | string) => (
+  bannerPositionOptions.find((option) => option.value === position)?.label ?? position
+)
+
 export function Personalizacao() {
   const [primaryColor, setPrimaryColor] = useState('#fff159')
   const [secondaryColor, setSecondaryColor] = useState('#3483fa')
-  const [browserTitle, setBrowserTitle] = useState('Mercado Ads')
-  const [browserTitleInactive, setBrowserTitleInactive] = useState('Mercado Ads')
+  const [browserTitle, setBrowserTitle] = useState('Cookie market')
+  const [browserTitleInactive, setBrowserTitleInactive] = useState('Cookie market')
   const [logoUrl, setLogoUrl] = useState('')
   const [faviconUrl, setFaviconUrl] = useState('')
   const [desktopLogoSize, setDesktopLogoSize] = useState(130)
@@ -55,8 +75,8 @@ export function Personalizacao() {
         const settings = settingsResult.data
         setPrimaryColor(settings?.primary_color ?? '#fff159')
         setSecondaryColor(settings?.secondary_color ?? '#3483fa')
-        setBrowserTitle(settings?.browser_title ?? 'Mercado Ads')
-        setBrowserTitleInactive(settings?.browser_title_inactive ?? settings?.browser_title ?? 'Mercado Ads')
+        setBrowserTitle(settings?.browser_title ?? 'Cookie market')
+        setBrowserTitleInactive(settings?.browser_title_inactive ?? settings?.browser_title ?? 'Cookie market')
         setLogoUrl(settings?.logo_url ?? '')
         setFaviconUrl(settings?.favicon_url ?? '')
         setDesktopLogoSize(Number(settings?.logo_desktop_size ?? 130))
@@ -204,7 +224,7 @@ export function Personalizacao() {
                   type="text"
                   value={browserTitle}
                   onChange={(event) => setBrowserTitle(event.target.value)}
-                  placeholder="Mercado Ads"
+                  placeholder="Cookie market"
                   className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue"
                 />
               </div>
@@ -214,7 +234,7 @@ export function Personalizacao() {
                   type="text"
                   value={browserTitleInactive}
                   onChange={(event) => setBrowserTitleInactive(event.target.value)}
-                  placeholder="Volte para Mercado Ads"
+                  placeholder="Volte para Cookie market"
                   className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue"
                 />
               </div>
@@ -321,7 +341,7 @@ export function Personalizacao() {
                 </div>
                 <div className="flex-grow">
                   <p className="font-medium text-ml-dark">{banner.title || 'Banner sem texto'}</p>
-                  <p className="text-xs text-gray-500">{banner.position} | {banner.link}</p>
+                  <p className="text-xs text-gray-500">{getBannerPositionLabel(banner.position)} | {banner.link}</p>
                 </div>
                 <Button type="button" variant="outline" onClick={() => deactivateBanner(banner.id)} className="border-red-200 text-red-600 hover:bg-red-50 rounded-sm">
                   Remover
@@ -397,10 +417,11 @@ export function Personalizacao() {
                   onChange={(event) => setBannerForm((current) => ({ ...current, position: event.target.value as Banner['position'] }))}
                   className="w-full h-10 px-3 border border-gray-300 rounded-sm bg-white focus:outline-none focus:border-ml-blue"
                 >
-                  <option value="home_hero">Banner central da home</option>
-                  <option value="left_flyer">Flyer lateral esquerdo</option>
-                  <option value="right_flyer">Flyer lateral direito</option>
+                  {bannerPositionOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
                 </select>
+                <p className="mt-1 text-xs text-gray-400">{bannerPositionOptions.find((option) => option.value === bannerForm.position)?.helper}</p>
               </div>
 
               <div>
