@@ -52,6 +52,10 @@ function friendlyProviderMessage(message: string | null, status?: number) {
     return 'Credenciais recusadas. Confira a chave, usuário ou senha configurados.'
   }
 
+  if (normalized.includes('invalid api key') || normalized.includes('api key')) {
+    return 'Chave da API publica invalida. Use a chave criada na area de API publica do fornecedor, nao o usuario, senha ou Basic Auth Token do proxy.'
+  }
+
   if (normalized.includes('supabase') || normalized.includes('edge function') || normalized.includes('decodo')) {
     return 'Não foi possível consultar o catálogo de proxies agora.'
   }
