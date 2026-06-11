@@ -134,9 +134,9 @@ export function Home() {
           </div>
 
           <aside className="grid content-start gap-3 sm:grid-cols-3 lg:grid-cols-1">
-            <BannerSlot position="home_side_top" className="h-36 lg:h-[142px]" compact fallbackTitle="Banner lateral superior" />
-            <BannerSlot position="home_side_middle" className="h-36 lg:h-[142px]" compact fallbackTitle="Banner lateral central" />
-            <BannerSlot position="home_side_bottom" className="h-36 lg:h-[142px]" compact fallbackTitle="Banner lateral inferior" />
+            <BannerSlot position="home_side_top" className="h-40 lg:h-[205px]" compact fallbackTitle="Banner lateral superior" />
+            <BannerSlot position="home_side_middle" className="h-40 lg:h-[205px]" compact fallbackTitle="Banner lateral central" />
+            <BannerSlot position="home_side_bottom" className="h-40 lg:h-[205px]" compact fallbackTitle="Banner lateral inferior" />
           </aside>
         </div>
       </section>
