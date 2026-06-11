@@ -25,6 +25,39 @@ type DecodoSettings = {
   password: string | null
 }
 
+type ProxyOfferSettings = {
+  id?: number
+  name: string
+  type: string
+  country: string
+  city: string
+  protocol: string
+  endpoint: string
+  port: string
+  price: string
+  traffic: string
+  stock: string
+  status: string
+  sort_order: number
+  is_active: boolean
+}
+
+const emptyProxyOffer: ProxyOfferSettings = {
+  name: '',
+  type: 'Pool premium',
+  country: 'Global',
+  city: '',
+  protocol: 'HTTP(S) / SOCKS5',
+  endpoint: '',
+  port: '',
+  price: '',
+  traffic: '',
+  stock: 'Disponivel',
+  status: 'Disponivel',
+  sort_order: 10,
+  is_active: true,
+}
+
 const defaultUserAgent = 'Cookie market/1.0 (+suporte@mercadoads.com)'
 
 export function Gateway() {
@@ -45,6 +78,9 @@ export function Gateway() {
   const [decodoPassword, setDecodoPassword] = useState('')
   const [proxyProviderMessage, setProxyProviderMessage] = useState<string | null>(null)
   const [proxyProviderTestMessage, setProxyProviderTestMessage] = useState<string | null>(null)
+  const [proxyOffers, setProxyOffers] = useState<ProxyOfferSettings[]>([])
+  const [proxyOfferForm, setProxyOfferForm] = useState<ProxyOfferSettings>(emptyProxyOffer)
+  const [proxyOfferMessage, setProxyOfferMessage] = useState<string | null>(null)
 
   const functionBaseUrl = useMemo(() => {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
@@ -71,11 +107,17 @@ export function Gateway() {
         .select('id, active, api_base_url, products_path, api_key, username, password')
         .eq('id', 1)
         .maybeSingle(),
+      supabase
+        .from('proxy_offers')
+        .select('id, name, type, country, city, protocol, endpoint, port, price, traffic, stock, status, sort_order, is_active')
+        .order('sort_order', { ascending: true })
+        .order('id', { ascending: true }),
     ])
-      .then(([gatewayResult, decodoResult]) => {
+      .then(([gatewayResult, decodoResult, proxyOffersResult]) => {
         if (!mounted) return
         if (gatewayResult.error) throw gatewayResult.error
         if (decodoResult.error) throw decodoResult.error
+        if (proxyOffersResult.error) throw proxyOffersResult.error
 
         const settings = gatewayResult.data as GatewaySettings | null
         setActive(settings?.active ?? true)
@@ -91,6 +133,7 @@ export function Gateway() {
         setDecodoApiKey(decodoSettings?.api_key ?? '')
         setDecodoUsername(decodoSettings?.username ?? '')
         setDecodoPassword(decodoSettings?.password ?? '')
+        setProxyOffers((proxyOffersResult.data ?? []) as ProxyOfferSettings[])
       })
       .catch((error) => setMessage(error instanceof Error ? error.message : 'Nao foi possivel carregar o gateway.'))
       .finally(() => {
@@ -213,6 +256,85 @@ export function Gateway() {
     } catch (error) {
       setProxyProviderTestMessage(error instanceof Error ? error.message : 'Nao foi possivel validar o catálogo.')
     }
+  }
+
+  const resetProxyOfferForm = () => {
+    setProxyOfferForm({ ...emptyProxyOffer, sort_order: (proxyOffers.length + 1) * 10 })
+  }
+
+  const saveProxyOffer = async () => {
+    setProxyOfferMessage(null)
+    const payload = {
+      name: proxyOfferForm.name.trim(),
+      type: proxyOfferForm.type.trim() || 'Pool premium',
+      country: proxyOfferForm.country.trim() || 'Global',
+      city: proxyOfferForm.city.trim() || null,
+      protocol: proxyOfferForm.protocol.trim() || 'HTTP(S) / SOCKS5',
+      endpoint: proxyOfferForm.endpoint.trim() || null,
+      port: proxyOfferForm.port.trim() || null,
+      price: proxyOfferForm.price.trim() || 'Sob consulta',
+      traffic: proxyOfferForm.traffic.trim() || 'Conforme plano',
+      stock: proxyOfferForm.stock.trim() || 'Disponivel',
+      status: proxyOfferForm.status.trim() || 'Disponivel',
+      sort_order: Number(proxyOfferForm.sort_order) || 0,
+      is_active: proxyOfferForm.is_active,
+      updated_at: new Date().toISOString(),
+    }
+
+    if (!payload.name) {
+      setProxyOfferMessage('Informe o nome do plano.')
+      return
+    }
+
+    const request = proxyOfferForm.id
+      ? supabase.from('proxy_offers').update(payload).eq('id', proxyOfferForm.id)
+      : supabase.from('proxy_offers').insert(payload)
+
+    const { error } = await request
+    if (error) {
+      setProxyOfferMessage(error.message)
+      return
+    }
+
+    const { data, error: reloadError } = await supabase
+      .from('proxy_offers')
+      .select('id, name, type, country, city, protocol, endpoint, port, price, traffic, stock, status, sort_order, is_active')
+      .order('sort_order', { ascending: true })
+      .order('id', { ascending: true })
+
+    if (reloadError) {
+      setProxyOfferMessage(reloadError.message)
+      return
+    }
+
+    setProxyOffers((data ?? []) as ProxyOfferSettings[])
+    setProxyOfferMessage('Plano salvo.')
+    setProxyOfferForm({ ...emptyProxyOffer, sort_order: ((data?.length ?? 0) + 1) * 10 })
+  }
+
+  const editProxyOffer = (offer: ProxyOfferSettings) => {
+    setProxyOfferForm({
+      ...offer,
+      city: offer.city ?? '',
+      endpoint: offer.endpoint ?? '',
+      port: offer.port ?? '',
+    })
+  }
+
+  const deleteProxyOffer = async (id?: number) => {
+    if (!id) return
+    const { error } = await supabase.from('proxy_offers').delete().eq('id', id)
+    if (error) {
+      setProxyOfferMessage(error.message)
+      return
+    }
+    setProxyOffers((current) => current.filter((offer) => offer.id !== id))
+    setProxyOfferMessage('Plano removido.')
+    if (proxyOfferForm.id === id) resetProxyOfferForm()
+  }
+
+  const updateProxyOfferForm = <K extends keyof ProxyOfferSettings>(key: K, value: ProxyOfferSettings[K]) => {
+    setProxyOfferForm((current) => ({ ...current, [key]: value }))
   }
 
   return (
@@ -446,7 +568,118 @@ export function Gateway() {
             {proxyProviderTestMessage && <p className={`text-sm ${proxyProviderTestMessage.includes('validado') ? 'text-green-600' : 'text-red-600'}`}>{proxyProviderTestMessage}</p>}
           </CardContent>
         </Card>
+
+        <Card className="bg-white border-none shadow-sm rounded-md">
+          <CardContent className="p-6 space-y-6">
+            <div>
+              <h3 className="text-lg font-medium text-ml-dark">Planos de proxy</h3>
+              <p className="text-sm text-gray-500">Cadastre as opcoes, valores e limites que aparecem na pagina /proxy.</p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <GatewayField label="Nome do plano">
+                <input value={proxyOfferForm.name} onChange={(event) => updateProxyOfferForm('name', event.target.value)} placeholder="Proxy premium 10GB" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+              </GatewayField>
+              <GatewayField label="Tipo">
+                <input value={proxyOfferForm.type} onChange={(event) => updateProxyOfferForm('type', event.target.value)} placeholder="Pool premium" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+              </GatewayField>
+              <GatewayField label="Pais/localidade">
+                <input value={proxyOfferForm.country} onChange={(event) => updateProxyOfferForm('country', event.target.value)} placeholder="Global, Brasil, EUA..." className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+              </GatewayField>
+              <GatewayField label="Cidade">
+                <input value={proxyOfferForm.city} onChange={(event) => updateProxyOfferForm('city', event.target.value)} placeholder="Opcional" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+              </GatewayField>
+              <GatewayField label="Protocolo">
+                <input value={proxyOfferForm.protocol} onChange={(event) => updateProxyOfferForm('protocol', event.target.value)} placeholder="HTTP(S) / SOCKS5" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+              </GatewayField>
+              <GatewayField label="Preco">
+                <input value={proxyOfferForm.price} onChange={(event) => updateProxyOfferForm('price', event.target.value)} placeholder="R$ 139,90" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+              </GatewayField>
+              <GatewayField label="Trafego">
+                <input value={proxyOfferForm.traffic} onChange={(event) => updateProxyOfferForm('traffic', event.target.value)} placeholder="10GB" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+              </GatewayField>
+              <GatewayField label="Estoque/status curto">
+                <input value={proxyOfferForm.stock} onChange={(event) => updateProxyOfferForm('stock', event.target.value)} placeholder="Disponivel" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+              </GatewayField>
+              <GatewayField label="Endpoint exibido">
+                <input value={proxyOfferForm.endpoint} onChange={(event) => updateProxyOfferForm('endpoint', event.target.value)} placeholder="Liberado apos compra" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+              </GatewayField>
+              <GatewayField label="Porta">
+                <input value={proxyOfferForm.port} onChange={(event) => updateProxyOfferForm('port', event.target.value)} placeholder="Opcional" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+              </GatewayField>
+              <GatewayField label="Ordem">
+                <input type="number" value={proxyOfferForm.sort_order} onChange={(event) => updateProxyOfferForm('sort_order', Number(event.target.value))} className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+              </GatewayField>
+              <GatewayField label="Status">
+                <input value={proxyOfferForm.status} onChange={(event) => updateProxyOfferForm('status', event.target.value)} placeholder="Disponivel" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+              </GatewayField>
+            </div>
+
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input type="checkbox" checked={proxyOfferForm.is_active} onChange={(event) => updateProxyOfferForm('is_active', event.target.checked)} className="h-4 w-4 accent-ml-blue" />
+              Mostrar plano na pagina de proxies
+            </label>
+
+            <div className="flex flex-wrap gap-3">
+              <Button type="button" onClick={saveProxyOffer} className="bg-ml-blue text-white hover:bg-ml-hover font-semibold py-3 px-6 rounded-sm shadow-sm">
+                {proxyOfferForm.id ? 'Salvar alteracoes' : 'Adicionar plano'}
+              </Button>
+              <Button type="button" onClick={resetProxyOfferForm} className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold py-3 px-6 rounded-sm shadow-sm">
+                Novo plano
+              </Button>
+            </div>
+
+            {proxyOfferMessage && <p className={`text-sm ${proxyOfferMessage.includes('salvo') || proxyOfferMessage.includes('removido') ? 'text-green-600' : 'text-red-600'}`}>{proxyOfferMessage}</p>}
+
+            <div className="overflow-hidden rounded-sm border border-gray-100">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-gray-50 text-gray-500">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Plano</th>
+                    <th className="px-4 py-3 font-medium">Preco</th>
+                    <th className="px-4 py-3 font-medium">Trafego</th>
+                    <th className="px-4 py-3 font-medium">Ativo</th>
+                    <th className="px-4 py-3 font-medium text-right">Acoes</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {proxyOffers.map((offer) => (
+                    <tr key={offer.id}>
+                      <td className="px-4 py-3">
+                        <p className="font-semibold text-gray-900">{offer.name}</p>
+                        <p className="text-xs text-gray-500">{offer.country} {offer.city ? `/ ${offer.city}` : ''}</p>
+                      </td>
+                      <td className="px-4 py-3 text-gray-700">{offer.price}</td>
+                      <td className="px-4 py-3 text-gray-700">{offer.traffic}</td>
+                      <td className="px-4 py-3 text-gray-700">{offer.is_active ? 'Sim' : 'Nao'}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-2">
+                          <button type="button" onClick={() => editProxyOffer(offer)} className="text-ml-blue hover:underline">Editar</button>
+                          <button type="button" onClick={() => deleteProxyOffer(offer.id)} className="text-red-500 hover:underline">Remover</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {proxyOffers.length === 0 && (
+                    <tr>
+                      <td className="px-4 py-6 text-center text-gray-500" colSpan={5}>Nenhum plano cadastrado.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </AdminLayout>
+  )
+}
+
+function GatewayField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-sm font-medium text-gray-700">{label}</span>
+      {children}
+    </label>
   )
 }

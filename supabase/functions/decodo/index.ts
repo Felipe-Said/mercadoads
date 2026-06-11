@@ -151,6 +151,35 @@ async function loadSettings(supabaseAdmin: ReturnType<typeof createClient>) {
   return data as DecodoSettings | null
 }
 
+async function loadProxyOffers(supabaseAdmin: ReturnType<typeof createClient>) {
+  const { data, error } = await supabaseAdmin
+    .from('proxy_offers')
+    .select('id, name, type, country, city, protocol, endpoint, port, price, traffic, stock, status')
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true })
+    .order('id', { ascending: true })
+
+  if (error) {
+    console.error(error)
+    return []
+  }
+
+  return (data ?? []).map((row) => ({
+    id: String(row.id),
+    name: firstString(row.name, 'Proxy premium'),
+    type: firstString(row.type, 'Proxy premium'),
+    country: firstString(row.country, 'Global'),
+    city: firstString(row.city),
+    protocol: firstString(row.protocol, 'HTTP(S) / SOCKS5'),
+    endpoint: firstString(row.endpoint),
+    port: firstString(row.port),
+    price: firstString(row.price, 'Sob consulta'),
+    traffic: firstString(row.traffic, 'Conforme plano'),
+    stock: firstString(row.stock, 'Disponivel'),
+    status: firstString(row.status, 'Disponivel'),
+  })) as ProxyOffer[]
+}
+
 async function callDecodo(settings: DecodoSettings) {
   const base = settings.api_base_url.replace(/\/+$/, '')
   const path = settings.products_path.trim()
@@ -222,6 +251,7 @@ Deno.serve(async (req) => {
 
   const supabaseAdmin = createClient(supabaseUrl, serviceRole)
   const settings = await loadSettings(supabaseAdmin)
+  const customOffers = await loadProxyOffers(supabaseAdmin)
 
   if (!settings || !settings.active) {
     return json({ success: true, configured: false, items: [] })
@@ -240,6 +270,10 @@ Deno.serve(async (req) => {
       apiBaseUrl: settings.api_base_url,
       productsPath: settings.products_path,
     })
+  }
+
+  if (action === 'catalog' && customOffers.length > 0) {
+    return json({ success: true, configured: true, status: 200, items: customOffers })
   }
 
   if (!hasCredentials) {
