@@ -57,7 +57,7 @@ export function HomeFeatures() {
   return (
     <div className="relative z-20 max-w-[1600px] mx-auto px-4 lg:px-8 -mt-24 mb-10">
       {/* Container scrollable for mobile, grid for large screens */}
-      <div className="flex overflow-x-auto lg:grid lg:grid-cols-6 gap-2 lg:gap-4 pb-4 lg:pb-0 scrollbar-hide snap-x">
+      <div className="flex overflow-x-auto lg:grid lg:grid-cols-6 gap-2 lg:gap-4 pb-4 lg:pb-0 snap-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {features.map((feature) => (
           <div 
             key={feature.id} 

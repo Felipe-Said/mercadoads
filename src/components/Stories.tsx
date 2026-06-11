@@ -19,8 +19,8 @@ export function Stories() {
   }, [])
 
   return (
-    <div className="bg-white rounded-md shadow-sm py-5 px-6 mb-0">
-      <div className="w-full">
+    <div className="bg-white py-4 mb-0">
+      <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center gap-4 mb-3">
           <h2 className="text-sm font-semibold text-ml-dark">Grupos de Network</h2>
           <Link to="/groups" className="text-ml-blue text-sm font-medium hover:underline">Ver mais</Link>
