@@ -55,13 +55,12 @@ export function HomeFeatures() {
   ]
 
   return (
-    <div className="relative z-20 max-w-[1600px] mx-auto px-4 lg:px-8 -mt-24 mb-10">
-      {/* Container scrollable for mobile, grid for large screens */}
-      <div className="flex overflow-x-auto lg:grid lg:grid-cols-6 gap-2 lg:gap-4 pb-4 lg:pb-0 snap-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+    <div className="w-full">
+      <div className="flex overflow-x-auto lg:grid lg:grid-cols-6 gap-3 lg:gap-4 pb-4 lg:pb-0 snap-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {features.map((feature) => (
           <div 
             key={feature.id} 
-            className="flex-shrink-0 w-64 lg:w-auto snap-center bg-white rounded-md shadow-[0_1px_2px_0_rgba(0,0,0,0.12)] p-6 flex flex-col items-center text-center transition-shadow hover:shadow-md h-[220px] justify-between group"
+            className="flex-shrink-0 w-64 lg:w-auto snap-center bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col items-center text-center transition-all hover:shadow-md hover:border-ml-blue h-[220px] justify-between group cursor-default"
           >
             <div>
               <h3 className="text-sm font-semibold text-ml-dark mb-4">{feature.title}</h3>
@@ -77,7 +76,7 @@ export function HomeFeatures() {
             
             <Link 
               to={feature.link}
-              className="mt-3 w-full block text-sm font-semibold text-green-500 hover:text-green-600 transition-colors bg-gray-50 hover:bg-green-50/50 py-2 rounded-sm"
+              className="mt-4 w-full block text-[13px] font-bold text-ml-blue hover:text-white transition-colors bg-blue-50 hover:bg-ml-blue py-2.5 rounded-lg"
             >
               {feature.actionText}
             </Link>

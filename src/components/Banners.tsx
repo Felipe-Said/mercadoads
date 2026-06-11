@@ -25,10 +25,10 @@ export function Banners() {
   const hasText = (banner: Banner) => Boolean(banner.title?.trim() || banner.subtitle?.trim())
 
   return (
-    <div className="relative w-full mb-0">
-      <div className="max-w-[1600px] mx-auto relative flex justify-center">
+    <div className="relative w-full mb-0 rounded-2xl overflow-hidden shadow-sm">
+      <div className="w-full relative flex justify-center">
 
-        <div className="relative w-full max-w-7xl overflow-hidden group">
+        <div className="relative w-full overflow-hidden group">
           <div className="flex transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${current * 100}%)` }}>
             {heroBanners.length > 0 ? (
               heroBanners.map((banner) => {
@@ -38,7 +38,7 @@ export function Banners() {
                   <a
                     key={banner.id}
                     href={banner.link}
-                    className={`w-full flex-shrink-0 relative flex items-center justify-center overflow-hidden ${showText || !banner.image ? 'h-[340px] md:h-[400px]' : ''}`}
+                    className={`w-full flex-shrink-0 relative flex items-center justify-center overflow-hidden ${showText || !banner.image ? 'h-[300px] md:h-[380px]' : ''}`}
                     style={{ backgroundColor: banner.color }}
                   >
                     {banner.image && (
@@ -50,11 +50,11 @@ export function Banners() {
                     )}
                     {showText && (
                     <>
-                      <div className="absolute inset-0 bg-black/25" />
-                      <div className="z-20 text-white text-center p-8 mb-16">
-                        {banner.title && <h2 className="text-4xl md:text-6xl font-bold mb-4 drop-shadow-lg">{banner.title}</h2>}
-                        {banner.subtitle && <p className="text-lg md:text-2xl mb-6">{banner.subtitle}</p>}
-                        <span className="inline-flex bg-white text-ml-blue font-bold px-6 py-3 rounded-md hover:bg-gray-100 transition-colors shadow-lg">Ver ofertas</span>
+                      <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
+                      <div className="z-20 text-white text-left p-8 md:p-16 w-full max-w-3xl mr-auto">
+                        {banner.title && <h2 className="text-4xl md:text-5xl font-extrabold mb-4 drop-shadow-md leading-tight">{banner.title}</h2>}
+                        {banner.subtitle && <p className="text-lg md:text-xl mb-6 font-light opacity-90">{banner.subtitle}</p>}
+                        <span className="inline-flex bg-white text-ml-blue font-bold px-8 py-3 rounded-full hover:bg-gray-100 transition-all hover:scale-105 shadow-lg">Explorar Agora</span>
                       </div>
                     </>
                     )}
@@ -62,16 +62,16 @@ export function Banners() {
                 )
               })
             ) : (
-              <div className="w-full flex-shrink-0 relative flex items-center justify-center overflow-hidden h-[340px] md:h-[400px] bg-ml-blue">
-                <div className="z-20 text-white text-center p-8 mb-16">
-                  <h2 className="text-4xl md:text-6xl font-bold mb-4 drop-shadow-lg">Bem-vindo(a)</h2>
-                  <p className="text-lg md:text-2xl mb-6">Aproveite nossas ofertas imperdíveis.</p>
+              <div className="w-full flex-shrink-0 relative flex items-center justify-center overflow-hidden h-[240px] bg-gradient-to-r from-blue-600 to-ml-blue rounded-2xl">
+                <div className="z-20 text-white text-center p-8">
+                  <h2 className="text-3xl md:text-4xl font-bold mb-2 drop-shadow-md">Bem-vindo(a) à nossa loja!</h2>
+                  <p className="text-md md:text-lg opacity-90">Navegue pelas nossas ofertas abaixo.</p>
                 </div>
               </div>
             )}
           </div>
 
-          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#ebebeb] to-transparent pointer-events-none z-10" />
+
 
           {heroBanners.length > 1 && (
             <>

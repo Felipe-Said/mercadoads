@@ -19,11 +19,11 @@ export function Stories() {
   }, [])
 
   return (
-    <div className="bg-white py-4 mb-0">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="flex items-center gap-4 mb-3">
-          <h2 className="text-sm font-semibold text-ml-dark">Grupos de Network</h2>
-          <Link to="/groups" className="text-ml-blue text-sm font-medium hover:underline">Ver mais</Link>
+    <div className="w-full mb-0">
+      <div className="w-full">
+        <div className="flex items-center justify-between mb-4 px-2 lg:px-0">
+          <h2 className="text-xl font-bold text-gray-800">Categorias Populares</h2>
+          <Link to="/groups" className="text-ml-blue text-sm font-semibold hover:underline">Explorar todas</Link>
         </div>
 
         <div className="flex overflow-x-auto pb-2 scrollbar-hide gap-4 items-center min-h-[90px]">
@@ -38,11 +38,11 @@ export function Stories() {
             </div>
           ) : groups.length > 0 ? (
             groups.map((group) => (
-              <a key={group.id} href={group.link} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1 cursor-pointer min-w-[72px]">
-                <div className="w-16 h-16 rounded-full border-[3px] border-green-500 p-[2px] hover:scale-105 transition-transform">
+              <a key={group.id} href={group.link} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-2 cursor-pointer min-w-[80px] group/story">
+                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full border border-gray-200 bg-white shadow-sm flex items-center justify-center p-[2px] group-hover/story:shadow-md group-hover/story:border-ml-blue transition-all">
                   <img src={group.image || '/favicon.svg'} alt={group.name} className="w-full h-full rounded-full object-cover" />
                 </div>
-                <span className="text-xs text-center font-medium text-ml-dark truncate w-full">{group.name}</span>
+                <span className="text-xs font-semibold text-gray-700 text-center truncate w-full group-hover/story:text-ml-blue transition-colors">{group.name}</span>
               </a>
             ))
           ) : (
