@@ -20,8 +20,6 @@ export function Banners() {
     return () => clearInterval(timer)
   }, [heroBanners.length])
 
-  if (heroBanners.length === 0) return null
-
   const next = () => setCurrent((prev) => (prev === heroBanners.length - 1 ? 0 : prev + 1))
   const prev = () => setCurrent((prev) => (prev === 0 ? heroBanners.length - 1 : prev - 1))
   const hasText = (banner: Banner) => Boolean(banner.title?.trim() || banner.subtitle?.trim())
@@ -32,36 +30,45 @@ export function Banners() {
 
         <div className="relative w-full max-w-7xl overflow-hidden group">
           <div className="flex transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${current * 100}%)` }}>
-            {heroBanners.map((banner) => {
-              const showText = hasText(banner)
+            {heroBanners.length > 0 ? (
+              heroBanners.map((banner) => {
+                const showText = hasText(banner)
 
-              return (
-                <a
-                  key={banner.id}
-                  href={banner.link}
-                  className={`w-full flex-shrink-0 relative flex items-center justify-center overflow-hidden ${showText || !banner.image ? 'h-[340px] md:h-[400px]' : ''}`}
-                  style={{ backgroundColor: banner.color }}
-                >
-                  {banner.image && (
-                    <img
-                      src={banner.image}
-                      alt={banner.title || 'Banner principal'}
-                      className={showText ? 'absolute inset-0 w-full h-full object-cover opacity-70' : 'relative block w-full h-auto object-contain'}
-                    />
-                  )}
-                  {showText && (
-                  <>
-                    <div className="absolute inset-0 bg-black/25" />
-                    <div className="z-20 text-white text-center p-8 mb-16">
-                      {banner.title && <h2 className="text-4xl md:text-6xl font-bold mb-4 drop-shadow-lg">{banner.title}</h2>}
-                      {banner.subtitle && <p className="text-lg md:text-2xl mb-6">{banner.subtitle}</p>}
-                      <span className="inline-flex bg-white text-ml-blue font-bold px-6 py-3 rounded-md hover:bg-gray-100 transition-colors shadow-lg">Ver ofertas</span>
-                    </div>
-                  </>
-                  )}
-                </a>
-              )
-            })}
+                return (
+                  <a
+                    key={banner.id}
+                    href={banner.link}
+                    className={`w-full flex-shrink-0 relative flex items-center justify-center overflow-hidden ${showText || !banner.image ? 'h-[340px] md:h-[400px]' : ''}`}
+                    style={{ backgroundColor: banner.color }}
+                  >
+                    {banner.image && (
+                      <img
+                        src={banner.image}
+                        alt={banner.title || 'Banner principal'}
+                        className={showText ? 'absolute inset-0 w-full h-full object-cover opacity-70' : 'relative block w-full h-auto object-contain'}
+                      />
+                    )}
+                    {showText && (
+                    <>
+                      <div className="absolute inset-0 bg-black/25" />
+                      <div className="z-20 text-white text-center p-8 mb-16">
+                        {banner.title && <h2 className="text-4xl md:text-6xl font-bold mb-4 drop-shadow-lg">{banner.title}</h2>}
+                        {banner.subtitle && <p className="text-lg md:text-2xl mb-6">{banner.subtitle}</p>}
+                        <span className="inline-flex bg-white text-ml-blue font-bold px-6 py-3 rounded-md hover:bg-gray-100 transition-colors shadow-lg">Ver ofertas</span>
+                      </div>
+                    </>
+                    )}
+                  </a>
+                )
+              })
+            ) : (
+              <div className="w-full flex-shrink-0 relative flex items-center justify-center overflow-hidden h-[340px] md:h-[400px] bg-ml-blue">
+                <div className="z-20 text-white text-center p-8 mb-16">
+                  <h2 className="text-4xl md:text-6xl font-bold mb-4 drop-shadow-lg">Bem-vindo(a)</h2>
+                  <p className="text-lg md:text-2xl mb-6">Aproveite nossas ofertas imperdíveis.</p>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#ebebeb] to-transparent pointer-events-none z-10" />
