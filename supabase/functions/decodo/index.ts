@@ -202,7 +202,10 @@ async function getCapacity(settings: ProviderSettings) {
   const subscriptions = await callProvider(settings, settings.products_path || '/subscriptions')
   if (subscriptions.configured === false || subscriptions.success === false) return subscriptions
 
-  const allocated = await callProvider(settings, '/allocated-traffic-limit?service_type=residential_proxies')
+  let allocated = await callProvider(settings, '/allocated-traffic-limit?service_type=residential_proxies')
+  if (allocated.configured !== false && allocated.success === false) {
+    allocated = await callProvider(settings, '/allocated-traffic-limit')
+  }
   if (allocated.configured === false || allocated.success === false) return allocated
 
   const totalLimit = extractResidentialTrafficLimit(subscriptions.data)

@@ -56,6 +56,10 @@ function friendlyProviderMessage(message: string | null, status?: number) {
     return 'Chave da API publica invalida. Use a chave criada na area de API publica do fornecedor, nao o usuario, senha ou Basic Auth Token do proxy.'
   }
 
+  if (normalized.includes('can not process request') || normalized.includes('cannot process request')) {
+    return 'A API aceitou a chamada, mas nao conseguiu processar a consulta de assinatura/trafego. Confirme se essa chave tem permissao da API publica e se existe assinatura residencial ativa.'
+  }
+
   if (normalized.includes('supabase') || normalized.includes('edge function') || normalized.includes('decodo')) {
     return 'Não foi possível consultar o catálogo de proxies agora.'
   }
