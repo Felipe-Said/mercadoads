@@ -5,6 +5,7 @@ import { ProductGrid } from '../components/ProductCard'
 import { HomeFeatures } from '../components/HomeFeatures'
 
 export function Home() {
+  return (
     <div className="bg-[#f8fafc] min-h-screen pb-16 w-full font-sans text-gray-900">
       
       {/* 1. Hero Banner (Centered, Rounded, Premium) */}
