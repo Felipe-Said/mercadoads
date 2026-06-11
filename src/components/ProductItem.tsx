@@ -1,6 +1,7 @@
 import React from "react"
 import { Link } from "react-router-dom"
 import { Card, CardContent } from "./ui/card"
+import { Zap } from "lucide-react"
 import type { Product } from "../lib/data"
 
 interface ProductItemProps {
@@ -8,51 +9,52 @@ interface ProductItemProps {
 }
 
 export function ProductItem({ product }: ProductItemProps) {
+  const price = product.price || 0;
+  const installmentsPrice = price / 10;
+
   return (
-    <Link to={`/produto/${product.id}`} className="block outline-none">
-      <Card className="overflow-hidden group flex flex-col justify-between bg-white border-none shadow-sm hover:shadow-lg transition-all duration-300 rounded-md h-full">
+    <Link to={`/produto/${product.id}`} className="block outline-none h-full">
+      <Card className="overflow-hidden group flex flex-col justify-between bg-white border border-gray-100 hover:border-transparent shadow-sm hover:shadow-[0_7px_16px_0_rgba(0,0,0,0.1)] transition-all duration-300 rounded-md h-full cursor-pointer">
         <div>
-          <div className="w-full h-52 bg-white flex items-center justify-center border-b border-gray-100 overflow-hidden relative">
+          <div className="w-full h-[224px] bg-white flex items-center justify-center border-b border-gray-50 overflow-hidden relative">
             <img 
               src={product.image || '/favicon.svg'} 
               alt={product.title} 
-              className="max-w-full max-h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500 ease-out"
+              className="max-w-full max-h-full object-contain"
             />
           </div>
-          <CardContent className="p-5 pt-4">
+          <CardContent className="p-4 pt-3 flex flex-col gap-0.5">
             {product.originalPrice ? (
-              <div className="text-[13px] text-gray-400 line-through mb-0.5">
+              <span className="text-[12px] text-gray-400 line-through">
                 R$ {product.originalPrice.toFixed(2).replace('.', ',')}
-              </div>
+              </span>
             ) : (
-              <div className="h-[19px] mb-0.5" />
+              <div className="h-[18px]" />
             )}
             
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-2xl font-light tracking-tight text-ml-dark">
-                R$ {product.price.toFixed(2).replace('.', ',')}
+            <div className="flex items-center gap-2">
+              <span className="text-[22px] leading-none font-light tracking-tight text-[#333]">
+                R$ {price.toFixed(2).replace('.', ',')}
               </span>
               {product.originalPrice && (
-                <span className="text-[13px] font-medium text-green-500 mt-1">
-                  {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF
+                <span className="text-[13px] font-medium text-[#00a650]">
+                  {Math.round(((product.originalPrice - price) / product.originalPrice) * 100)}% OFF
                 </span>
               )}
             </div>
             
-            <div className="text-[13px] text-green-500 font-medium mb-3">
-              Pagamento via PIX
+            <div className="text-[13px] text-[#00a650] mt-1">
+              em 10x R$ {installmentsPrice.toFixed(2).replace('.', ',')} sem juros
             </div>
-            <p className="text-[14px] text-gray-500 font-light leading-snug group-hover:text-ml-blue transition-colors line-clamp-2">
+            
+            <div className="text-[13px] text-[#00a650] font-semibold flex items-center gap-1 mt-1">
+              Frete grátis <Zap className="w-3 h-3 fill-current" /> <span className="font-black italic text-[11px] ml-[-2px]">FULL</span>
+            </div>
+            
+            <p className="text-[14px] text-[#666] font-light leading-[1.25] mt-2 line-clamp-2">
               {product.title}
             </p>
           </CardContent>
-        </div>
-        
-        {/* We keep the visual button for effect, but the whole card is the link now */}
-        <div className="p-5 pt-0 mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <div className="w-full bg-ml-blue/10 text-ml-blue text-center font-semibold py-3 text-sm transition-colors rounded-sm">
-            Ver detalhes
-          </div>
         </div>
       </Card>
     </Link>
