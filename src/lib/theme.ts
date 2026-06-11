@@ -33,6 +33,11 @@ export type LayoutTheme = {
   dashboardSidebarBg: string
   dashboardSidebarHeaderBg: string
   dashboardSidebarText: string
+  dashboardSidebarMutedText: string
+  dashboardSidebarKickerText: string
+  dashboardSidebarBorder: string
+  dashboardSidebarHoverBg: string
+  dashboardSidebarHoverText: string
   dashboardSidebarActiveBg: string
   dashboardSidebarActiveText: string
   headerAccountLinkColor: string
@@ -62,6 +67,11 @@ export const DEFAULT_LAYOUT_THEME: LayoutTheme = {
   dashboardSidebarBg: '#131921',
   dashboardSidebarHeaderBg: '#232f3e',
   dashboardSidebarText: '#ffffff',
+  dashboardSidebarMutedText: '#cbd5e1',
+  dashboardSidebarKickerText: '#ff9900',
+  dashboardSidebarBorder: '#0f172a',
+  dashboardSidebarHoverBg: '#263241',
+  dashboardSidebarHoverText: '#ffffff',
   dashboardSidebarActiveBg: '#ff9900',
   dashboardSidebarActiveText: '#131921',
   headerAccountLinkColor: '#007185',

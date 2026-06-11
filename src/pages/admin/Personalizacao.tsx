@@ -518,6 +518,11 @@ export function Personalizacao() {
                   <ColorControl label="Fundo da sidebar" value={layoutTheme.dashboardSidebarBg} onChange={(value) => updateLayoutTheme('dashboardSidebarBg', value)} />
                   <ColorControl label="Fundo do topo da sidebar" value={layoutTheme.dashboardSidebarHeaderBg} onChange={(value) => updateLayoutTheme('dashboardSidebarHeaderBg', value)} />
                   <ColorControl label="Texto da sidebar" value={layoutTheme.dashboardSidebarText} onChange={(value) => updateLayoutTheme('dashboardSidebarText', value)} />
+                  <ColorControl label="Texto secundario do topo" value={layoutTheme.dashboardSidebarMutedText} onChange={(value) => updateLayoutTheme('dashboardSidebarMutedText', value)} />
+                  <ColorControl label="Texto COOKIE MARKET" value={layoutTheme.dashboardSidebarKickerText} onChange={(value) => updateLayoutTheme('dashboardSidebarKickerText', value)} />
+                  <ColorControl label="Borda/divisoria da sidebar" value={layoutTheme.dashboardSidebarBorder} onChange={(value) => updateLayoutTheme('dashboardSidebarBorder', value)} />
+                  <ColorControl label="Item ao passar mouse - fundo" value={layoutTheme.dashboardSidebarHoverBg} onChange={(value) => updateLayoutTheme('dashboardSidebarHoverBg', value)} />
+                  <ColorControl label="Item ao passar mouse - texto" value={layoutTheme.dashboardSidebarHoverText} onChange={(value) => updateLayoutTheme('dashboardSidebarHoverText', value)} />
                   <ColorControl label="Item ativo - fundo" value={layoutTheme.dashboardSidebarActiveBg} onChange={(value) => updateLayoutTheme('dashboardSidebarActiveBg', value)} />
                   <ColorControl label="Item ativo - texto" value={layoutTheme.dashboardSidebarActiveText} onChange={(value) => updateLayoutTheme('dashboardSidebarActiveText', value)} />
                 </TokenGroup>

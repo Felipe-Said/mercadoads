@@ -62,6 +62,11 @@
   --layout-dashboard-sidebar-bg: #131921;
   --layout-dashboard-sidebar-header-bg: #232f3e;
   --layout-dashboard-sidebar-text: #ffffff;
+  --layout-dashboard-sidebar-muted-text: #cbd5e1;
+  --layout-dashboard-sidebar-kicker-text: #ff9900;
+  --layout-dashboard-sidebar-border: #0f172a;
+  --layout-dashboard-sidebar-hover-bg: #263241;
+  --layout-dashboard-sidebar-hover-text: #ffffff;
   --layout-dashboard-sidebar-active-bg: #ff9900;
   --layout-dashboard-sidebar-active-text: #131921;
   --layout-header-account-link-color: #007185;
