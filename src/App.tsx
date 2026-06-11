@@ -40,7 +40,7 @@ import { Configuracoes } from './pages/user/Configuracoes'
 
 function App() {
   return (
-    <div className="min-h-screen bg-[#ebebeb] flex flex-col">
+    <div className="min-h-screen bg-[#f3f4f6] flex flex-col">
       <PlatformTheme />
       <Header />
       <main className="flex-grow">

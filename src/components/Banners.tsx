@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { getBanners, type Banner } from '../lib/data'
 
 export function Banners({ position = 'home_hero' }: { position?: 'home_hero' | 'home_middle' | 'home_bottom' }) {
   const [banners, setBanners] = useState<Banner[]>([])
   const [current, setCurrent] = useState(0)
+  const isHero = position === 'home_hero'
 
   useEffect(() => {
     getBanners().then((allBanners) => {
@@ -14,10 +15,10 @@ export function Banners({ position = 'home_hero' }: { position?: 'home_hero' | '
 
   useEffect(() => {
     if (banners.length < 2) return
-    const timer = setInterval(() => {
+    const timer = window.setInterval(() => {
       setCurrent((prev) => (prev === banners.length - 1 ? 0 : prev + 1))
     }, 5000)
-    return () => clearInterval(timer)
+    return () => window.clearInterval(timer)
   }, [banners.length])
 
   const next = () => setCurrent((prev) => (prev === banners.length - 1 ? 0 : prev + 1))
@@ -25,10 +26,9 @@ export function Banners({ position = 'home_hero' }: { position?: 'home_hero' | '
   const hasText = (banner: Banner) => Boolean(banner.title?.trim() || banner.subtitle?.trim())
 
   return (
-    <div className="relative w-full mb-0 rounded-2xl overflow-hidden shadow-sm">
-      <div className="w-full relative flex justify-center">
-
-        <div className="relative w-full overflow-hidden group">
+    <div className={`relative w-full overflow-hidden rounded-md border border-black/5 bg-white shadow-sm ${isHero ? 'min-h-[180px]' : ''}`}>
+      <div className="relative flex w-full justify-center">
+        <div className="group relative w-full overflow-hidden">
           <div className="flex transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${current * 100}%)` }}>
             {banners.length > 0 ? (
               banners.map((banner) => {
@@ -38,53 +38,50 @@ export function Banners({ position = 'home_hero' }: { position?: 'home_hero' | '
                   <a
                     key={banner.id}
                     href={banner.link}
-                    className={`w-full flex-shrink-0 relative flex items-center justify-center overflow-hidden ${showText || !banner.image ? 'h-[300px] md:h-[380px]' : ''}`}
+                    className={`relative flex w-full flex-shrink-0 items-center justify-center overflow-hidden ${showText || !banner.image ? 'h-[240px] md:h-[320px]' : ''}`}
                     style={{ backgroundColor: banner.color }}
                   >
                     {banner.image && (
                       <img
                         src={banner.image}
                         alt={banner.title || 'Banner principal'}
-                        className={showText ? 'absolute inset-0 w-full h-full object-cover opacity-70' : 'relative block w-full h-auto object-contain'}
+                        className={showText ? 'absolute inset-0 h-full w-full object-cover opacity-75' : 'relative block h-auto w-full object-contain'}
                       />
                     )}
                     {showText && (
-                    <>
-                      <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
-                      <div className="z-20 text-white text-left p-8 md:p-16 w-full max-w-3xl mr-auto">
-                        {banner.title && <h2 className="text-4xl md:text-5xl font-extrabold mb-4 drop-shadow-md leading-tight">{banner.title}</h2>}
-                        {banner.subtitle && <p className="text-lg md:text-xl mb-6 font-light opacity-90">{banner.subtitle}</p>}
-                        <span className="inline-flex bg-white text-ml-blue font-bold px-8 py-3 rounded-full hover:bg-gray-100 transition-all hover:scale-105 shadow-lg">Explorar Agora</span>
-                      </div>
-                    </>
+                      <>
+                        <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/35 to-transparent" />
+                        <div className="z-20 mr-auto w-full max-w-3xl p-7 text-left text-white md:p-12">
+                          {banner.title && <h2 className="mb-3 text-3xl font-bold leading-tight drop-shadow-md md:text-5xl">{banner.title}</h2>}
+                          {banner.subtitle && <p className="mb-5 text-base font-normal opacity-95 md:text-lg">{banner.subtitle}</p>}
+                          <span className="inline-flex rounded-sm bg-white px-6 py-3 text-sm font-bold text-ml-blue shadow-sm transition hover:bg-gray-100">Explorar agora</span>
+                        </div>
+                      </>
                     )}
                   </a>
                 )
               })
             ) : (
-              <div className="w-full flex-shrink-0 relative flex items-center justify-center overflow-hidden h-[240px] bg-gradient-to-r from-blue-600 to-ml-blue rounded-2xl">
-                <div className="z-20 text-white text-center p-8">
-                  <h2 className="text-3xl md:text-4xl font-bold mb-2 drop-shadow-md">Bem-vindo(a) à nossa loja!</h2>
-                  <p className="text-md md:text-lg opacity-90">Navegue pelas nossas ofertas abaixo.</p>
+              <div className="relative flex h-[220px] w-full flex-shrink-0 items-center justify-center overflow-hidden bg-gradient-to-r from-ml-blue to-blue-600">
+                <div className="z-20 p-8 text-center text-white">
+                  <h2 className="mb-2 text-3xl font-bold drop-shadow-md md:text-4xl">Bem-vindo a nossa loja</h2>
+                  <p className="text-md opacity-90 md:text-lg">Navegue pelas ofertas verificadas abaixo.</p>
                 </div>
               </div>
             )}
           </div>
 
-
-
           {banners.length > 1 && (
             <>
-              <button onClick={prev} className="absolute left-0 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-ml-blue p-4 shadow-md rounded-r-full opacity-0 group-hover:opacity-100 transition-opacity z-30">
+              <button onClick={prev} className="absolute left-3 top-1/2 z-30 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-ml-blue opacity-0 shadow-md transition-opacity hover:bg-white group-hover:opacity-100">
                 <ChevronLeft className="w-6 h-6" />
               </button>
-              <button onClick={next} className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-ml-blue p-4 shadow-md rounded-l-full opacity-0 group-hover:opacity-100 transition-opacity z-30">
+              <button onClick={next} className="absolute right-3 top-1/2 z-30 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-ml-blue opacity-0 shadow-md transition-opacity hover:bg-white group-hover:opacity-100">
                 <ChevronRight className="w-6 h-6" />
               </button>
             </>
           )}
         </div>
-
       </div>
     </div>
   )
