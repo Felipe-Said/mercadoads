@@ -32,6 +32,7 @@ interface Group {
 const bannerPositionOptions = [
   { value: 'home_hero', label: 'Home | Banner principal' },
   { value: 'home_side_top', label: 'Home | Lateral superior' },
+  { value: 'home_side_middle', label: 'Home | Lateral central' },
   { value: 'home_side_bottom', label: 'Home | Lateral inferior' },
   { value: 'home_deals_top', label: 'Home | Ofertas esquerda' },
   { value: 'home_deals_bottom', label: 'Home | Ofertas direita' },

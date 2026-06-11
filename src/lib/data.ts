@@ -59,6 +59,7 @@ export type BannerPosition =
   | 'left_flyer'
   | 'right_flyer'
   | 'home_side_top'
+  | 'home_side_middle'
   | 'home_side_bottom'
   | 'home_middle'
   | 'home_bottom'

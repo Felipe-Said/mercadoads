@@ -31,6 +31,7 @@ const emptyBannerForm: BannerForm = {
 const bannerPositionOptions: { value: BannerPosition; label: string; helper: string }[] = [
   { value: 'home_hero', label: 'Home | Banner principal', helper: 'Carrossel grande no topo da home.' },
   { value: 'home_side_top', label: 'Home | Lateral superior', helper: 'Card lateral direito acima da dobra.' },
+  { value: 'home_side_middle', label: 'Home | Lateral central', helper: 'Card lateral direito entre os banners superior e inferior.' },
   { value: 'home_side_bottom', label: 'Home | Lateral inferior', helper: 'Card lateral direito abaixo da dobra.' },
   { value: 'home_deals_top', label: 'Home | Faixa de ofertas esquerda', helper: 'Banner medio na area de ofertas.' },
   { value: 'home_deals_bottom', label: 'Home | Faixa de ofertas direita', helper: 'Banner medio ao lado da faixa de ofertas.' },
