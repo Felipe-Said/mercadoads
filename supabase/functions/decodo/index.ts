@@ -5,13 +5,32 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-type DecodoSettings = {
+type ProviderSettings = {
   active: boolean
   api_base_url: string
   products_path: string
   api_key: string | null
   username: string | null
   password: string | null
+}
+
+type ProxyOfferRow = {
+  id: number
+  name: string
+  type: string
+  country: string
+  city: string | null
+  protocol: string
+  endpoint: string | null
+  port: string | null
+  price: string
+  traffic: string
+  stock: string
+  status: string
+  price_amount: number | null
+  traffic_limit_gb: number
+  service_type: string
+  auto_disable: boolean
 }
 
 type ProxyOffer = {
@@ -24,7 +43,9 @@ type ProxyOffer = {
   endpoint: string
   port: string
   price: string
+  priceAmount: number
   traffic: string
+  trafficLimitGb: number
   stock: string
   status: string
 }
@@ -36,6 +57,12 @@ function json(body: unknown, status = 200) {
   })
 }
 
+function asRecord(value: unknown) {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null
+}
+
 function firstString(...values: unknown[]) {
   const found = values.find((value) => {
     if (typeof value === 'string') return value.trim().length > 0
@@ -45,89 +72,61 @@ function firstString(...values: unknown[]) {
   return found === undefined || found === null ? '' : String(found).trim()
 }
 
-function asRecord(value: unknown) {
-  return value && typeof value === 'object' && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : null
+function toNumber(value: unknown) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string') {
+    const parsed = Number(value.replace(',', '.').replace(/[^\d.]/g, ''))
+    return Number.isFinite(parsed) ? parsed : null
+  }
+  return null
 }
 
-function findFirstArray(value: unknown): unknown[] {
-  if (Array.isArray(value)) return value
-  const root = asRecord(value)
-  if (!root) return []
-
-  const directKeys = ['data', 'items', 'results', 'products', 'plans', 'proxies', 'countries', 'locations']
-  for (const key of directKeys) {
-    const found = root[key]
-    if (Array.isArray(found)) return found
-    const nested = findFirstArray(found)
-    if (nested.length > 0) return nested
+function findNumbersByKey(value: unknown, keyPattern: RegExp, numbers: number[] = []) {
+  const record = asRecord(value)
+  if (!record) {
+    if (Array.isArray(value)) value.forEach((item) => findNumbersByKey(item, keyPattern, numbers))
+    return numbers
   }
 
-  for (const nestedValue of Object.values(root)) {
-    const nested = findFirstArray(nestedValue)
-    if (nested.length > 0) return nested
-  }
-
-  return []
-}
-
-function normalizeOffer(item: unknown, index: number): ProxyOffer {
-  if (typeof item === 'string') {
-    return {
-      id: item,
-      name: item,
-      type: 'Proxy premium',
-      country: item,
-      city: '',
-      protocol: 'HTTP(S) / SOCKS5',
-      endpoint: '',
-      port: '',
-      price: '',
-      traffic: '',
-      stock: '',
-      status: 'Disponivel',
+  for (const [key, item] of Object.entries(record)) {
+    if (keyPattern.test(key)) {
+      const parsed = toNumber(item)
+      if (parsed !== null) numbers.push(parsed)
     }
+    findNumbersByKey(item, keyPattern, numbers)
   }
 
-  const record = asRecord(item) ?? {}
-  const location = asRecord(record.location) ?? {}
-  const pricing = asRecord(record.pricing) ?? asRecord(record.price) ?? {}
-  const limits = asRecord(record.limits) ?? {}
-
-  const id = firstString(record.id, record.uuid, record.code, record.slug, record.country_code, record.countryCode, index + 1)
-  const name = firstString(record.name, record.title, record.product, record.plan, record.country_name, record.countryName, record.country, `Proxy ${index + 1}`)
-  const type = firstString(record.type, record.proxy_type, record.proxyType, record.category, 'Proxy premium')
-  const country = firstString(record.country, record.country_name, record.countryName, location.country, location.country_name, location.countryCode)
-  const city = firstString(record.city, location.city, location.city_name)
-  const protocol = firstString(record.protocol, record.protocols, record.scheme, 'HTTP(S) / SOCKS5')
-  const endpoint = firstString(record.endpoint, record.host, record.hostname, record.server, record.address, record.proxy, record.proxy_address)
-  const port = firstString(record.port, record.http_port, record.socks5_port)
-  const price = firstString(record.price, pricing.amount, pricing.value, record.price_per_gb, record.pricePerGb)
-  const traffic = firstString(record.traffic, record.bandwidth, record.gb, limits.traffic, limits.bandwidth)
-  const stock = firstString(record.stock, record.available, record.quantity, record.count, record.ip_count, record.ipCount)
-  const status = firstString(record.status, record.state, record.available === false ? 'Indisponivel' : 'Disponivel')
-
-  return { id, name, type, country, city, protocol, endpoint, port, price, traffic, stock, status }
+  return numbers
 }
 
-function defaultProxyOffers(status = 'Disponivel'): ProxyOffer[] {
-  return [
-    {
-      id: 'premium-pool',
-      name: 'Proxy premium',
-      type: 'Pool premium',
-      country: 'Global',
-      city: '',
-      protocol: 'HTTP(S)',
-      endpoint: '',
-      port: '',
-      price: 'Sob consulta',
-      traffic: 'Conforme plano',
-      stock: 'Ativo',
-      status,
-    },
-  ]
+function extractResidentialTrafficLimit(data: unknown) {
+  const root = asRecord(data)
+  const candidates: unknown[] = []
+  if (Array.isArray(data)) candidates.push(...data)
+  if (Array.isArray(root?.data)) candidates.push(...root.data)
+  if (Array.isArray(root?.subscriptions)) candidates.push(...root.subscriptions)
+  if (Array.isArray(root?.items)) candidates.push(...root.items)
+  if (candidates.length === 0) candidates.push(data)
+
+  const residential = candidates.filter((item) => {
+    const text = JSON.stringify(item).toLowerCase()
+    return text.includes('residential')
+  })
+  const sourceItems = residential.length > 0 ? residential : candidates
+
+  const limits = sourceItems.flatMap((item) => findNumbersByKey(item, /(traffic.*limit|limit.*traffic|included.*traffic|total.*traffic|traffic)$/i))
+  return limits.length > 0 ? Math.max(...limits) : null
+}
+
+function makePassword() {
+  const random = crypto.getRandomValues(new Uint32Array(3))
+  return `Cm_9${random[0].toString(36)}A+${random[1].toString(36)}z${random[2].toString(36)}`.slice(0, 24)
+}
+
+function makeUsername(saleId: string, buyerId: string) {
+  const compactSale = saleId.replace(/\D/g, '').slice(-10).padStart(6, '0')
+  const compactBuyer = buyerId.replace(/-/g, '').slice(0, 8).toLowerCase()
+  return `cm_${compactSale}_${compactBuyer}`.slice(0, 64)
 }
 
 async function parseRequestBody(req: Request) {
@@ -148,67 +147,41 @@ async function loadSettings(supabaseAdmin: ReturnType<typeof createClient>) {
     .maybeSingle()
 
   if (error) throw error
-  return data as DecodoSettings | null
+  return data as ProviderSettings | null
 }
 
 async function loadProxyOffers(supabaseAdmin: ReturnType<typeof createClient>) {
   const { data, error } = await supabaseAdmin
     .from('proxy_offers')
-    .select('id, name, type, country, city, protocol, endpoint, port, price, traffic, stock, status')
+    .select('id, name, type, country, city, protocol, endpoint, port, price, traffic, stock, status, price_amount, traffic_limit_gb, service_type, auto_disable')
     .eq('is_active', true)
+    .not('price_amount', 'is', null)
     .order('sort_order', { ascending: true })
     .order('id', { ascending: true })
 
-  if (error) {
-    console.error(error)
-    return []
-  }
-
-  return (data ?? []).map((row) => ({
-    id: String(row.id),
-    name: firstString(row.name, 'Proxy premium'),
-    type: firstString(row.type, 'Proxy premium'),
-    country: firstString(row.country, 'Global'),
-    city: firstString(row.city),
-    protocol: firstString(row.protocol, 'HTTP(S) / SOCKS5'),
-    endpoint: firstString(row.endpoint),
-    port: firstString(row.port),
-    price: firstString(row.price, 'Sob consulta'),
-    traffic: firstString(row.traffic, 'Conforme plano'),
-    stock: firstString(row.stock, 'Disponivel'),
-    status: firstString(row.status, 'Disponivel'),
-  })) as ProxyOffer[]
+  if (error) throw error
+  return (data ?? []) as ProxyOfferRow[]
 }
 
-async function callDecodo(settings: DecodoSettings) {
-  const base = settings.api_base_url.replace(/\/+$/, '')
-  const path = settings.products_path.trim()
+async function callProvider(settings: ProviderSettings, path: string, init: RequestInit = {}) {
+  const apiKey = settings.api_key?.trim()
+  if (!apiKey) {
+    return { configured: false as const }
+  }
+
+  const base = (settings.api_base_url || 'https://api.decodo.com/v2').replace(/\/+$/, '')
   const targetUrl = /^https?:\/\//i.test(path)
     ? path
     : `${base}${path.startsWith('/') ? path : `/${path}`}`
-  const headers = new Headers({ Accept: 'application/json' })
+  const headers = new Headers(init.headers)
+  headers.set('Accept', 'application/json')
+  headers.set('Authorization', apiKey)
 
-  if (settings.api_key?.trim()) {
-    headers.set('Authorization', `Bearer ${settings.api_key.trim()}`)
-    headers.set('X-API-Key', settings.api_key.trim())
-  } else if (settings.username?.trim() && settings.password?.trim()) {
-    headers.set('Authorization', `Basic ${btoa(`${settings.username.trim()}:${settings.password}`)}`)
-  }
-
-  const isScrapeEndpoint = /\/scrape\/?$/i.test(new URL(targetUrl).pathname)
-  const init: RequestInit = { headers }
-
-  if (isScrapeEndpoint) {
+  if (init.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
-    init.method = 'POST'
-    init.body = JSON.stringify({
-      url: 'https://ip.decodo.com',
-      proxy_pool: 'premium',
-      headless: 'html',
-    })
   }
 
-  const response = await fetch(targetUrl, init)
+  const response = await fetch(targetUrl, { ...init, headers })
   const text = await response.text()
   let data: unknown = text
 
@@ -219,22 +192,133 @@ async function callDecodo(settings: DecodoSettings) {
   }
 
   if (!response.ok) {
+    return { configured: true as const, success: false as const, status: response.status, data }
+  }
+
+  return { configured: true as const, success: true as const, status: response.status, data }
+}
+
+async function getCapacity(settings: ProviderSettings) {
+  const subscriptions = await callProvider(settings, settings.products_path || '/subscriptions')
+  if (subscriptions.configured === false || subscriptions.success === false) return subscriptions
+
+  const allocated = await callProvider(settings, '/allocated-traffic-limit?service_type=residential_proxies')
+  if (allocated.configured === false || allocated.success === false) return allocated
+
+  const totalLimit = extractResidentialTrafficLimit(subscriptions.data)
+  const allocatedLimit = toNumber(asRecord(allocated.data)?.allocated_traffic_limit) ?? 0
+
+  if (totalLimit === null) {
     return {
+      configured: true as const,
       success: false as const,
-      status: response.status,
-      error: response.status === 404
-        ? 'Endpoint de catálogo não encontrado. Confira a Base URL e o endpoint configurado.'
-        : 'Não foi possível consultar o catálogo de proxies agora.',
-      data,
+      status: 422,
+      data: { message: 'Nao foi possivel confirmar o limite de trafego disponivel.' },
     }
   }
 
-  const items = findFirstArray(data).map(normalizeOffer)
-  if (items.length === 0 && isScrapeEndpoint) {
-    return { success: true as const, status: response.status, data, items: defaultProxyOffers() }
+  return {
+    configured: true as const,
+    success: true as const,
+    status: 200,
+    data: subscriptions.data,
+    totalLimit,
+    allocatedLimit,
+    availableLimit: Math.max(totalLimit - allocatedLimit, 0),
+  }
+}
+
+function mapOffer(row: ProxyOfferRow, availableLimit: number): ProxyOffer | null {
+  const priceAmount = Number(row.price_amount ?? 0)
+  const trafficLimitGb = Number(row.traffic_limit_gb ?? 0)
+  if (!priceAmount || !trafficLimitGb || availableLimit < trafficLimitGb) return null
+
+  return {
+    id: String(row.id),
+    name: firstString(row.name, `Proxy ${trafficLimitGb}GB`),
+    type: firstString(row.type, 'Proxy residencial'),
+    country: firstString(row.country, 'Global'),
+    city: firstString(row.city),
+    protocol: firstString(row.protocol, 'HTTP(S) / SOCKS5'),
+    endpoint: firstString(row.endpoint, 'gate.decodo.com'),
+    port: firstString(row.port, '7000'),
+    price: firstString(row.price, new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(priceAmount)),
+    priceAmount,
+    traffic: firstString(row.traffic, `${trafficLimitGb}GB`),
+    trafficLimitGb,
+    stock: `${Math.floor(availableLimit / trafficLimitGb)} disponivel`,
+    status: firstString(row.status, 'Disponivel'),
+  }
+}
+
+async function provisionProxySale(supabaseAdmin: ReturnType<typeof createClient>, settings: ProviderSettings, saleId: string) {
+  const { data: sale, error: saleError } = await supabaseAdmin
+    .from('sales')
+    .select('id, buyer_id, proxy_offer_id, status, proxy_offers(id, name, traffic_limit_gb, service_type, auto_disable)')
+    .eq('id', saleId)
+    .maybeSingle()
+
+  if (saleError) throw saleError
+  const saleRecord = asRecord(sale)
+  if (!saleRecord?.proxy_offer_id || saleRecord.status !== 'paid') return { skipped: true }
+
+  const existing = await supabaseAdmin
+    .from('proxy_deliveries')
+    .select('id')
+    .eq('sale_id', saleId)
+    .maybeSingle()
+
+  if (existing.data) return { skipped: true, existing: true }
+
+  const offer = asRecord(saleRecord.proxy_offers)
+  const username = makeUsername(String(saleRecord.id), String(saleRecord.buyer_id))
+  const password = makePassword()
+  const trafficLimitGb = Number(offer?.traffic_limit_gb ?? 1)
+  const serviceType = firstString(offer?.service_type, 'residential_proxies')
+
+  const providerResult = await callProvider(settings, '/sub-users', {
+    method: 'POST',
+    body: JSON.stringify({
+      username,
+      password,
+      service_type: serviceType,
+      traffic_limit: trafficLimitGb,
+      auto_disable: offer?.auto_disable ?? true,
+    }),
+  })
+
+  if (providerResult.configured === false || providerResult.success === false) {
+    await supabaseAdmin.from('proxy_deliveries').insert({
+      sale_id: saleId,
+      buyer_id: saleRecord.buyer_id,
+      proxy_offer_id: saleRecord.proxy_offer_id,
+      username,
+      password,
+      service_type: serviceType,
+      traffic_limit_gb: trafficLimitGb,
+      status: 'failed',
+      provider_payload: providerResult,
+    })
+    return providerResult
   }
 
-  return { success: true as const, status: response.status, data, items }
+  const providerData = asRecord(providerResult.data)
+  await supabaseAdmin.from('proxy_deliveries').insert({
+    sale_id: saleId,
+    buyer_id: saleRecord.buyer_id,
+    proxy_offer_id: saleRecord.proxy_offer_id,
+    provider_sub_user_id: firstString(providerData?.id, providerData?.username, username),
+    username,
+    password,
+    host: 'gate.decodo.com',
+    port: '7000',
+    service_type: serviceType,
+    traffic_limit_gb: trafficLimitGb,
+    status: 'active',
+    provider_payload: providerResult.data,
+  })
+
+  return { success: true, username }
 }
 
 Deno.serve(async (req) => {
@@ -251,7 +335,6 @@ Deno.serve(async (req) => {
 
   const supabaseAdmin = createClient(supabaseUrl, serviceRole)
   const settings = await loadSettings(supabaseAdmin)
-  const customOffers = await loadProxyOffers(supabaseAdmin)
 
   if (!settings || !settings.active) {
     return json({ success: true, configured: false, items: [] })
@@ -260,20 +343,20 @@ Deno.serve(async (req) => {
   const url = new URL(req.url)
   const body = req.method === 'GET' ? {} : await parseRequestBody(req)
   const action = String(url.searchParams.get('action') || body.action || 'catalog').toLowerCase()
-  const hasCredentials = Boolean(settings.api_key?.trim() || (settings.username?.trim() && settings.password?.trim()))
+  const hasCredentials = Boolean(settings.api_key?.trim())
 
   if (action === 'status') {
+    const capacity = hasCredentials ? await getCapacity(settings) : null
     return json({
-      success: true,
+      success: capacity ? capacity.success !== false : true,
       configured: hasCredentials,
       active: settings.active,
-      apiBaseUrl: settings.api_base_url,
-      productsPath: settings.products_path,
-    })
-  }
-
-  if (action === 'catalog' && customOffers.length > 0) {
-    return json({ success: true, configured: true, status: 200, items: customOffers })
+      availableLimit: capacity && 'availableLimit' in capacity ? capacity.availableLimit : null,
+      totalLimit: capacity && 'totalLimit' in capacity ? capacity.totalLimit : null,
+      allocatedLimit: capacity && 'allocatedLimit' in capacity ? capacity.allocatedLimit : null,
+      status: capacity && 'status' in capacity ? capacity.status : 200,
+      data: capacity && 'data' in capacity ? capacity.data : null,
+    }, capacity?.success === false ? 400 : 200)
   }
 
   if (!hasCredentials) {
@@ -281,8 +364,30 @@ Deno.serve(async (req) => {
   }
 
   if (action === 'catalog') {
-    const result = await callDecodo(settings)
-    return json({ configured: true, ...result }, result.success ? 200 : 400)
+    const capacity = await getCapacity(settings)
+    if (capacity.configured === false || capacity.success === false) {
+      return json({ configured: true, ...capacity, items: [] }, capacity.success === false ? 400 : 200)
+    }
+
+    const offers = await loadProxyOffers(supabaseAdmin)
+    const items = offers
+      .map((offer) => mapOffer(offer, capacity.availableLimit))
+      .filter(Boolean) as ProxyOffer[]
+
+    return json({
+      success: true,
+      configured: true,
+      status: 200,
+      availableLimit: capacity.availableLimit,
+      items,
+    })
+  }
+
+  if (action === 'provision_sale') {
+    const saleId = firstString(body.saleId, url.searchParams.get('saleId'))
+    if (!saleId) return json({ success: false, configured: true, error: 'Pedido nao informado.' }, 400)
+    const result = await provisionProxySale(supabaseAdmin, settings, saleId)
+    return json({ configured: true, ...result }, (result as { success?: boolean }).success === false ? 400 : 200)
   }
 
   return json({ success: false, configured: true, error: 'Action not supported.' }, 400)

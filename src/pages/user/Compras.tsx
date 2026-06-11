@@ -135,6 +135,12 @@ export function Compras() {
     }
   }
 
+  const handleCopyText = async (value: string, saleId: string) => {
+    await navigator.clipboard.writeText(value)
+    setCopiedSaleId(saleId)
+    setTimeout(() => setCopiedSaleId(null), 2000)
+  }
+
   return (
     <UserLayout>
       <div className="space-y-6">
@@ -178,7 +184,7 @@ export function Compras() {
                     {sale.products?.image_url ? <img src={sale.products.image_url} alt="" className="w-full h-full object-cover" /> : <Package className="w-8 h-8 text-gray-400" />}
                   </div>
                   <div className="space-y-2">
-                    <p className="text-ml-dark font-medium group-hover:text-ml-blue transition-colors">{sale.products?.title ?? 'Produto removido'}</p>
+                    <p className="text-ml-dark font-medium group-hover:text-ml-blue transition-colors">{sale.products?.title ?? sale.proxy_offers?.name ?? 'Pedido de proxy'}</p>
                     <p className="text-sm text-gray-500 mt-1">{formatCurrency(sale.amount)}</p>
                     {sale.status === 'pending' && !(sale.payment_qrcode_text || sale.payment_qrcode) && (
                       <div className="rounded-md border border-yellow-100 bg-yellow-50 p-3 max-w-2xl">
@@ -257,6 +263,43 @@ export function Compras() {
                             <p className="text-sm text-gray-700 whitespace-pre-wrap">{sale.products.seller_note}</p>
                           </div>
                         )}
+                        {sale.proxy_deliveries?.map((delivery) => {
+                          const proxyLine = `${delivery.host}:${delivery.port}:${delivery.username}:${delivery.password}`
+                          if (delivery.status === 'failed') {
+                            return (
+                              <div key={delivery.username} className="rounded-md border border-yellow-100 bg-yellow-50 p-4 max-w-3xl">
+                                <p className="text-sm font-semibold text-yellow-800">Entrega em analise</p>
+                                <p className="mt-1 text-xs text-gray-600">O pagamento foi confirmado, mas a credencial ainda nao foi liberada automaticamente. O suporte deve revisar este pedido.</p>
+                              </div>
+                            )
+                          }
+                          return (
+                            <div key={delivery.username} className="rounded-md border border-blue-100 bg-blue-50 p-4 max-w-3xl">
+                              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                                <div>
+                                  <p className="text-sm font-semibold text-blue-800">Proxy liberado</p>
+                                  <p className="mt-1 text-xs text-blue-700">
+                                    {delivery.traffic_limit_gb}GB provisionado. Use o host, porta, usuario e senha abaixo.
+                                  </p>
+                                </div>
+                                <Button
+                                  type="button"
+                                  onClick={() => handleCopyText(proxyLine, sale.id)}
+                                  className="h-9 rounded-sm bg-white border border-blue-200 text-blue-800 hover:bg-blue-100 text-xs font-semibold"
+                                >
+                                  {copiedSaleId === sale.id ? 'Copiado' : 'Copiar proxy'}
+                                </Button>
+                              </div>
+                              <div className="mt-3 grid gap-2 text-xs md:grid-cols-2">
+                                <p><span className="font-semibold text-blue-900">Host:</span> {delivery.host}</p>
+                                <p><span className="font-semibold text-blue-900">Porta:</span> {delivery.port}</p>
+                                <p><span className="font-semibold text-blue-900">Usuario:</span> {delivery.username}</p>
+                                <p><span className="font-semibold text-blue-900">Senha:</span> {delivery.password}</p>
+                              </div>
+                              <textarea readOnly value={proxyLine} rows={2} className="mt-3 w-full resize-none rounded-sm border border-blue-100 bg-white p-2 font-mono text-xs text-gray-700 outline-none" />
+                            </div>
+                          )
+                        })}
                       </div>
                     )}
                     {sale.status === 'pending' && (

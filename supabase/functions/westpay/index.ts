@@ -14,6 +14,12 @@ type GatewaySettings = {
   westpay_webhook_secret: string | null
 }
 
+type ProxyProviderSettings = {
+  active: boolean
+  api_base_url: string
+  api_key: string | null
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -171,6 +177,17 @@ function unwrapPayload(value: unknown): Record<string, unknown> {
     ?? root
 }
 
+function makeProxyPassword() {
+  const random = crypto.getRandomValues(new Uint32Array(3))
+  return `Cm_9${random[0].toString(36)}A+${random[1].toString(36)}z${random[2].toString(36)}`.slice(0, 24)
+}
+
+function makeProxyUsername(saleId: string, buyerId: string) {
+  const compactSale = saleId.replace(/\D/g, '').slice(-10).padStart(6, '0')
+  const compactBuyer = buyerId.replace(/-/g, '').slice(0, 8).toLowerCase()
+  return `cm_${compactSale}_${compactBuyer}`.slice(0, 64)
+}
+
 async function loadGatewaySettings(supabaseAdmin: ReturnType<typeof createClient>) {
   const { data, error } = await supabaseAdmin
     .from('payment_gateway_settings')
@@ -180,6 +197,101 @@ async function loadGatewaySettings(supabaseAdmin: ReturnType<typeof createClient
 
   if (error) throw error
   return data as GatewaySettings | null
+}
+
+async function loadProxyProviderSettings(supabaseAdmin: ReturnType<typeof createClient>) {
+  const { data, error } = await supabaseAdmin
+    .from('decodo_settings')
+    .select('active, api_base_url, api_key')
+    .eq('id', 1)
+    .maybeSingle()
+
+  if (error) throw error
+  return data as ProxyProviderSettings | null
+}
+
+async function callProxyProvider(settings: ProxyProviderSettings, path: string, body: Record<string, unknown>) {
+  if (!settings.active || !settings.api_key?.trim()) {
+    return { success: false as const, configured: false as const, data: null }
+  }
+
+  const base = (settings.api_base_url || 'https://api.decodo.com/v2').replace(/\/+$/, '')
+  const response = await fetch(`${base}${path.startsWith('/') ? path : `/${path}`}`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      Authorization: settings.api_key.trim(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  })
+  const text = await response.text()
+  let data: unknown = text
+
+  try {
+    data = text ? JSON.parse(text) : null
+  } catch {
+    data = text
+  }
+
+  if (!response.ok) {
+    return { success: false as const, configured: true as const, status: response.status, data }
+  }
+
+  return { success: true as const, configured: true as const, status: response.status, data }
+}
+
+async function provisionProxySale(supabaseAdmin: ReturnType<typeof createClient>, saleId: string) {
+  const { data: sale, error: saleError } = await supabaseAdmin
+    .from('sales')
+    .select('id, buyer_id, proxy_offer_id, status, proxy_offers(id, traffic_limit_gb, service_type, auto_disable)')
+    .eq('id', saleId)
+    .maybeSingle()
+
+  if (saleError) throw saleError
+  const saleRecord = asRecord(sale)
+  if (!saleRecord?.proxy_offer_id || saleRecord.status !== 'paid') return { skipped: true }
+
+  const existing = await supabaseAdmin
+    .from('proxy_deliveries')
+    .select('id')
+    .eq('sale_id', saleId)
+    .maybeSingle()
+
+  if (existing.data) return { skipped: true, existing: true }
+
+  const settings = await loadProxyProviderSettings(supabaseAdmin)
+  const offer = asRecord(saleRecord.proxy_offers)
+  const username = makeProxyUsername(String(saleRecord.id), String(saleRecord.buyer_id))
+  const password = makeProxyPassword()
+  const trafficLimitGb = Number(offer?.traffic_limit_gb ?? 1)
+  const serviceType = firstString(offer?.service_type, 'residential_proxies') ?? 'residential_proxies'
+  const providerResult = settings
+    ? await callProxyProvider(settings, '/sub-users', {
+      username,
+      password,
+      service_type: serviceType,
+      traffic_limit: trafficLimitGb,
+      auto_disable: offer?.auto_disable ?? true,
+    })
+    : { success: false as const, configured: false as const, data: null }
+
+  await supabaseAdmin.from('proxy_deliveries').insert({
+    sale_id: saleId,
+    buyer_id: saleRecord.buyer_id,
+    proxy_offer_id: saleRecord.proxy_offer_id,
+    provider_sub_user_id: providerResult.success ? firstString(asRecord(providerResult.data)?.id, username) : null,
+    username,
+    password,
+    host: 'gate.decodo.com',
+    port: '7000',
+    service_type: serviceType,
+    traffic_limit_gb: trafficLimitGb,
+    status: providerResult.success ? 'active' : 'failed',
+    provider_payload: providerResult,
+  })
+
+  return providerResult
 }
 
 async function callWestPay(settings: GatewaySettings, path: string, method: 'GET' | 'POST', body?: Record<string, unknown>) {
@@ -257,7 +369,10 @@ async function updateSaleFromWebhook(supabaseAdmin: ReturnType<typeof createClie
 
   const { error } = await supabaseAdmin.from('sales').update(updates).eq('id', saleId)
   if (error) throw error
-  return { updated: true }
+  const proxyDelivery = mappedStatus === 'paid'
+    ? await provisionProxySale(supabaseAdmin, saleId)
+    : { skipped: true }
+  return { updated: true, proxyDelivery }
 }
 
 async function updateWithdrawalFromWebhook(supabaseAdmin: ReturnType<typeof createClient>, payload: Record<string, unknown>) {

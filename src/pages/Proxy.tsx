@@ -1,12 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Globe2, LockKeyhole, RefreshCw, Search, Server, ShieldCheck, Wifi } from 'lucide-react'
 import { getDecodoProxyCatalog, type DecodoProxyOffer } from '../lib/decodo'
+import { useAuth } from '../contexts/AuthContext'
+import { createWestPayPixInOrThrow, validateWestPayCustomer } from '../lib/westpay'
+import { supabase } from '../lib/supabase'
+import { formatCurrency } from '../lib/data'
 
 function displayValue(value: string, fallback = 'Consultar') {
   return value?.trim() || fallback
 }
 
-function ProxyCard({ proxy }: { proxy: DecodoProxyOffer }) {
+function ProxyCard({ proxy, onBuy, buying }: { proxy: DecodoProxyOffer; onBuy: (proxy: DecodoProxyOffer) => void; buying: boolean }) {
   return (
     <article className="layout-surface flex h-full flex-col rounded-sm p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <div className="mb-4 flex items-start justify-between gap-3">
@@ -37,7 +42,7 @@ function ProxyCard({ proxy }: { proxy: DecodoProxyOffer }) {
       <div className="mt-5 grid grid-cols-3 gap-2 border-t border-[var(--layout-border-color)] pt-4 text-xs">
         <div>
           <p className="font-bold text-[var(--layout-text-primary)]">Preco</p>
-          <p className="mt-1 text-[var(--layout-price-color)]">{displayValue(proxy.price)}</p>
+          <p className="mt-1 text-[var(--layout-price-color)]">{proxy.priceAmount ? formatCurrency(proxy.priceAmount) : displayValue(proxy.price)}</p>
         </div>
         <div>
           <p className="font-bold text-[var(--layout-text-primary)]">Trafego</p>
@@ -49,19 +54,36 @@ function ProxyCard({ proxy }: { proxy: DecodoProxyOffer }) {
         </div>
       </div>
 
-      <button className="layout-primary-button mt-5 h-11 rounded-sm text-sm font-bold">
-        Solicitar proxy
+      <button
+        type="button"
+        onClick={() => onBuy(proxy)}
+        disabled={buying || !proxy.priceAmount}
+        className="layout-primary-button mt-5 h-11 rounded-sm text-sm font-bold disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {buying ? 'Gerando Pix...' : 'Comprar proxy'}
       </button>
     </article>
   )
 }
 
 export function Proxy() {
+  const navigate = useNavigate()
+  const { user, profile, loading: authLoading } = useAuth()
   const [items, setItems] = useState<DecodoProxyOffer[]>([])
   const [configured, setConfigured] = useState(true)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
+  const [selectedProxy, setSelectedProxy] = useState<DecodoProxyOffer | null>(null)
+  const [buyerName, setBuyerName] = useState('')
+  const [buyerPhone, setBuyerPhone] = useState('')
+  const [buyerDocument, setBuyerDocument] = useState('')
+  const [buyingId, setBuyingId] = useState<string | null>(null)
+
+  useEffect(() => {
+    setBuyerName(profile?.full_name ?? user?.user_metadata?.full_name ?? '')
+    setBuyerPhone(profile?.phone ?? '')
+  }, [profile?.full_name, profile?.phone, user?.user_metadata?.full_name])
 
   const load = async () => {
     setLoading(true)
@@ -94,6 +116,58 @@ export function Proxy() {
       item.status,
     ].some((value) => value.toLowerCase().includes(term)))
   }, [items, query])
+
+  const handleBuy = async (proxy: DecodoProxyOffer) => {
+    if (authLoading) return
+    if (!user) {
+      setError('Entre na sua conta para comprar proxy.')
+      return
+    }
+
+    setError(null)
+    setSelectedProxy(proxy)
+
+    if (!buyerName.trim() || !buyerPhone.trim() || !buyerDocument.trim()) return
+
+    setBuyingId(proxy.id)
+    let saleId: string | null = null
+
+    try {
+      const customer = validateWestPayCustomer({
+        name: buyerName,
+        email: user.email ?? '',
+        phone: buyerPhone,
+        documentNumber: buyerDocument,
+      })
+
+      const { data: saleData, error: saleError } = await supabase.from('sales').insert({
+        product_id: null,
+        proxy_offer_id: Number(proxy.id),
+        buyer_id: user.id,
+        seller_id: null,
+        amount: proxy.priceAmount,
+        status: 'pending',
+      }).select('id').single()
+
+      if (saleError) throw saleError
+      saleId = saleData?.id ? String(saleData.id) : null
+      if (!saleId) throw new Error('Nao foi possivel gerar o pedido.')
+
+      await createWestPayPixInOrThrow({
+        saleId,
+        amount: proxy.priceAmount,
+        customer,
+        itemTitle: proxy.name,
+      })
+
+      navigate('/painel/usuario/compras', { state: { checkoutSaleIds: [saleId] } })
+    } catch (buyError) {
+      if (saleId) await supabase.from('sales').delete().eq('id', saleId)
+      setError(buyError instanceof Error ? buyError.message : 'Nao foi possivel gerar o Pix.')
+    } finally {
+      setBuyingId(null)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[var(--layout-page-background)] pb-12 text-[var(--layout-text-primary)]">
@@ -157,6 +231,42 @@ export function Proxy() {
           </div>
         )}
 
+        {selectedProxy && user && (
+          <div className="layout-surface mb-5 rounded-sm p-5 shadow-sm">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-end">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--layout-link-color)]">Dados para pagamento</p>
+                <h2 className="mt-1 text-lg font-bold text-[var(--layout-text-primary)]">{selectedProxy.name}</h2>
+                <p className="mt-1 text-sm text-[var(--layout-text-muted)]">
+                  {selectedProxy.traffic} de trafego. A credencial exclusiva e liberada depois da confirmacao do pagamento.
+                </p>
+                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                  <label className="block">
+                    <span className="mb-1 block text-sm font-bold text-[var(--layout-text-primary)]">Nome completo</span>
+                    <input value={buyerName} onChange={(event) => setBuyerName(event.target.value)} className="h-11 w-full rounded-sm border border-[var(--layout-border-color)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)]" />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-sm font-bold text-[var(--layout-text-primary)]">WhatsApp</span>
+                    <input value={buyerPhone} onChange={(event) => setBuyerPhone(event.target.value)} className="h-11 w-full rounded-sm border border-[var(--layout-border-color)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)]" placeholder="DDD + numero" />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-sm font-bold text-[var(--layout-text-primary)]">CPF ou CNPJ</span>
+                    <input value={buyerDocument} onChange={(event) => setBuyerDocument(event.target.value)} className="h-11 w-full rounded-sm border border-[var(--layout-border-color)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)]" placeholder="Somente numeros" />
+                  </label>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleBuy(selectedProxy)}
+                disabled={Boolean(buyingId)}
+                className="layout-primary-button h-12 rounded-sm px-5 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {buyingId ? 'Gerando Pix...' : `Pagar ${formatCurrency(selectedProxy.priceAmount)}`}
+              </button>
+            </div>
+          </div>
+        )}
+
         {loading && (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {[1, 2, 3, 4, 5, 6].map((item) => (
@@ -174,7 +284,7 @@ export function Proxy() {
         {!loading && filteredItems.length > 0 && (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {filteredItems.map((item, index) => (
-              <ProxyCard key={`${item.id}-${index}`} proxy={item} />
+              <ProxyCard key={`${item.id}-${index}`} proxy={item} onBuy={handleBuy} buying={buyingId === item.id} />
             ))}
           </div>
         )}

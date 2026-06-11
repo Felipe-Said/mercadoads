@@ -89,6 +89,15 @@ export interface Sale {
   payment_qrcode_expires_at?: string | null
   gateway_payload?: Record<string, unknown> | null
   products?: { title: string | null; image_url: string | null; file_url?: string | null; seller_note?: string | null } | null
+  proxy_offers?: { name: string | null; traffic: string | null; protocol: string | null } | null
+  proxy_deliveries?: Array<{
+    username: string
+    password: string
+    host: string
+    port: string
+    traffic_limit_gb: number
+    status: string
+  }> | null
   buyer?: { full_name: string | null } | null
   seller?: { full_name: string | null } | null
 }
@@ -203,7 +212,7 @@ export async function getBanners(position?: Banner['position']) {
 export async function getSales(options: { buyerId?: string; sellerId?: string } = {}) {
   let query = supabase
     .from('sales')
-    .select('*, products(title, image_url, file_url, seller_note), buyer:buyer_id(full_name), seller:seller_id(full_name)')
+    .select('*, products(title, image_url, file_url, seller_note), proxy_offers(name, traffic, protocol), proxy_deliveries(username, password, host, port, traffic_limit_gb, status), buyer:buyer_id(full_name), seller:seller_id(full_name)')
     .order('created_at', { ascending: false })
 
   if (options.buyerId) query = query.eq('buyer_id', options.buyerId)

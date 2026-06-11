@@ -10,7 +10,9 @@ export type DecodoProxyOffer = {
   endpoint: string
   port: string
   price: string
+  priceAmount: number
   traffic: string
+  trafficLimitGb: number
   stock: string
   status: string
 }
@@ -57,7 +59,7 @@ function friendlyProviderMessage(message: string | null, status?: number) {
   return message || 'Não foi possível consultar o catálogo de proxies agora.'
 }
 
-async function invokeDecodoDirect(action: string) {
+async function invokeDecodoDirect(action: string, payload?: Record<string, unknown>) {
   if (!supabaseUrl) throw new Error('Plataforma nao configurada.')
 
   const { data: sessionData } = await supabase.auth.getSession()
@@ -69,7 +71,7 @@ async function invokeDecodoDirect(action: string) {
       ...(supabaseAnonKey ? { apikey: supabaseAnonKey } : {}),
       ...(sessionData.session?.access_token ? { Authorization: `Bearer ${sessionData.session.access_token}` } : {}),
     },
-    body: JSON.stringify({ action }),
+    body: JSON.stringify({ action, ...(payload ?? {}) }),
   })
 
   const text = await response.text()
@@ -89,16 +91,16 @@ async function invokeDecodoDirect(action: string) {
   return data as DecodoInvokeResult
 }
 
-export async function invokeDecodo(action: 'catalog' | 'status') {
+export async function invokeDecodo(action: 'catalog' | 'status' | 'provision_sale', payload?: Record<string, unknown>) {
   try {
     const { data, error } = await supabase.functions.invoke('decodo', {
-      body: { action },
+      body: { action, ...(payload ?? {}) },
     })
 
-    if (error) return invokeDecodoDirect(action)
+    if (error) return invokeDecodoDirect(action, payload)
     return data as DecodoInvokeResult
   } catch {
-    return invokeDecodoDirect(action)
+    return invokeDecodoDirect(action, payload)
   }
 }
 

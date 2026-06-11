@@ -35,9 +35,13 @@ type ProxyOfferSettings = {
   endpoint: string
   port: string
   price: string
+  price_amount: number | null
   traffic: string
+  traffic_limit_gb: number
   stock: string
   status: string
+  service_type: string
+  auto_disable: boolean
   sort_order: number
   is_active: boolean
 }
@@ -51,9 +55,13 @@ const emptyProxyOffer: ProxyOfferSettings = {
   endpoint: '',
   port: '',
   price: '',
+  price_amount: null,
   traffic: '',
+  traffic_limit_gb: 5,
   stock: 'Disponivel',
   status: 'Disponivel',
+  service_type: 'residential_proxies',
+  auto_disable: true,
   sort_order: 10,
   is_active: true,
 }
@@ -71,8 +79,8 @@ export function Gateway() {
   const [message, setMessage] = useState<string | null>(null)
   const [testMessage, setTestMessage] = useState<string | null>(null)
   const [decodoActive, setDecodoActive] = useState(false)
-  const [decodoBaseUrl, setDecodoBaseUrl] = useState('https://scraper-api.decodo.com')
-  const [decodoProductsPath, setDecodoProductsPath] = useState('/v2/scrape')
+  const [decodoBaseUrl, setDecodoBaseUrl] = useState('https://api.decodo.com/v2')
+  const [decodoProductsPath, setDecodoProductsPath] = useState('/subscriptions')
   const [decodoApiKey, setDecodoApiKey] = useState('')
   const [decodoUsername, setDecodoUsername] = useState('')
   const [decodoPassword, setDecodoPassword] = useState('')
@@ -109,7 +117,7 @@ export function Gateway() {
         .maybeSingle(),
       supabase
         .from('proxy_offers')
-        .select('id, name, type, country, city, protocol, endpoint, port, price, traffic, stock, status, sort_order, is_active')
+        .select('id, name, type, country, city, protocol, endpoint, port, price, price_amount, traffic, traffic_limit_gb, stock, status, service_type, auto_disable, sort_order, is_active')
         .order('sort_order', { ascending: true })
         .order('id', { ascending: true }),
     ])
@@ -128,8 +136,8 @@ export function Gateway() {
 
         const decodoSettings = decodoResult.data as DecodoSettings | null
         setDecodoActive(decodoSettings?.active ?? false)
-        setDecodoBaseUrl(decodoSettings?.api_base_url ?? 'https://scraper-api.decodo.com')
-        setDecodoProductsPath(decodoSettings?.products_path ?? '/v2/scrape')
+        setDecodoBaseUrl(decodoSettings?.api_base_url ?? 'https://api.decodo.com/v2')
+        setDecodoProductsPath(decodoSettings?.products_path ?? '/subscriptions')
         setDecodoApiKey(decodoSettings?.api_key ?? '')
         setDecodoUsername(decodoSettings?.username ?? '')
         setDecodoPassword(decodoSettings?.password ?? '')
@@ -207,8 +215,8 @@ export function Gateway() {
     const { error } = await supabase.from('decodo_settings').upsert({
       id: 1,
       active: decodoActive,
-      api_base_url: decodoBaseUrl.trim() || 'https://scraper-api.decodo.com',
-      products_path: decodoProductsPath.trim() || '/v2/scrape',
+      api_base_url: decodoBaseUrl.trim() || 'https://api.decodo.com/v2',
+      products_path: decodoProductsPath.trim() || '/subscriptions',
       api_key: decodoApiKey.trim() || null,
       username: decodoUsername.trim() || null,
       password: decodoPassword.trim() || null,
@@ -235,8 +243,8 @@ export function Gateway() {
 
     const settings = data as Omit<DecodoSettings, 'id'> | null
     setDecodoActive(settings?.active ?? decodoActive)
-    setDecodoBaseUrl(settings?.api_base_url ?? 'https://scraper-api.decodo.com')
-    setDecodoProductsPath(settings?.products_path ?? '/v2/scrape')
+    setDecodoBaseUrl(settings?.api_base_url ?? 'https://api.decodo.com/v2')
+    setDecodoProductsPath(settings?.products_path ?? '/subscriptions')
     setDecodoApiKey(settings?.api_key ?? '')
     setDecodoUsername(settings?.username ?? '')
     setDecodoPassword(settings?.password ?? '')
@@ -273,9 +281,13 @@ export function Gateway() {
       endpoint: proxyOfferForm.endpoint.trim() || null,
       port: proxyOfferForm.port.trim() || null,
       price: proxyOfferForm.price.trim() || 'Sob consulta',
+      price_amount: Number(proxyOfferForm.price_amount) || null,
       traffic: proxyOfferForm.traffic.trim() || 'Conforme plano',
+      traffic_limit_gb: Number(proxyOfferForm.traffic_limit_gb) || 1,
       stock: proxyOfferForm.stock.trim() || 'Disponivel',
       status: proxyOfferForm.status.trim() || 'Disponivel',
+      service_type: proxyOfferForm.service_type.trim() || 'residential_proxies',
+      auto_disable: proxyOfferForm.auto_disable,
       sort_order: Number(proxyOfferForm.sort_order) || 0,
       is_active: proxyOfferForm.is_active,
       updated_at: new Date().toISOString(),
@@ -283,6 +295,14 @@ export function Gateway() {
 
     if (!payload.name) {
       setProxyOfferMessage('Informe o nome do plano.')
+      return
+    }
+    if (!payload.price_amount) {
+      setProxyOfferMessage('Informe o valor cobrado do cliente.')
+      return
+    }
+    if (!payload.traffic_limit_gb) {
+      setProxyOfferMessage('Informe quantos GB serao provisionados.')
       return
     }
 
@@ -298,7 +318,7 @@ export function Gateway() {
 
     const { data, error: reloadError } = await supabase
       .from('proxy_offers')
-      .select('id, name, type, country, city, protocol, endpoint, port, price, traffic, stock, status, sort_order, is_active')
+      .select('id, name, type, country, city, protocol, endpoint, port, price, price_amount, traffic, traffic_limit_gb, stock, status, service_type, auto_disable, sort_order, is_active')
       .order('sort_order', { ascending: true })
       .order('id', { ascending: true })
 
@@ -318,6 +338,10 @@ export function Gateway() {
       city: offer.city ?? '',
       endpoint: offer.endpoint ?? '',
       port: offer.port ?? '',
+      price_amount: offer.price_amount ?? null,
+      traffic_limit_gb: offer.traffic_limit_gb ?? 1,
+      service_type: offer.service_type ?? 'residential_proxies',
+      auto_disable: offer.auto_disable ?? true,
     })
   }
 
@@ -474,7 +498,7 @@ export function Gateway() {
                   type="url"
                   value={decodoBaseUrl}
                   onChange={(event) => setDecodoBaseUrl(event.target.value)}
-                  placeholder="https://scraper-api.decodo.com"
+                  placeholder="https://api.decodo.com/v2"
                   className="w-full h-12 px-4 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-ml-blue focus:border-transparent transition-all"
                 />
                 <p className="text-xs text-gray-400 mt-1">Use somente o dominio da API do fornecedor.</p>
@@ -486,10 +510,10 @@ export function Gateway() {
                   type="text"
                   value={decodoProductsPath}
                   onChange={(event) => setDecodoProductsPath(event.target.value)}
-                  placeholder="/v2/scrape"
+                  placeholder="/subscriptions"
                   className="w-full h-12 px-4 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-ml-blue focus:border-transparent transition-all"
                 />
-                <p className="text-xs text-gray-400 mt-1">Para o playground de scraping, use o endpoint de consulta em tempo real.</p>
+                <p className="text-xs text-gray-400 mt-1">Esse endpoint valida a assinatura e o trafego antes de liberar planos vendaveis.</p>
               </div>
 
               <div>
@@ -498,19 +522,19 @@ export function Gateway() {
                   type="password"
                   value={decodoApiKey}
                   onChange={(event) => setDecodoApiKey(event.target.value)}
-                  placeholder="Token do fornecedor, se o endpoint usar Bearer/X-API-Key"
+                  placeholder="Chave publica da API do fornecedor"
                   className="w-full h-12 px-4 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-ml-blue focus:border-transparent transition-all"
                 />
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-2 opacity-60">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
                   <input
                     type="text"
                     value={decodoUsername}
                     onChange={(event) => setDecodoUsername(event.target.value)}
-                    placeholder="Usuario, se usar Basic Auth"
+                    placeholder="Nao usado para provisionamento"
                     className="w-full h-12 px-4 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-ml-blue focus:border-transparent transition-all"
                   />
                 </div>
@@ -520,7 +544,7 @@ export function Gateway() {
                     type="password"
                     value={decodoPassword}
                     onChange={(event) => setDecodoPassword(event.target.value)}
-                    placeholder="Senha, se usar Basic Auth"
+                    placeholder="Nao usado para provisionamento"
                     className="w-full h-12 px-4 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-ml-blue focus:border-transparent transition-all"
                   />
                 </div>
@@ -573,7 +597,7 @@ export function Gateway() {
           <CardContent className="p-6 space-y-6">
             <div>
               <h3 className="text-lg font-medium text-ml-dark">Planos de proxy</h3>
-              <p className="text-sm text-gray-500">Cadastre as opcoes, valores e limites que aparecem na pagina /proxy.</p>
+              <p className="text-sm text-gray-500">Cadastre preco e limite. A pagina so mostra planos que cabem no trafego disponivel do fornecedor.</p>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -595,8 +619,14 @@ export function Gateway() {
               <GatewayField label="Preco">
                 <input value={proxyOfferForm.price} onChange={(event) => updateProxyOfferForm('price', event.target.value)} placeholder="R$ 139,90" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
               </GatewayField>
+              <GatewayField label="Valor cobrado (R$)">
+                <input type="number" step="0.01" value={proxyOfferForm.price_amount ?? ''} onChange={(event) => updateProxyOfferForm('price_amount', event.target.value ? Number(event.target.value) : null)} placeholder="139.90" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+              </GatewayField>
               <GatewayField label="Trafego">
                 <input value={proxyOfferForm.traffic} onChange={(event) => updateProxyOfferForm('traffic', event.target.value)} placeholder="10GB" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+              </GatewayField>
+              <GatewayField label="GB provisionado">
+                <input type="number" step="0.1" value={proxyOfferForm.traffic_limit_gb} onChange={(event) => updateProxyOfferForm('traffic_limit_gb', Number(event.target.value))} placeholder="10" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
               </GatewayField>
               <GatewayField label="Estoque/status curto">
                 <input value={proxyOfferForm.stock} onChange={(event) => updateProxyOfferForm('stock', event.target.value)} placeholder="Disponivel" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
@@ -613,11 +643,18 @@ export function Gateway() {
               <GatewayField label="Status">
                 <input value={proxyOfferForm.status} onChange={(event) => updateProxyOfferForm('status', event.target.value)} placeholder="Disponivel" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
               </GatewayField>
+              <GatewayField label="Tipo provisionado">
+                <input value={proxyOfferForm.service_type} onChange={(event) => updateProxyOfferForm('service_type', event.target.value)} placeholder="residential_proxies" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+              </GatewayField>
             </div>
 
             <label className="flex items-center gap-2 text-sm text-gray-700">
               <input type="checkbox" checked={proxyOfferForm.is_active} onChange={(event) => updateProxyOfferForm('is_active', event.target.checked)} className="h-4 w-4 accent-ml-blue" />
               Mostrar plano na pagina de proxies
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input type="checkbox" checked={proxyOfferForm.auto_disable} onChange={(event) => updateProxyOfferForm('auto_disable', event.target.checked)} className="h-4 w-4 accent-ml-blue" />
+              Desativar automaticamente ao atingir o limite de trafego
             </label>
 
             <div className="flex flex-wrap gap-3">
