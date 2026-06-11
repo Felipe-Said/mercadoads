@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useCart } from '../contexts/CartContext'
-import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react'
+import { Trash2, Plus, Minus, ShoppingBag, ShieldCheck, CreditCard, Clock3 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { createWestPayPixInOrThrow, validateWestPayCustomer } from '../lib/westpay'
@@ -100,153 +100,169 @@ export function Cart() {
   }
 
   return (
-    <div className="min-h-screen bg-[#ebebeb]">
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-semibold text-gray-800">Carrinho ({totalItems})</h1>
+    <div className="min-h-screen bg-[#e3e6e6]">
+      <main className="mx-auto max-w-[1440px] px-4 py-5">
+        <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
+          <Link to="/" className="font-semibold text-[#007185] hover:text-[#c7511f]">Cookie market</Link>
+          <span className="text-gray-400">/</span>
+          <span className="text-gray-600">Carrinho</span>
+        </div>
+
+        <div className="mb-4 rounded-sm border border-gray-200 bg-white px-5 py-4 shadow-sm">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#007185]">Checkout</p>
+              <h1 className="text-2xl font-bold tracking-tight text-[#111827]">Carrinho ({totalItems})</h1>
+            </div>
+            <p className="text-sm text-gray-500">Produtos digitais prontos para gerar Pix com validacao do comprador.</p>
+          </div>
         </div>
 
         {cart.length === 0 ? (
-          <div className="bg-white rounded-md shadow-sm p-12 text-center flex flex-col items-center">
-            <ShoppingBag className="w-16 h-16 text-gray-300 mb-4" />
-            <h2 className="text-xl font-medium text-gray-800 mb-2">Seu carrinho está vazio</h2>
-            <p className="text-gray-500 mb-6">Produtos digitais prontos para entrega dentro da plataforma.</p>
-            <Link to="/" className="bg-ml-blue text-white px-6 py-3 rounded-md font-semibold hover:bg-ml-hover transition-colors">
+          <div className="rounded-sm border border-gray-200 bg-white px-6 py-16 text-center shadow-sm">
+            <ShoppingBag className="mx-auto mb-4 h-16 w-16 text-gray-300" />
+            <h2 className="text-xl font-bold text-[#111827]">Seu carrinho esta vazio</h2>
+            <p className="mx-auto mt-2 max-w-md text-gray-500">Produtos digitais prontos para entrega dentro da plataforma.</p>
+            <Link to="/" className="mt-6 inline-flex rounded-sm bg-[#ff9900] px-6 py-3 font-bold text-[#131921] shadow-sm transition hover:bg-[#ffb84d]">
               Descobrir ofertas
             </Link>
           </div>
         ) : (
-          <div className="flex flex-col lg:flex-row gap-6">
-            {/* Produtos */}
-            <div className="flex-grow space-y-4">
-              <div className="bg-white rounded-md shadow-sm overflow-hidden">
-                <div className="p-4 border-b border-gray-100 flex items-center justify-between text-sm text-gray-500 font-medium bg-gray-50/50">
-                  <span>Produtos</span>
-                  <span className="hidden md:block">Quantidade</span>
-                  <span className="hidden md:block">Preço</span>
-                </div>
-                
-                <div className="divide-y divide-gray-100">
-                  {cart.map((item) => (
-                    <div key={item.id} className="p-6 flex flex-col md:flex-row items-start md:items-center gap-6">
-                      <div className="flex-shrink-0 w-20 h-20 bg-gray-50 rounded-md p-2 flex items-center justify-center border border-gray-100">
-                        <img 
-                          src={item.image} 
-                          alt={item.title} 
-                          className="max-w-full max-h-full object-contain"
-                        />
-                      </div>
-                      
-                      <div className="flex-grow">
-                        <h3 className="text-base text-gray-800 font-medium mb-1 line-clamp-2">{item.title}</h3>
-                        <button 
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_390px]">
+            <section className="overflow-hidden rounded-sm border border-gray-200 bg-white shadow-sm">
+              <div className="flex items-center justify-between border-b border-gray-100 bg-[#f8fafc] px-5 py-4 text-xs font-bold uppercase tracking-[0.08em] text-gray-500">
+                <span>Produtos</span>
+                <span className="hidden md:block">Quantidade</span>
+                <span className="hidden md:block">Preco</span>
+              </div>
+
+              <div className="divide-y divide-gray-100">
+                {cart.map((item) => (
+                  <article key={item.id} className="grid gap-4 px-5 py-5 md:grid-cols-[96px_minmax(0,1fr)_260px] md:items-center">
+                    <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-sm border border-gray-200 bg-gray-50 p-2">
+                      <img
+                        src={item.image}
+                        alt={item.title}
+                        className="max-h-full max-w-full object-contain"
+                      />
+                    </div>
+
+                    <div className="min-w-0">
+                      <h3 className="line-clamp-2 text-base font-bold leading-snug text-[#111827]">{item.title}</h3>
+                      <div className="mt-3 flex flex-wrap items-center gap-3">
+                        <button
                           onClick={() => removeFromCart(item.id)}
-                          className="text-ml-blue text-sm font-medium hover:underline flex items-center gap-1 mt-2"
+                          className="inline-flex items-center gap-1 text-sm font-semibold text-[#007185] hover:text-[#c7511f]"
                         >
-                          <Trash2 className="w-3 h-3" /> Excluir
+                          <Trash2 className="h-3.5 w-3.5" /> Excluir
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-4 md:items-end">
+                      <div className="flex items-center rounded-sm border border-gray-300 bg-white">
+                        <button
+                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                          disabled={item.quantity <= 1}
+                          className="flex h-10 w-10 items-center justify-center text-[#007185] transition hover:bg-gray-50 disabled:text-gray-300"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </button>
+                        <span className="w-10 text-center text-sm font-bold text-[#111827]">{item.quantity}</span>
+                        <button
+                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          className="flex h-10 w-10 items-center justify-center text-[#007185] transition hover:bg-gray-50"
+                        >
+                          <Plus className="h-4 w-4" />
                         </button>
                       </div>
 
-                      <div className="flex flex-col md:flex-row items-start md:items-center gap-6 md:w-64 justify-end">
-                        {/* Seletor de Quantidade */}
-                        <div className="flex items-center border border-gray-200 rounded-md h-10 w-28 bg-white">
-                          <button 
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                            disabled={item.quantity <= 1}
-                            className="w-8 h-full flex items-center justify-center text-ml-blue disabled:text-gray-300 hover:bg-gray-50 transition-colors"
-                          >
-                            <Minus className="w-4 h-4" />
-                          </button>
-                          <span className="flex-grow text-center text-sm font-medium text-gray-700">
-                            {item.quantity}
-                          </span>
-                          <button 
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                            className="w-8 h-full flex items-center justify-center text-ml-blue hover:bg-gray-50 transition-colors"
-                          >
-                            <Plus className="w-4 h-4" />
-                          </button>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold tracking-tight text-[#111827]">
+                          R$ {item.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </div>
-
-                        {/* Preço */}
-                        <div className="text-right w-24 flex-shrink-0">
-                          <div className="text-xl font-medium text-gray-800">
-                            R$ {item.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        {item.quantity > 1 && (
+                          <div className="mt-1 text-xs text-gray-500">
+                            R$ {(item.price * item.quantity).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} no total
                           </div>
-                          {item.quantity > 1 && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              R$ {(item.price * item.quantity).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} un.
-                            </div>
-                          )}
-                        </div>
+                        )}
                       </div>
                     </div>
-                  ))}
-                </div>
-                
+                  </article>
+                ))}
               </div>
-            </div>
+            </section>
 
-            {/* Resumo da Compra */}
-            <div className="lg:w-80 flex-shrink-0">
-              <div className="bg-white rounded-md shadow-sm p-6 sticky top-24">
-                <h2 className="text-lg font-medium text-gray-800 mb-6">Resumo da compra</h2>
-                
-                <div className="space-y-4 mb-6">
-                  <div className="flex justify-between text-gray-600 text-sm">
-                    <span>Produtos ({totalItems})</span>
-                    <span>R$ {subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+            <aside className="space-y-4">
+              <div className="rounded-sm border border-gray-200 bg-white p-5 shadow-sm">
+                <h2 className="text-lg font-bold tracking-tight text-[#111827]">Resumo da compra</h2>
+                <div className="mt-4 space-y-3 rounded-sm bg-[#f8fafc] p-4 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Produtos ({totalItems})</span>
+                    <span className="font-semibold text-[#111827]">R$ {subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-gray-200 pt-3">
+                    <span className="text-base font-bold text-[#111827]">Total</span>
+                    <span className="text-2xl font-bold tracking-tight text-[#111827]">R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                   </div>
                 </div>
 
-                <div className="border-t border-gray-100 pt-4 mb-6 flex justify-between items-end">
-                  <span className="text-gray-800 font-medium">Total</span>
-                  <span className="text-2xl font-medium text-gray-800">
-                    R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </span>
+                <div className="mt-4 grid gap-3 rounded-sm border border-gray-100 bg-white p-4 text-sm text-gray-600">
+                  <div className="flex gap-3">
+                    <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#007185]" />
+                    <p><strong className="text-[#111827]">Compra segura:</strong> pedido acompanha o fluxo interno da plataforma.</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <CreditCard className="mt-0.5 h-5 w-5 shrink-0 text-[#007185]" />
+                    <p><strong className="text-[#111827]">Pix via gateway:</strong> pagamento gerado com QR Code e copia e cola.</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <Clock3 className="mt-0.5 h-5 w-5 shrink-0 text-[#007185]" />
+                    <p><strong className="text-[#111827]">Protecao:</strong> o cliente tem 24 horas para reclamar depois da compra.</p>
+                  </div>
                 </div>
 
-                <div className="space-y-3 mb-6">
+                <div className="mt-5 space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Nome completo</label>
+                    <label className="mb-1 block text-sm font-bold text-gray-700">Nome completo</label>
                     <input
                       value={buyerName}
                       onChange={(event) => setBuyerName(event.target.value)}
-                      className="w-full h-11 px-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ml-blue"
+                      className="h-11 w-full rounded-sm border border-gray-300 px-3 text-sm focus:border-[#ff9900] focus:outline-none focus:ring-2 focus:ring-[#ff9900]/20"
                       placeholder="Nome do comprador"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp</label>
+                    <label className="mb-1 block text-sm font-bold text-gray-700">WhatsApp</label>
                     <input
                       value={buyerPhone}
                       onChange={(event) => setBuyerPhone(event.target.value)}
-                      className="w-full h-11 px-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ml-blue"
+                      className="h-11 w-full rounded-sm border border-gray-300 px-3 text-sm focus:border-[#ff9900] focus:outline-none focus:ring-2 focus:ring-[#ff9900]/20"
                       placeholder="DDD + numero"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">CPF ou CNPJ</label>
+                    <label className="mb-1 block text-sm font-bold text-gray-700">CPF ou CNPJ</label>
                     <input
                       value={buyerDocument}
                       onChange={(event) => setBuyerDocument(event.target.value)}
-                      className="w-full h-11 px-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ml-blue"
+                      className="h-11 w-full rounded-sm border border-gray-300 px-3 text-sm focus:border-[#ff9900] focus:outline-none focus:ring-2 focus:ring-[#ff9900]/20"
                       placeholder="Somente numeros"
                     />
                   </div>
                 </div>
 
-                {checkoutError && <p className="text-sm text-red-600 mb-3">{checkoutError}</p>}
+                {checkoutError && <p className="mt-4 rounded-sm border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">{checkoutError}</p>}
                 <button
                   type="button"
                   onClick={handleContinuePurchase}
                   disabled={checkoutLoading}
-                  className="w-full bg-ml-blue text-white py-3.5 rounded-md font-semibold hover:bg-ml-hover transition-colors shadow-sm disabled:opacity-60"
+                  className="mt-4 w-full rounded-sm bg-[#ff9900] py-3.5 font-bold text-[#131921] shadow-sm transition hover:bg-[#ffb84d] disabled:opacity-60"
                 >
                   {checkoutLoading ? 'Processando...' : 'Continuar a compra'}
                 </button>
               </div>
-            </div>
+            </aside>
           </div>
         )}
       </main>
