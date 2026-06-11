@@ -10,7 +10,6 @@ interface ProductItemProps {
 
 export function ProductItem({ product }: ProductItemProps) {
   const price = product.price || 0;
-  const installmentsPrice = price / 10;
 
   return (
     <Link to={`/produto/${product.id}`} className="block outline-none h-full">
@@ -43,12 +42,8 @@ export function ProductItem({ product }: ProductItemProps) {
               )}
             </div>
             
-            <div className="text-[13px] text-[#00a650] mt-1">
-              em 10x R$ {installmentsPrice.toFixed(2).replace('.', ',')} sem juros
-            </div>
-            
             <div className="text-[13px] text-[#00a650] font-semibold flex items-center gap-1 mt-1">
-              Frete grátis <Zap className="w-3 h-3 fill-current" /> <span className="font-black italic text-[11px] ml-[-2px]">FULL</span>
+              Pagamento via PIX <Zap className="w-3 h-3 fill-current" /> <span className="font-black italic text-[11px] ml-[-2px]">AUTO</span>
             </div>
             
             <p className="text-[14px] text-[#666] font-light leading-[1.25] mt-2 line-clamp-2">

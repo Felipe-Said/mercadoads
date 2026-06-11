@@ -11,8 +11,6 @@ export function Banners() {
   }, [])
 
   const heroBanners = useMemo(() => banners.filter((banner) => banner.position === 'home_hero'), [banners])
-  const leftFlyer = banners.find((banner) => banner.position === 'left_flyer')
-  const rightFlyer = banners.find((banner) => banner.position === 'right_flyer')
 
   useEffect(() => {
     if (heroBanners.length < 2) return
@@ -31,13 +29,6 @@ export function Banners() {
   return (
     <div className="relative w-full mb-0">
       <div className="max-w-[1600px] mx-auto relative flex justify-center">
-        
-        {leftFlyer && (
-          <a href={leftFlyer.link} className="hidden 2xl:flex absolute left-0 top-0 h-[340px] md:h-[400px] w-[150px] rounded-sm flex-col justify-center items-center overflow-hidden z-10" style={{ backgroundColor: leftFlyer.color }}>
-            {leftFlyer.image ? <img src={leftFlyer.image} alt={leftFlyer.title || 'Banner lateral'} className="absolute inset-0 w-full h-full object-contain" /> : <span className="relative z-10 bg-white text-ml-dark px-3 py-1 font-bold rounded-sm shadow-sm rotate-[-90deg] whitespace-nowrap">{leftFlyer.title || 'Banner'}</span>}
-            <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#ebebeb] to-transparent pointer-events-none z-10" />
-          </a>
-        )}
 
         <div className="relative w-full max-w-7xl overflow-hidden group">
           <div className="flex transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${current * 100}%)` }}>
@@ -87,12 +78,6 @@ export function Banners() {
           )}
         </div>
 
-        {rightFlyer && (
-          <a href={rightFlyer.link} className="hidden 2xl:flex absolute right-0 top-0 h-[340px] md:h-[400px] w-[150px] rounded-sm flex-col justify-center items-center overflow-hidden z-10" style={{ backgroundColor: rightFlyer.color }}>
-            {rightFlyer.image ? <img src={rightFlyer.image} alt={rightFlyer.title || 'Banner lateral'} className="absolute inset-0 w-full h-full object-contain" /> : <span className="relative z-10 bg-white text-ml-dark px-3 py-1 font-bold rounded-sm shadow-sm rotate-90 whitespace-nowrap">{rightFlyer.title || 'Banner'}</span>}
-            <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#ebebeb] to-transparent pointer-events-none z-10" />
-          </a>
-        )}
       </div>
     </div>
   )
