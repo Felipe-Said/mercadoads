@@ -3,7 +3,7 @@ import { AdminLayout } from '../../components/layouts/AdminLayout'
 import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { supabase } from '../../lib/supabase'
-import { decodoStatus } from '../../lib/decodo'
+import { getDecodoProxyCatalog } from '../../lib/decodo'
 import { westPayStatus } from '../../lib/westpay'
 
 type GatewaySettings = {
@@ -206,9 +206,9 @@ export function Gateway() {
   const testDecodoConnection = async () => {
     setDecodoTestMessage('Testando Decodo...')
     try {
-      const result = await decodoStatus()
+      const result = await getDecodoProxyCatalog()
       setDecodoTestMessage(result.configured
-        ? 'Funcao Decodo ativa e credenciais encontradas no banco.'
+        ? `Conexao com Decodo validada. Itens retornados: ${result.items.length}.`
         : 'Funcao Decodo ativa, mas sem credenciais salvas.')
     } catch (error) {
       setDecodoTestMessage(error instanceof Error ? error.message : 'Nao foi possivel validar a Decodo.')
