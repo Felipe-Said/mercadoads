@@ -26,7 +26,7 @@ export function ResumoVendas() {
             </div>
             <div className="flex-grow">
               <h1 className="text-2xl font-light text-ml-dark">{profile?.full_name ?? 'Vendedor'}</h1>
-              <p className="text-gray-500 mt-1">Perfil conectado ao Supabase</p>
+              <p className="text-gray-500 mt-1">Perfil conectado a plataforma</p>
             </div>
 
             <div className="bg-gray-50 p-4 rounded-md min-w-[200px] border border-gray-100 text-center">

@@ -128,7 +128,7 @@ export function MeusAnunciosAdmin() {
       const { data, error } = await supabase.storage.from('product_files').upload(`uploads/${fileName}`, selectedFile)
       
       if (error) {
-        alert('Erro ao fazer upload. Verifique se o bucket "product_files" foi criado no Supabase.')
+        alert('Erro ao fazer upload. Verifique se o armazenamento de arquivos foi configurado.')
         setIsUploading(false)
         return
       }

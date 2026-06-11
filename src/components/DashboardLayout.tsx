@@ -57,7 +57,7 @@ export function DashboardLayout({ children, navItems, title }: DashboardLayoutPr
                 <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--layout-link-color)]">Painel</p>
                 <h1 className="text-2xl font-bold tracking-tight text-[var(--layout-text-primary)]">{title}</h1>
               </div>
-              <p className="text-sm text-[var(--layout-text-muted)]">Dados em tempo real conectados ao Supabase.</p>
+              <p className="text-sm text-[var(--layout-text-muted)]">Dados em tempo real conectados a plataforma.</p>
             </div>
           </div>
           <div className="dashboard-surface">

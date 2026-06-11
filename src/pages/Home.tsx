@@ -180,7 +180,7 @@ export function Home() {
           <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <h2 className="text-xl font-bold tracking-tight">Ofertas em destaque</h2>
-              <p className="text-sm text-gray-500">Produtos reais ativos no Supabase, organizados em vitrine densa.</p>
+              <p className="text-sm text-gray-500">Produtos ativos organizados em vitrine densa.</p>
             </div>
             <div className="relative w-full md:w-80">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -196,7 +196,7 @@ export function Home() {
           {loading && <div className="h-40 animate-pulse rounded-sm bg-gray-100" />}
           {!loading && featured.length === 0 && (
             <div className="rounded-sm border border-dashed border-gray-300 bg-gray-50 p-8 text-center text-sm text-gray-500">
-              Nenhum produto ativo cadastrado no Supabase.
+              Nenhum produto ativo cadastrado.
             </div>
           )}
           {!loading && featured.length > 0 && (

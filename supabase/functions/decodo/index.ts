@@ -77,7 +77,7 @@ function normalizeOffer(item: unknown, index: number): ProxyOffer {
     return {
       id: item,
       name: item,
-      type: 'Proxy Decodo',
+      type: 'Proxy premium',
       country: item,
       city: '',
       protocol: 'HTTP(S) / SOCKS5',
@@ -96,8 +96,8 @@ function normalizeOffer(item: unknown, index: number): ProxyOffer {
   const limits = asRecord(record.limits) ?? {}
 
   const id = firstString(record.id, record.uuid, record.code, record.slug, record.country_code, record.countryCode, index + 1)
-  const name = firstString(record.name, record.title, record.product, record.plan, record.country_name, record.countryName, record.country, `Proxy Decodo ${index + 1}`)
-  const type = firstString(record.type, record.proxy_type, record.proxyType, record.category, 'Proxy Decodo')
+  const name = firstString(record.name, record.title, record.product, record.plan, record.country_name, record.countryName, record.country, `Proxy ${index + 1}`)
+  const type = firstString(record.type, record.proxy_type, record.proxyType, record.category, 'Proxy premium')
   const country = firstString(record.country, record.country_name, record.countryName, location.country, location.country_name, location.countryCode)
   const city = firstString(record.city, location.city, location.city_name)
   const protocol = firstString(record.protocol, record.protocols, record.scheme, 'HTTP(S) / SOCKS5')
@@ -134,7 +134,10 @@ async function loadSettings(supabaseAdmin: ReturnType<typeof createClient>) {
 
 async function callDecodo(settings: DecodoSettings) {
   const base = settings.api_base_url.replace(/\/+$/, '')
-  const path = settings.products_path.startsWith('/') ? settings.products_path : `/${settings.products_path}`
+  const path = settings.products_path.trim()
+  const targetUrl = /^https?:\/\//i.test(path)
+    ? path
+    : `${base}${path.startsWith('/') ? path : `/${path}`}`
   const headers = new Headers({ Accept: 'application/json' })
 
   if (settings.api_key?.trim()) {
@@ -144,7 +147,7 @@ async function callDecodo(settings: DecodoSettings) {
     headers.set('Authorization', `Basic ${btoa(`${settings.username.trim()}:${settings.password}`)}`)
   }
 
-  const response = await fetch(`${base}${path}`, { headers })
+  const response = await fetch(targetUrl, { headers })
   const text = await response.text()
   let data: unknown = text
 
@@ -155,7 +158,14 @@ async function callDecodo(settings: DecodoSettings) {
   }
 
   if (!response.ok) {
-    return { success: false as const, status: response.status, data }
+    return {
+      success: false as const,
+      status: response.status,
+      error: response.status === 404
+        ? 'Endpoint de catálogo não encontrado. Confira a Base URL e o endpoint configurado.'
+        : 'Não foi possível consultar o catálogo de proxies agora.',
+      data,
+    }
   }
 
   const items = findFirstArray(data).map(normalizeOffer)
@@ -171,7 +181,7 @@ Deno.serve(async (req) => {
   const serviceRole = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
   if (!supabaseUrl || !serviceRole) {
-    return json({ success: false, configured: false, error: 'Supabase not configured.' }, 500)
+    return json({ success: false, configured: false, error: 'Plataforma nao configurada.' }, 500)
   }
 
   const supabaseAdmin = createClient(supabaseUrl, serviceRole)

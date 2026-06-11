@@ -96,7 +96,7 @@ export function validateWestPayCustomer(customer: {
 
 async function invokeWestPayDirect(action: string, payload?: Record<string, unknown>) {
   if (!supabaseUrl) {
-    throw new Error('Supabase nao configurado.')
+    throw new Error('Plataforma nao configurada.')
   }
 
   const { data: sessionData } = await supabase.auth.getSession()
@@ -125,7 +125,7 @@ async function invokeWestPayDirect(action: string, payload?: Record<string, unkn
       configured: true,
       success: false,
       data,
-      error: extractGatewayMessage(data) ?? `Funcao WestPay retornou HTTP ${response.status}.`,
+      error: extractGatewayMessage(data) ?? `Gateway retornou HTTP ${response.status}.`,
     } satisfies WestPayInvokeResult
   }
 
@@ -169,7 +169,7 @@ export async function invokeWestPayStrict(action: string, payload?: Record<strin
   if (error) {
     const fallbackResult = await invokeWestPayDirect(action, payload)
     if (!fallbackResult) {
-      throw new Error(error.message || 'Funcao WestPay indisponivel.')
+      throw new Error(error.message || 'Gateway indisponivel.')
     }
 
     if (fallbackResult.configured === false) {

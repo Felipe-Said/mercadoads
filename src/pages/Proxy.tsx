@@ -11,7 +11,7 @@ function ProxyCard({ proxy }: { proxy: DecodoProxyOffer }) {
     <article className="layout-surface flex h-full flex-col rounded-sm p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--layout-link-color)]">{displayValue(proxy.type, 'Proxy Decodo')}</p>
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--layout-link-color)]">{displayValue(proxy.type, 'Proxy premium')}</p>
           <h3 className="mt-1 line-clamp-2 text-lg font-bold text-[var(--layout-text-primary)]">{displayValue(proxy.name, 'Proxy disponivel')}</h3>
         </div>
         <span className="rounded-sm bg-[var(--layout-subtle-background)] px-2 py-1 text-xs font-bold text-[var(--layout-success-color)]">
@@ -71,7 +71,7 @@ export function Proxy() {
       setConfigured(result.configured)
       setItems(result.items)
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Nao foi possivel carregar os proxies da Decodo.')
+      setError(loadError instanceof Error ? loadError.message : 'Nao foi possivel carregar os proxies agora.')
     } finally {
       setLoading(false)
     }
@@ -101,10 +101,10 @@ export function Proxy() {
         <div className="mx-auto max-w-[1440px] px-4 py-8">
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--layout-dashboard-sidebar-kicker-text)]">Decodo Proxy</p>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--layout-dashboard-sidebar-kicker-text)]">Cookie Proxy</p>
               <h1 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">Proxies disponiveis</h1>
               <p className="mt-3 max-w-2xl text-sm text-[var(--layout-dashboard-sidebar-muted-text)]">
-                Catalogo conectado a Decodo para vender proxies com disponibilidade atualizada pela API.
+                Catalogo de proxies com disponibilidade atualizada automaticamente.
               </p>
             </div>
             <div className="layout-surface rounded-sm p-4 text-[var(--layout-text-primary)] shadow-sm">
@@ -112,7 +112,7 @@ export function Proxy() {
                 <ShieldCheck className="h-9 w-9 text-[var(--layout-success-color)]" />
                 <div>
                   <p className="font-bold">Conexao protegida</p>
-                  <p className="mt-1 text-sm text-[var(--layout-text-muted)]">Credenciais ficam no Supabase e as chamadas passam pela Edge Function.</p>
+                  <p className="mt-1 text-sm text-[var(--layout-text-muted)]">As credenciais ficam protegidas e as consultas passam pela estrutura da plataforma.</p>
                 </div>
               </div>
             </div>
@@ -142,9 +142,9 @@ export function Proxy() {
             <div className="flex gap-3">
               <LockKeyhole className="h-6 w-6 text-[var(--layout-link-color)]" />
               <div>
-                <h2 className="font-bold">Decodo ainda nao configurada</h2>
+                <h2 className="font-bold">Catalogo de proxies ainda nao configurado</h2>
                 <p className="mt-1 text-sm text-[var(--layout-text-muted)]">
-                  Configure API Key ou usuario/senha em Painel Admin &gt; Gateway para listar os proxies disponiveis.
+                  Configure as credenciais em Painel Admin &gt; Gateway para listar os proxies disponiveis.
                 </p>
               </div>
             </div>
@@ -167,7 +167,7 @@ export function Proxy() {
 
         {!loading && configured && !error && filteredItems.length === 0 && (
           <div className="layout-surface rounded-sm p-8 text-center text-sm text-[var(--layout-text-muted)] shadow-sm">
-            Nenhum proxy retornado pela Decodo no momento.
+            Nenhum proxy disponivel no momento.
           </div>
         )}
 

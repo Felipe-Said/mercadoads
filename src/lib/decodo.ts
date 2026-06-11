@@ -39,8 +39,26 @@ function extractMessage(value: unknown) {
   return JSON.stringify(record)
 }
 
+function friendlyProviderMessage(message: string | null, status?: number) {
+  const normalized = (message ?? '').toLowerCase()
+
+  if (status === 404 || normalized.includes('route not found') || normalized.includes('not found')) {
+    return 'Endpoint de catálogo não encontrado. Confira a Base URL e o endpoint configurado.'
+  }
+
+  if (status === 401 || status === 403 || normalized.includes('unauthorized') || normalized.includes('forbidden')) {
+    return 'Credenciais recusadas. Confira a chave, usuário ou senha configurados.'
+  }
+
+  if (normalized.includes('supabase') || normalized.includes('edge function') || normalized.includes('decodo')) {
+    return 'Não foi possível consultar o catálogo de proxies agora.'
+  }
+
+  return message || 'Não foi possível consultar o catálogo de proxies agora.'
+}
+
 async function invokeDecodoDirect(action: string) {
-  if (!supabaseUrl) throw new Error('Supabase nao configurado.')
+  if (!supabaseUrl) throw new Error('Plataforma nao configurada.')
 
   const { data: sessionData } = await supabase.auth.getSession()
   const directUrl = `${supabaseUrl.replace('.supabase.co', '.functions.supabase.co')}/decodo`
@@ -65,7 +83,7 @@ async function invokeDecodoDirect(action: string) {
 
   if (!response.ok) {
     const result = data as DecodoInvokeResult
-    throw new Error(extractMessage(result?.data) || result?.error || `Funcao Decodo retornou HTTP ${response.status}.`)
+    throw new Error(friendlyProviderMessage(extractMessage(result?.data) || result?.error || null, response.status))
   }
 
   return data as DecodoInvokeResult
@@ -87,7 +105,7 @@ export async function invokeDecodo(action: 'catalog' | 'status') {
 export async function getDecodoProxyCatalog() {
   const result = await invokeDecodo('catalog')
   if (result.success === false) {
-    throw new Error(extractMessage(result.data) || result.error || 'Decodo recusou a requisicao.')
+    throw new Error(friendlyProviderMessage(extractMessage(result.data) || result.error || null, result.status))
   }
   return {
     configured: Boolean(result.configured),
@@ -99,7 +117,7 @@ export async function getDecodoProxyCatalog() {
 export async function decodoStatus() {
   const result = await invokeDecodo('status')
   if (result.success === false) {
-    throw new Error(extractMessage(result.data) || result.error || 'Nao foi possivel validar a Decodo.')
+    throw new Error(friendlyProviderMessage(extractMessage(result.data) || result.error || null, result.status))
   }
   return result
 }

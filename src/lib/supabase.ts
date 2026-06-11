@@ -4,7 +4,7 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Supabase nao configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env')
+  throw new Error('Plataforma nao configurada. Verifique as variaveis de ambiente.')
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)

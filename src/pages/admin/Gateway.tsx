@@ -43,8 +43,8 @@ export function Gateway() {
   const [decodoApiKey, setDecodoApiKey] = useState('')
   const [decodoUsername, setDecodoUsername] = useState('')
   const [decodoPassword, setDecodoPassword] = useState('')
-  const [decodoMessage, setDecodoMessage] = useState<string | null>(null)
-  const [decodoTestMessage, setDecodoTestMessage] = useState<string | null>(null)
+  const [proxyProviderMessage, setProxyProviderMessage] = useState<string | null>(null)
+  const [proxyProviderTestMessage, setProxyProviderTestMessage] = useState<string | null>(null)
 
   const functionBaseUrl = useMemo(() => {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
@@ -130,7 +130,7 @@ export function Gateway() {
       .maybeSingle()
 
     if (reloadError) {
-      setMessage(`Gateway salvo, mas nao foi possivel confirmar no banco: ${reloadError.message}`)
+      setMessage(`Gateway salvo, mas nao foi possivel confirmar os dados: ${reloadError.message}`)
       setSaving(false)
       return
     }
@@ -142,8 +142,8 @@ export function Gateway() {
     setUserAgent(settings?.westpay_user_agent ?? defaultUserAgent)
     setWebhookSecret(settings?.westpay_webhook_secret ?? '')
     setMessage(settings?.westpay_api_key && settings?.westpay_public_key
-      ? 'Gateway salvo e credenciais confirmadas no banco.'
-      : 'Gateway salvo, mas API Key ou Public Key continuam vazias no banco.')
+      ? 'Gateway salvo e credenciais confirmadas.'
+      : 'Gateway salvo, mas API Key ou Public Key continuam vazias.')
     setSaving(false)
   }
 
@@ -151,7 +151,7 @@ export function Gateway() {
     setTestMessage('Testando conexao...')
     try {
       await westPayStatus()
-      setTestMessage('Funcao WestPay ativa e credenciais encontradas no banco.')
+      setTestMessage('Gateway ativo e credenciais encontradas.')
     } catch (error) {
       setTestMessage(error instanceof Error ? error.message : 'Nao foi possivel validar a conexao.')
     }
@@ -159,7 +159,7 @@ export function Gateway() {
 
   const saveDecodo = async () => {
     setSaving(true)
-    setDecodoMessage(null)
+    setProxyProviderMessage(null)
 
     const { error } = await supabase.from('decodo_settings').upsert({
       id: 1,
@@ -173,7 +173,7 @@ export function Gateway() {
     }, { onConflict: 'id' })
 
     if (error) {
-      setDecodoMessage(error.message)
+      setProxyProviderMessage(error.message)
       setSaving(false)
       return
     }
@@ -185,7 +185,7 @@ export function Gateway() {
       .maybeSingle()
 
     if (reloadError) {
-      setDecodoMessage(`Decodo salva, mas nao foi possivel confirmar no banco: ${reloadError.message}`)
+      setProxyProviderMessage(`Configuracao salva, mas nao foi possivel confirmar os dados: ${reloadError.message}`)
       setSaving(false)
       return
     }
@@ -197,21 +197,21 @@ export function Gateway() {
     setDecodoApiKey(settings?.api_key ?? '')
     setDecodoUsername(settings?.username ?? '')
     setDecodoPassword(settings?.password ?? '')
-    setDecodoMessage(settings?.api_key || (settings?.username && settings?.password)
-      ? 'Decodo salva e credenciais confirmadas no banco.'
-      : 'Decodo salva, mas sem API Key ou usuario/senha.')
+    setProxyProviderMessage(settings?.api_key || (settings?.username && settings?.password)
+      ? 'Configuração salva e credenciais confirmadas.'
+      : 'Configuração salva, mas sem API Key ou usuario/senha.')
     setSaving(false)
   }
 
   const testDecodoConnection = async () => {
-    setDecodoTestMessage('Testando Decodo...')
+    setProxyProviderTestMessage('Testando catálogo...')
     try {
       const result = await getDecodoProxyCatalog()
-      setDecodoTestMessage(result.configured
-        ? `Conexao com Decodo validada. Itens retornados: ${result.items.length}.`
-        : 'Funcao Decodo ativa, mas sem credenciais salvas.')
+      setProxyProviderTestMessage(result.configured
+        ? `Catálogo validado. Itens retornados: ${result.items.length}.`
+        : 'Integracao ativa, mas sem credenciais salvas.')
     } catch (error) {
-      setDecodoTestMessage(error instanceof Error ? error.message : 'Nao foi possivel validar a Decodo.')
+      setProxyProviderTestMessage(error instanceof Error ? error.message : 'Nao foi possivel validar o catálogo.')
     }
   }
 
@@ -331,8 +331,8 @@ export function Gateway() {
           <CardContent className="p-6 space-y-6">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-lg font-medium text-ml-dark">Decodo</h3>
-                <p className="text-sm text-gray-500">API para listar proxies disponiveis na pagina /proxy.</p>
+                <h3 className="text-lg font-medium text-ml-dark">Fornecedor de proxies</h3>
+                <p className="text-sm text-gray-500">Integração para listar proxies disponiveis na pagina /proxy.</p>
               </div>
               <label className="flex items-center gap-2 text-sm text-gray-600">
                 <input
@@ -355,7 +355,7 @@ export function Gateway() {
                   placeholder="https://api.decodo.com"
                   className="w-full h-12 px-4 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-ml-blue focus:border-transparent transition-all"
                 />
-                <p className="text-xs text-gray-400 mt-1">Use a URL base indicada no playground da Decodo.</p>
+                <p className="text-xs text-gray-400 mt-1">Use a URL base indicada no painel do fornecedor.</p>
               </div>
 
               <div>
@@ -376,7 +376,7 @@ export function Gateway() {
                   type="password"
                   value={decodoApiKey}
                   onChange={(event) => setDecodoApiKey(event.target.value)}
-                  placeholder="Token da Decodo, se o endpoint usar Bearer/X-API-Key"
+                  placeholder="Token do fornecedor, se o endpoint usar Bearer/X-API-Key"
                   className="w-full h-12 px-4 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-ml-blue focus:border-transparent transition-all"
                 />
               </div>
@@ -406,7 +406,7 @@ export function Gateway() {
             </div>
 
             <div className="rounded-md border border-gray-100 bg-gray-50 p-4 space-y-2">
-              <p className="text-sm font-medium text-gray-700">Endpoint publico da plataforma</p>
+              <p className="text-sm font-medium text-gray-700">Endpoint interno da plataforma</p>
               <div className="flex flex-col md:flex-row gap-2">
                 <input
                   readOnly
@@ -430,7 +430,7 @@ export function Gateway() {
                 disabled={saving || loading}
                 className="bg-ml-blue text-white hover:bg-ml-hover font-semibold py-3 px-6 rounded-sm shadow-sm"
               >
-                {saving ? 'Salvando...' : 'Salvar Decodo'}
+                {saving ? 'Salvando...' : 'Salvar fornecedor'}
               </Button>
               <Button
                 type="button"
@@ -438,12 +438,12 @@ export function Gateway() {
                 disabled={loading}
                 className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold py-3 px-6 rounded-sm shadow-sm"
               >
-                Testar Decodo
+                Testar catálogo
               </Button>
             </div>
 
-            {decodoMessage && <p className={`text-sm ${decodoMessage.includes('confirmadas') ? 'text-green-600' : 'text-red-600'}`}>{decodoMessage}</p>}
-            {decodoTestMessage && <p className={`text-sm ${decodoTestMessage.includes('ativa') ? 'text-green-600' : 'text-red-600'}`}>{decodoTestMessage}</p>}
+            {proxyProviderMessage && <p className={`text-sm ${proxyProviderMessage.includes('confirmadas') ? 'text-green-600' : 'text-red-600'}`}>{proxyProviderMessage}</p>}
+            {proxyProviderTestMessage && <p className={`text-sm ${proxyProviderTestMessage.includes('validado') ? 'text-green-600' : 'text-red-600'}`}>{proxyProviderTestMessage}</p>}
           </CardContent>
         </Card>
       </div>

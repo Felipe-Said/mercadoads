@@ -75,7 +75,7 @@ export function ProductGrid({
       {error && <p className="text-sm text-red-500">Erro ao carregar produtos: {error}</p>}
       {!loading && !error && products.length === 0 && (
         <div className="rounded-md border border-dashed border-[var(--layout-border-color)] bg-[var(--layout-subtle-background)] p-8 text-center text-[var(--layout-text-muted)]">
-          Nenhum produto ativo cadastrado no Supabase.
+          Nenhum produto ativo cadastrado.
         </div>
       )}
 
