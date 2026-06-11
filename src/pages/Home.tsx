@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { BadgeCheck, ChevronRight, Clock3, CreditCard, Flame, PackageCheck, Search, ShieldCheck, Sparkles, Star, Truck, Zap } from 'lucide-react'
+import { ChevronRight, Clock3, CreditCard, PackageCheck, Search, ShieldCheck, Sparkles, Star, Truck } from 'lucide-react'
 import { BannerSlot, Banners } from '../components/Banners'
 import { ProductGrid } from '../components/ProductCard'
+import { Stories } from '../components/Stories'
 import { getProducts, type Product, formatCurrency } from '../lib/data'
 
 const departments = [
@@ -15,13 +16,6 @@ const departments = [
   'Criativos',
   'Ferramentas',
   'Network',
-]
-
-const quickLinks = [
-  { label: 'Ofertas relampago', icon: Flame, tone: 'text-[#b12704]' },
-  { label: 'Pix aprovado rapido', icon: Zap, tone: 'text-[#007600]' },
-  { label: 'Vendedores verificados', icon: BadgeCheck, tone: 'text-[#007185]' },
-  { label: 'Produtos digitais', icon: PackageCheck, tone: 'text-[#232f3e]' },
 ]
 
 function ProductTile({ product }: { product: Product }) {
@@ -136,24 +130,12 @@ export function Home() {
 
           <div className="min-w-0 space-y-3">
             <Banners position="home_hero" />
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {quickLinks.map((item) => {
-                const Icon = item.icon
-                return (
-                  <Link key={item.label} to="/ofertas" className="flex items-center gap-3 rounded-sm bg-white px-3 py-3 text-[#111827] shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-                    <span className={`flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 ${item.tone}`}>
-                      <Icon className="h-5 w-5" />
-                    </span>
-                    <span className="text-sm font-bold leading-tight">{item.label}</span>
-                  </Link>
-                )
-              })}
-            </div>
+            <Stories />
           </div>
 
           <aside className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
             <BannerSlot position="home_side_top" className="h-40 lg:h-[205px]" compact fallbackTitle="Banner lateral superior" />
-            <BannerSlot position="home_side_bottom" className="h-40 lg:h-[205px]" compact fallbackTitle="Banner lateral inferior" />
+            <BannerSlot position="home_side_bottom" className="h-40 lg:-mt-3 lg:h-[205px]" compact fallbackTitle="Banner lateral inferior" />
           </aside>
         </div>
       </section>
