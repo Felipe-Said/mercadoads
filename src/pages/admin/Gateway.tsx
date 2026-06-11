@@ -38,8 +38,8 @@ export function Gateway() {
   const [message, setMessage] = useState<string | null>(null)
   const [testMessage, setTestMessage] = useState<string | null>(null)
   const [decodoActive, setDecodoActive] = useState(false)
-  const [decodoBaseUrl, setDecodoBaseUrl] = useState('https://api.decodo.com')
-  const [decodoProductsPath, setDecodoProductsPath] = useState('/v1/proxies')
+  const [decodoBaseUrl, setDecodoBaseUrl] = useState('https://scraper-api.decodo.com')
+  const [decodoProductsPath, setDecodoProductsPath] = useState('/v2/scrape')
   const [decodoApiKey, setDecodoApiKey] = useState('')
   const [decodoUsername, setDecodoUsername] = useState('')
   const [decodoPassword, setDecodoPassword] = useState('')
@@ -86,8 +86,8 @@ export function Gateway() {
 
         const decodoSettings = decodoResult.data as DecodoSettings | null
         setDecodoActive(decodoSettings?.active ?? false)
-        setDecodoBaseUrl(decodoSettings?.api_base_url ?? 'https://api.decodo.com')
-        setDecodoProductsPath(decodoSettings?.products_path ?? '/v1/proxies')
+        setDecodoBaseUrl(decodoSettings?.api_base_url ?? 'https://scraper-api.decodo.com')
+        setDecodoProductsPath(decodoSettings?.products_path ?? '/v2/scrape')
         setDecodoApiKey(decodoSettings?.api_key ?? '')
         setDecodoUsername(decodoSettings?.username ?? '')
         setDecodoPassword(decodoSettings?.password ?? '')
@@ -164,8 +164,8 @@ export function Gateway() {
     const { error } = await supabase.from('decodo_settings').upsert({
       id: 1,
       active: decodoActive,
-      api_base_url: decodoBaseUrl.trim() || 'https://api.decodo.com',
-      products_path: decodoProductsPath.trim() || '/v1/proxies',
+      api_base_url: decodoBaseUrl.trim() || 'https://scraper-api.decodo.com',
+      products_path: decodoProductsPath.trim() || '/v2/scrape',
       api_key: decodoApiKey.trim() || null,
       username: decodoUsername.trim() || null,
       password: decodoPassword.trim() || null,
@@ -192,8 +192,8 @@ export function Gateway() {
 
     const settings = data as Omit<DecodoSettings, 'id'> | null
     setDecodoActive(settings?.active ?? decodoActive)
-    setDecodoBaseUrl(settings?.api_base_url ?? 'https://api.decodo.com')
-    setDecodoProductsPath(settings?.products_path ?? '/v1/proxies')
+    setDecodoBaseUrl(settings?.api_base_url ?? 'https://scraper-api.decodo.com')
+    setDecodoProductsPath(settings?.products_path ?? '/v2/scrape')
     setDecodoApiKey(settings?.api_key ?? '')
     setDecodoUsername(settings?.username ?? '')
     setDecodoPassword(settings?.password ?? '')
@@ -352,10 +352,10 @@ export function Gateway() {
                   type="url"
                   value={decodoBaseUrl}
                   onChange={(event) => setDecodoBaseUrl(event.target.value)}
-                  placeholder="https://api.decodo.com"
+                  placeholder="https://scraper-api.decodo.com"
                   className="w-full h-12 px-4 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-ml-blue focus:border-transparent transition-all"
                 />
-                <p className="text-xs text-gray-400 mt-1">Use a URL base indicada no painel do fornecedor.</p>
+                <p className="text-xs text-gray-400 mt-1">Use somente o dominio da API do fornecedor.</p>
               </div>
 
               <div>
@@ -364,10 +364,10 @@ export function Gateway() {
                   type="text"
                   value={decodoProductsPath}
                   onChange={(event) => setDecodoProductsPath(event.target.value)}
-                  placeholder="/v1/proxies"
+                  placeholder="/v2/scrape"
                   className="w-full h-12 px-4 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-ml-blue focus:border-transparent transition-all"
                 />
-                <p className="text-xs text-gray-400 mt-1">Cole aqui o path que retorna os proxies/planos disponiveis.</p>
+                <p className="text-xs text-gray-400 mt-1">Para o playground de scraping, use o endpoint de consulta em tempo real.</p>
               </div>
 
               <div>

@@ -111,6 +111,25 @@ function normalizeOffer(item: unknown, index: number): ProxyOffer {
   return { id, name, type, country, city, protocol, endpoint, port, price, traffic, stock, status }
 }
 
+function defaultProxyOffers(status = 'Disponivel'): ProxyOffer[] {
+  return [
+    {
+      id: 'premium-pool',
+      name: 'Proxy premium',
+      type: 'Pool premium',
+      country: 'Global',
+      city: '',
+      protocol: 'HTTP(S)',
+      endpoint: '',
+      port: '',
+      price: 'Sob consulta',
+      traffic: 'Conforme plano',
+      stock: 'Ativo',
+      status,
+    },
+  ]
+}
+
 async function parseRequestBody(req: Request) {
   const raw = await req.text()
   if (!raw) return {}
@@ -147,7 +166,20 @@ async function callDecodo(settings: DecodoSettings) {
     headers.set('Authorization', `Basic ${btoa(`${settings.username.trim()}:${settings.password}`)}`)
   }
 
-  const response = await fetch(targetUrl, { headers })
+  const isScrapeEndpoint = /\/scrape\/?$/i.test(new URL(targetUrl).pathname)
+  const init: RequestInit = { headers }
+
+  if (isScrapeEndpoint) {
+    headers.set('Content-Type', 'application/json')
+    init.method = 'POST'
+    init.body = JSON.stringify({
+      url: 'https://ip.decodo.com',
+      proxy_pool: 'premium',
+      headless: 'html',
+    })
+  }
+
+  const response = await fetch(targetUrl, init)
   const text = await response.text()
   let data: unknown = text
 
@@ -169,6 +201,10 @@ async function callDecodo(settings: DecodoSettings) {
   }
 
   const items = findFirstArray(data).map(normalizeOffer)
+  if (items.length === 0 && isScrapeEndpoint) {
+    return { success: true as const, status: response.status, data, items: defaultProxyOffers() }
+  }
+
   return { success: true as const, status: response.status, data, items }
 }
 

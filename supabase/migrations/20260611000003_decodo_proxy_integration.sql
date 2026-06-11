@@ -1,8 +1,8 @@
 CREATE TABLE IF NOT EXISTS public.decodo_settings (
   id INTEGER PRIMARY KEY DEFAULT 1,
   active BOOLEAN NOT NULL DEFAULT FALSE,
-  api_base_url TEXT NOT NULL DEFAULT 'https://api.decodo.com',
-  products_path TEXT NOT NULL DEFAULT '/v1/proxies',
+  api_base_url TEXT NOT NULL DEFAULT 'https://scraper-api.decodo.com',
+  products_path TEXT NOT NULL DEFAULT '/v2/scrape',
   api_key TEXT,
   username TEXT,
   password TEXT,
