@@ -40,9 +40,12 @@ export function ProductGrid() {
   }
 
   return (
-    <div className="w-full bg-transparent mb-16 relative group/carousel">
-      <div className="flex items-end gap-4 mb-4">
-        <h2 className="text-2xl font-light text-[#666]">Anúncios disponíveis</h2>
+    <div className="w-full bg-transparent relative group/carousel">
+      <div className="flex items-end gap-4 mb-4 px-2 lg:px-0">
+        <h2 className="text-[26px] font-light text-[#666]">Anúncios disponíveis</h2>
+        <a href="/painel/usuario/compras" className="text-[15px] font-semibold text-ml-blue hover:text-ml-hover mb-[3px] transition-colors">
+          Ver histórico
+        </a>
       </div>
 
       {loading && <p className="text-sm text-gray-500">Carregando produtos...</p>}
