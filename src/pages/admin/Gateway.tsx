@@ -3,6 +3,7 @@ import { AdminLayout } from '../../components/layouts/AdminLayout'
 import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { supabase } from '../../lib/supabase'
+import { decodoStatus } from '../../lib/decodo'
 import { westPayStatus } from '../../lib/westpay'
 
 type GatewaySettings = {
@@ -12,6 +13,16 @@ type GatewaySettings = {
   westpay_public_key: string | null
   westpay_user_agent: string | null
   westpay_webhook_secret: string | null
+}
+
+type DecodoSettings = {
+  id: number
+  active: boolean
+  api_base_url: string | null
+  products_path: string | null
+  api_key: string | null
+  username: string | null
+  password: string | null
 }
 
 const defaultUserAgent = 'Cookie market/1.0 (+suporte@mercadoads.com)'
@@ -26,6 +37,14 @@ export function Gateway() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [testMessage, setTestMessage] = useState<string | null>(null)
+  const [decodoActive, setDecodoActive] = useState(false)
+  const [decodoBaseUrl, setDecodoBaseUrl] = useState('https://api.decodo.com')
+  const [decodoProductsPath, setDecodoProductsPath] = useState('/v1/proxies')
+  const [decodoApiKey, setDecodoApiKey] = useState('')
+  const [decodoUsername, setDecodoUsername] = useState('')
+  const [decodoPassword, setDecodoPassword] = useState('')
+  const [decodoMessage, setDecodoMessage] = useState<string | null>(null)
+  const [decodoTestMessage, setDecodoTestMessage] = useState<string | null>(null)
 
   const functionBaseUrl = useMemo(() => {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
@@ -41,21 +60,37 @@ export function Gateway() {
   useEffect(() => {
     let mounted = true
 
-    supabase
+    Promise.all([
+      supabase
       .from('payment_gateway_settings')
       .select('id, active, westpay_api_key, westpay_public_key, westpay_user_agent, westpay_webhook_secret')
       .eq('id', 1)
-      .maybeSingle()
-      .then(({ data, error }) => {
+      .maybeSingle(),
+      supabase
+        .from('decodo_settings')
+        .select('id, active, api_base_url, products_path, api_key, username, password')
+        .eq('id', 1)
+        .maybeSingle(),
+    ])
+      .then(([gatewayResult, decodoResult]) => {
         if (!mounted) return
-        if (error) throw error
+        if (gatewayResult.error) throw gatewayResult.error
+        if (decodoResult.error) throw decodoResult.error
 
-        const settings = data as GatewaySettings | null
+        const settings = gatewayResult.data as GatewaySettings | null
         setActive(settings?.active ?? true)
         setApiKey(settings?.westpay_api_key ?? '')
         setPublicKey(settings?.westpay_public_key ?? '')
         setUserAgent(settings?.westpay_user_agent ?? defaultUserAgent)
         setWebhookSecret(settings?.westpay_webhook_secret ?? '')
+
+        const decodoSettings = decodoResult.data as DecodoSettings | null
+        setDecodoActive(decodoSettings?.active ?? false)
+        setDecodoBaseUrl(decodoSettings?.api_base_url ?? 'https://api.decodo.com')
+        setDecodoProductsPath(decodoSettings?.products_path ?? '/v1/proxies')
+        setDecodoApiKey(decodoSettings?.api_key ?? '')
+        setDecodoUsername(decodoSettings?.username ?? '')
+        setDecodoPassword(decodoSettings?.password ?? '')
       })
       .catch((error) => setMessage(error instanceof Error ? error.message : 'Nao foi possivel carregar o gateway.'))
       .finally(() => {
@@ -122,10 +157,68 @@ export function Gateway() {
     }
   }
 
+  const saveDecodo = async () => {
+    setSaving(true)
+    setDecodoMessage(null)
+
+    const { error } = await supabase.from('decodo_settings').upsert({
+      id: 1,
+      active: decodoActive,
+      api_base_url: decodoBaseUrl.trim() || 'https://api.decodo.com',
+      products_path: decodoProductsPath.trim() || '/v1/proxies',
+      api_key: decodoApiKey.trim() || null,
+      username: decodoUsername.trim() || null,
+      password: decodoPassword.trim() || null,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'id' })
+
+    if (error) {
+      setDecodoMessage(error.message)
+      setSaving(false)
+      return
+    }
+
+    const { data, error: reloadError } = await supabase
+      .from('decodo_settings')
+      .select('active, api_base_url, products_path, api_key, username, password')
+      .eq('id', 1)
+      .maybeSingle()
+
+    if (reloadError) {
+      setDecodoMessage(`Decodo salva, mas nao foi possivel confirmar no banco: ${reloadError.message}`)
+      setSaving(false)
+      return
+    }
+
+    const settings = data as Omit<DecodoSettings, 'id'> | null
+    setDecodoActive(settings?.active ?? decodoActive)
+    setDecodoBaseUrl(settings?.api_base_url ?? 'https://api.decodo.com')
+    setDecodoProductsPath(settings?.products_path ?? '/v1/proxies')
+    setDecodoApiKey(settings?.api_key ?? '')
+    setDecodoUsername(settings?.username ?? '')
+    setDecodoPassword(settings?.password ?? '')
+    setDecodoMessage(settings?.api_key || (settings?.username && settings?.password)
+      ? 'Decodo salva e credenciais confirmadas no banco.'
+      : 'Decodo salva, mas sem API Key ou usuario/senha.')
+    setSaving(false)
+  }
+
+  const testDecodoConnection = async () => {
+    setDecodoTestMessage('Testando Decodo...')
+    try {
+      const result = await decodoStatus()
+      setDecodoTestMessage(result.configured
+        ? 'Funcao Decodo ativa e credenciais encontradas no banco.'
+        : 'Funcao Decodo ativa, mas sem credenciais salvas.')
+    } catch (error) {
+      setDecodoTestMessage(error instanceof Error ? error.message : 'Nao foi possivel validar a Decodo.')
+    }
+  }
+
   return (
     <AdminLayout>
       <div className="space-y-6 max-w-4xl">
-        <h2 className="text-xl font-light text-ml-dark mb-4">Gateway de Pagamento</h2>
+        <h2 className="mb-4 text-xl font-light text-[var(--layout-text-primary)]">Gateways e APIs</h2>
 
         <Card className="bg-white border-none shadow-sm rounded-md">
           <CardContent className="p-6 space-y-6">
@@ -231,6 +324,126 @@ export function Gateway() {
 
             {message && <p className={`text-sm ${message.includes('confirmadas') ? 'text-green-600' : 'text-red-600'}`}>{message}</p>}
             {testMessage && <p className={`text-sm ${testMessage.includes('ativa') ? 'text-green-600' : 'text-red-600'}`}>{testMessage}</p>}
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-none shadow-sm rounded-md">
+          <CardContent className="p-6 space-y-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-medium text-ml-dark">Decodo</h3>
+                <p className="text-sm text-gray-500">API para listar proxies disponiveis na pagina /proxy.</p>
+              </div>
+              <label className="flex items-center gap-2 text-sm text-gray-600">
+                <input
+                  type="checkbox"
+                  checked={decodoActive}
+                  onChange={(event) => setDecodoActive(event.target.checked)}
+                  className="h-4 w-4 accent-ml-blue"
+                />
+                Ativo
+              </label>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Base URL</label>
+                <input
+                  type="url"
+                  value={decodoBaseUrl}
+                  onChange={(event) => setDecodoBaseUrl(event.target.value)}
+                  placeholder="https://api.decodo.com"
+                  className="w-full h-12 px-4 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-ml-blue focus:border-transparent transition-all"
+                />
+                <p className="text-xs text-gray-400 mt-1">Use a URL base indicada no playground da Decodo.</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Endpoint de catalogo</label>
+                <input
+                  type="text"
+                  value={decodoProductsPath}
+                  onChange={(event) => setDecodoProductsPath(event.target.value)}
+                  placeholder="/v1/proxies"
+                  className="w-full h-12 px-4 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-ml-blue focus:border-transparent transition-all"
+                />
+                <p className="text-xs text-gray-400 mt-1">Cole aqui o path que retorna os proxies/planos disponiveis.</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">API Key</label>
+                <input
+                  type="password"
+                  value={decodoApiKey}
+                  onChange={(event) => setDecodoApiKey(event.target.value)}
+                  placeholder="Token da Decodo, se o endpoint usar Bearer/X-API-Key"
+                  className="w-full h-12 px-4 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-ml-blue focus:border-transparent transition-all"
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
+                  <input
+                    type="text"
+                    value={decodoUsername}
+                    onChange={(event) => setDecodoUsername(event.target.value)}
+                    placeholder="Usuario, se usar Basic Auth"
+                    className="w-full h-12 px-4 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-ml-blue focus:border-transparent transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+                  <input
+                    type="password"
+                    value={decodoPassword}
+                    onChange={(event) => setDecodoPassword(event.target.value)}
+                    placeholder="Senha, se usar Basic Auth"
+                    className="w-full h-12 px-4 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-ml-blue focus:border-transparent transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-md border border-gray-100 bg-gray-50 p-4 space-y-2">
+              <p className="text-sm font-medium text-gray-700">Endpoint publico da plataforma</p>
+              <div className="flex flex-col md:flex-row gap-2">
+                <input
+                  readOnly
+                  value={functionBaseUrl ? `${functionBaseUrl}/decodo` : ''}
+                  className="w-full h-11 px-3 border border-gray-200 rounded-sm bg-white text-xs text-gray-600"
+                />
+                <Button
+                  type="button"
+                  onClick={() => navigator.clipboard.writeText(functionBaseUrl ? `${functionBaseUrl}/decodo` : '')}
+                  className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold px-4 h-11 rounded-sm"
+                >
+                  Copiar
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <Button
+                type="button"
+                onClick={saveDecodo}
+                disabled={saving || loading}
+                className="bg-ml-blue text-white hover:bg-ml-hover font-semibold py-3 px-6 rounded-sm shadow-sm"
+              >
+                {saving ? 'Salvando...' : 'Salvar Decodo'}
+              </Button>
+              <Button
+                type="button"
+                onClick={testDecodoConnection}
+                disabled={loading}
+                className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold py-3 px-6 rounded-sm shadow-sm"
+              >
+                Testar Decodo
+              </Button>
+            </div>
+
+            {decodoMessage && <p className={`text-sm ${decodoMessage.includes('confirmadas') ? 'text-green-600' : 'text-red-600'}`}>{decodoMessage}</p>}
+            {decodoTestMessage && <p className={`text-sm ${decodoTestMessage.includes('ativa') ? 'text-green-600' : 'text-red-600'}`}>{decodoTestMessage}</p>}
           </CardContent>
         </Card>
       </div>

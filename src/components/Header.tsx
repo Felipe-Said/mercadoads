@@ -180,6 +180,7 @@ export function Header() {
               </Link>
             )}
             <Link to="/contato" className="hidden whitespace-nowrap py-2 transition-opacity hover:opacity-75 md:block">Contato</Link>
+            <Link to="/proxy" className="hidden whitespace-nowrap py-2 transition-opacity hover:opacity-75 md:block">Proxy</Link>
           </div>
 
           <div className="hidden shrink-0 items-center gap-4 md:flex">
