@@ -52,6 +52,7 @@ export interface Banner {
   link: string
   color: string
   position: BannerPosition
+  is_active?: boolean
 }
 
 export type BannerPosition =
@@ -195,6 +196,7 @@ export async function getBanners(position?: Banner['position']) {
     link: row.link_url,
     color: row.background_color ?? '#1E1E1E',
     position: row.position,
+    is_active: Boolean(row.is_active),
   })) as Banner[]
 }
 
