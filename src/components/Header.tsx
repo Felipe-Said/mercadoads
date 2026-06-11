@@ -202,9 +202,9 @@ export function Header() {
                   <Link to="/painel/vendedor" className="font-medium transition-opacity hover:opacity-75">Painel do Vendedor</Link>
                 )}
                 {role === 'admin' && (
-                  <Link to="/painel/admin" className="font-medium text-[var(--layout-link-color)] transition-opacity hover:opacity-75">Painel Admin</Link>
+                  <Link to="/painel/admin" className="font-medium text-[var(--layout-header-account-link-color)] transition-opacity hover:opacity-75">Painel Admin</Link>
                 )}
-                <button onClick={handleLogout} className="flex items-center gap-1 text-red-500 transition-opacity hover:opacity-75">
+                <button onClick={handleLogout} className="flex items-center gap-1 text-[var(--layout-header-logout-color)] transition-opacity hover:opacity-75">
                   <LogOut className="h-3 w-3" /> Sair
                 </button>
               </>

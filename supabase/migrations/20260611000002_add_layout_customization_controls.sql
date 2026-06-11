@@ -27,7 +27,9 @@ ALTER TABLE public.platform_settings
     "dashboardSidebarHeaderBg": "#232f3e",
     "dashboardSidebarText": "#ffffff",
     "dashboardSidebarActiveBg": "#ff9900",
-    "dashboardSidebarActiveText": "#131921"
+    "dashboardSidebarActiveText": "#131921",
+    "headerAccountLinkColor": "#007185",
+    "headerLogoutColor": "#ef4444"
   }'::jsonb;
 
 INSERT INTO storage.buckets (id, name, public, file_size_limit)

@@ -35,6 +35,8 @@ export type LayoutTheme = {
   dashboardSidebarText: string
   dashboardSidebarActiveBg: string
   dashboardSidebarActiveText: string
+  headerAccountLinkColor: string
+  headerLogoutColor: string
 }
 
 export const DEFAULT_LAYOUT_THEME: LayoutTheme = {
@@ -62,6 +64,8 @@ export const DEFAULT_LAYOUT_THEME: LayoutTheme = {
   dashboardSidebarText: '#ffffff',
   dashboardSidebarActiveBg: '#ff9900',
   dashboardSidebarActiveText: '#131921',
+  headerAccountLinkColor: '#007185',
+  headerLogoutColor: '#ef4444',
 }
 
 function normalizeHex(value: string | null | undefined, fallback: string) {

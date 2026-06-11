@@ -64,6 +64,8 @@
   --layout-dashboard-sidebar-text: #ffffff;
   --layout-dashboard-sidebar-active-bg: #ff9900;
   --layout-dashboard-sidebar-active-text: #131921;
+  --layout-header-account-link-color: #007185;
+  --layout-header-logout-color: #ef4444;
 
   --radius-lg: 0.5rem;
   --radius-md: calc(0.5rem - 2px);

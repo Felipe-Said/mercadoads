@@ -496,6 +496,8 @@ export function Personalizacao() {
                 <TokenGroup title="Links e botoes">
                   <ColorControl label="Links" value={layoutTheme.linkColor} onChange={(value) => updateLayoutTheme('linkColor', value)} />
                   <ColorControl label="Links ao passar mouse" value={layoutTheme.linkHoverColor} onChange={(value) => updateLayoutTheme('linkHoverColor', value)} />
+                  <ColorControl label="Header - link da conta/painel" value={layoutTheme.headerAccountLinkColor} onChange={(value) => updateLayoutTheme('headerAccountLinkColor', value)} />
+                  <ColorControl label="Header - sair/logout" value={layoutTheme.headerLogoutColor} onChange={(value) => updateLayoutTheme('headerLogoutColor', value)} />
                   <ColorControl label="Botao primario - fundo" value={layoutTheme.buttonPrimaryBg} onChange={(value) => updateLayoutTheme('buttonPrimaryBg', value)} />
                   <ColorControl label="Botao primario - texto" value={layoutTheme.buttonPrimaryText} onChange={(value) => updateLayoutTheme('buttonPrimaryText', value)} />
                   <ColorControl label="Botao primario - hover" value={layoutTheme.buttonPrimaryHover} onChange={(value) => updateLayoutTheme('buttonPrimaryHover', value)} />
