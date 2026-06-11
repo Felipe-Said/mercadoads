@@ -5,7 +5,19 @@ import { getProducts, type Product } from '../lib/data'
 
 export type { Product }
 
-export function ProductGrid() {
+interface ProductGridProps {
+  title?: string;
+  linkText?: string;
+  linkUrl?: string;
+  shuffle?: boolean;
+}
+
+export function ProductGrid({ 
+  title = "Anúncios disponíveis", 
+  linkText = "Ver histórico",
+  linkUrl = "/painel/usuario/compras",
+  shuffle = false
+}: ProductGridProps) {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -16,12 +28,16 @@ export function ProductGrid() {
   useEffect(() => {
     getProducts()
       .then((data) => {
-        setProducts(data)
-        if (data.length <= 5) setShowRightBtn(false)
+        let finalData = [...data];
+        if (shuffle) {
+          finalData = finalData.sort(() => 0.5 - Math.random());
+        }
+        setProducts(finalData)
+        if (finalData.length <= 5) setShowRightBtn(false)
       })
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false))
-  }, [])
+  }, [shuffle])
 
   const handleScroll = () => {
     if (!scrollRef.current) return
@@ -42,9 +58,9 @@ export function ProductGrid() {
   return (
     <div className="w-full bg-transparent relative group/carousel">
       <div className="flex items-end gap-4 mb-4 px-2 lg:px-0">
-        <h2 className="text-[26px] font-light text-[#666]">Anúncios disponíveis</h2>
-        <a href="/painel/usuario/compras" className="text-[15px] font-semibold text-ml-blue hover:text-ml-hover mb-[3px] transition-colors">
-          Ver histórico
+        <h2 className="text-[26px] font-light text-[#666]">{title}</h2>
+        <a href={linkUrl} className="text-[15px] font-semibold text-ml-blue hover:text-ml-hover mb-[3px] transition-colors">
+          {linkText}
         </a>
       </div>
 

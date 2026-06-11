@@ -24,9 +24,24 @@ export function Home() {
           <HomeFeatures />
         </div>
 
-        {/* 4. Vitrine Premium */}
+        {/* 4. Vitrine Principal - Ofertas do Dia */}
         <div className="mt-12">
-          <ProductGrid />
+          <ProductGrid title="Ofertas do dia" />
+        </div>
+
+        {/* 5. Banner Promocional Secundário no meio da tela */}
+        <div className="mt-16 w-full hidden md:block">
+          <Banners position="home_middle" />
+        </div>
+
+        {/* 6. Mais Vendidos (Carrossel Secundário) */}
+        <div className="mt-12">
+          <ProductGrid title="Mais vendidos da semana" linkText="Ver todos" shuffle={true} />
+        </div>
+
+        {/* 7. Lançamentos / Recomendados */}
+        <div className="mt-12 mb-16">
+          <ProductGrid title="Recomendados para você" linkText="Descobrir mais" shuffle={true} />
         </div>
       </div>
     </div>
