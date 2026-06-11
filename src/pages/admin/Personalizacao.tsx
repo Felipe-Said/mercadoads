@@ -5,7 +5,7 @@ import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { type BannerPosition } from '../../lib/data'
 import { supabase } from '../../lib/supabase'
-import { applyPlatformTheme } from '../../lib/theme'
+import { applyPlatformTheme, DEFAULT_LAYOUT_THEME, type LayoutTheme } from '../../lib/theme'
 
 type BannerForm = {
   title: string
@@ -68,6 +68,7 @@ const sectionLinks = [
   { id: 'marca', label: 'Marca' },
   { id: 'cabecalho', label: 'Cabecalho' },
   { id: 'cores', label: 'Cores globais' },
+  { id: 'tokens', label: 'Tokens de layout' },
   { id: 'aba', label: 'Aba do navegador' },
   { id: 'banners', label: 'Banners' },
 ]
@@ -105,6 +106,7 @@ export function Personalizacao() {
   const [headerTopbarText, setHeaderTopbarText] = useState('#1f2937')
   const [headerNavBg, setHeaderNavBg] = useState('#ffe600')
   const [headerNavText, setHeaderNavText] = useState('#333333')
+  const [layoutTheme, setLayoutTheme] = useState<LayoutTheme>(DEFAULT_LAYOUT_THEME)
   const [headerPromo, setHeaderPromo] = useState<HeaderPromoState>({
     enabled: true,
     gifUrl: '',
@@ -154,6 +156,7 @@ export function Personalizacao() {
     setHeaderTopbarText(data?.header_topbar_text_color ?? '#1f2937')
     setHeaderNavBg(data?.header_nav_bg_color ?? '#ffe600')
     setHeaderNavText(data?.header_nav_text_color ?? '#333333')
+    setLayoutTheme({ ...DEFAULT_LAYOUT_THEME, ...(data?.layout_theme_json ?? {}) })
     setHeaderPromo({
       enabled: data?.header_promo_json?.enabled ?? true,
       gifUrl: data?.header_promo_json?.gifUrl ?? '',
@@ -222,6 +225,7 @@ export function Personalizacao() {
       header_topbar_text_color: headerTopbarText,
       header_nav_bg_color: headerNavBg,
       header_nav_text_color: headerNavText,
+      layout_theme_json: layoutTheme,
       header_promo_json: {
         enabled: headerPromo.enabled,
         gifUrl: headerPromo.gifUrl,
@@ -237,7 +241,7 @@ export function Personalizacao() {
       return
     }
 
-    applyPlatformTheme({ primaryColor, secondaryColor, faviconUrl, browserTitle, browserTitleInactive })
+    applyPlatformTheme({ primaryColor, secondaryColor, faviconUrl, browserTitle, browserTitleInactive, layoutTheme })
     window.dispatchEvent(new Event('platform-settings-updated'))
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
@@ -325,21 +329,25 @@ export function Personalizacao() {
     setBannerMessage('Banner excluido.')
   }
 
+  const updateLayoutTheme = (key: keyof LayoutTheme, value: string) => {
+    setLayoutTheme((current) => ({ ...current, [key]: value }))
+  }
+
   return (
     <AdminLayout>
       <div className="grid max-w-[1280px] gap-6 lg:grid-cols-[250px_minmax(0,1fr)]">
         <aside className="hidden lg:block">
           <div className="sticky top-28 rounded-sm border border-gray-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#007185]">Personalizacao</p>
-            <h2 className="mt-1 text-lg font-bold text-[#111827]">Controle do layout</h2>
+            <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--layout-link-color)]">Personalizacao</p>
+            <h2 className="mt-1 text-lg font-bold text-[var(--layout-text-primary)]">Controle do layout</h2>
             <nav className="mt-4 space-y-1">
               {sectionLinks.map((section) => (
-                <a key={section.id} href={`#${section.id}`} className="block rounded-sm px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 hover:text-[#007185]">
+                <a key={section.id} href={`#${section.id}`} className="block rounded-sm px-3 py-2 text-sm font-semibold text-[var(--layout-text-muted)] hover:bg-[var(--layout-subtle-background)] hover:text-[var(--layout-link-color)]">
                   {section.label}
                 </a>
               ))}
             </nav>
-            <div className="mt-5 rounded-sm bg-[#f8fafc] p-3 text-xs text-gray-600">
+            <div className="mt-5 rounded-sm bg-[var(--layout-subtle-background)] p-3 text-xs text-[var(--layout-text-muted)]">
               <p><strong>{activeBannerCount}</strong> banners ativos</p>
               <p><strong>{inactiveBannerCount}</strong> banners desabilitados</p>
             </div>
@@ -350,14 +358,14 @@ export function Personalizacao() {
           <div className="rounded-sm border border-gray-200 bg-white p-5 shadow-sm">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#007185]">Layout Studio</p>
-                <h2 className="text-2xl font-bold tracking-tight text-[#111827]">Personalizacao completa da plataforma</h2>
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--layout-link-color)]">Layout Studio</p>
+                <h2 className="text-2xl font-bold tracking-tight text-[var(--layout-text-primary)]">Personalizacao completa da plataforma</h2>
                 <p className="mt-1 text-sm text-gray-500">Edite marca, cabecalho, cores, aba do navegador e cada banner da home.</p>
               </div>
               <div className="flex items-center gap-3">
                 {saveMessage && <span className="max-w-xs text-sm text-red-600">{saveMessage}</span>}
                 {saved && <span className="text-sm text-green-600">Publicado.</span>}
-                <Button onClick={saveSettings} className="h-11 rounded-sm bg-[#ff9900] px-5 font-bold text-[#131921] hover:bg-[#ffb84d]">
+                <Button onClick={saveSettings} className="h-11 rounded-sm px-5 font-bold">
                   <Save className="mr-2 h-4 w-4" /> Publicar layout
                 </Button>
               </div>
@@ -408,16 +416,16 @@ export function Personalizacao() {
                     <ColorControl label="Texto do aviso/promo" value={headerPromo.textColor} onChange={(value) => setHeaderPromo((current) => ({ ...current, textColor: value }))} />
                   </div>
 
-                  <label className="flex items-center justify-between rounded-sm border border-gray-200 bg-[#f8fafc] p-3">
+                  <label className="flex items-center justify-between rounded-sm border border-[var(--layout-border-color)] bg-[var(--layout-subtle-background)] p-3">
                     <span>
-                      <span className="block text-sm font-bold text-[#111827]">Mostrar aviso do cabecalho</span>
+                      <span className="block text-sm font-bold text-[var(--layout-text-primary)]">Mostrar aviso do cabecalho</span>
                       <span className="text-xs text-gray-500">Desative para esconder a faixa promocional sem apagar os dados.</span>
                     </span>
                     <input
                       type="checkbox"
                       checked={headerPromo.enabled}
                       onChange={(event) => setHeaderPromo((current) => ({ ...current, enabled: event.target.checked }))}
-                      className="h-5 w-5 accent-[#ff9900]"
+                      className="h-5 w-5 accent-[var(--layout-accent-color)]"
                     />
                   </label>
 
@@ -440,8 +448,8 @@ export function Personalizacao() {
                   />
                 </div>
 
-                <div className="rounded-sm border border-gray-200 bg-[#f8fafc] p-4">
-                  <p className="mb-3 text-sm font-bold text-[#111827]">Preview do cabecalho</p>
+                <div className="rounded-sm border border-[var(--layout-border-color)] bg-[var(--layout-subtle-background)] p-4">
+                  <p className="mb-3 text-sm font-bold text-[var(--layout-text-primary)]">Preview do cabecalho</p>
                   <div className="overflow-hidden rounded-sm border border-gray-200 bg-white">
                     <div className="flex h-9 items-center justify-between px-3 text-xs" style={{ backgroundColor: headerTopbarBg, color: headerTopbarText }}>
                       <span>Compra segura com vendedores verificados</span>
@@ -472,6 +480,61 @@ export function Personalizacao() {
             </CardContent>
           </Card>
 
+          <Card id="tokens" className="rounded-sm border-gray-200 bg-white shadow-sm">
+            <CardContent className="p-6">
+              <SectionTitle title="Tokens de layout e componentes" subtitle="Controle as cores usadas por botoes, links, cards, textos, fundos, precos, destaques e painéis." />
+              <div className="grid gap-5 xl:grid-cols-2">
+                <TokenGroup title="Base da plataforma">
+                  <ColorControl label="Fundo das paginas" value={layoutTheme.pageBackground} onChange={(value) => updateLayoutTheme('pageBackground', value)} />
+                  <ColorControl label="Fundo de cards/superficies" value={layoutTheme.surfaceBackground} onChange={(value) => updateLayoutTheme('surfaceBackground', value)} />
+                  <ColorControl label="Fundo suave/areas internas" value={layoutTheme.subtleBackground} onChange={(value) => updateLayoutTheme('subtleBackground', value)} />
+                  <ColorControl label="Bordas" value={layoutTheme.borderColor} onChange={(value) => updateLayoutTheme('borderColor', value)} />
+                  <ColorControl label="Texto principal" value={layoutTheme.textPrimary} onChange={(value) => updateLayoutTheme('textPrimary', value)} />
+                  <ColorControl label="Texto secundario" value={layoutTheme.textMuted} onChange={(value) => updateLayoutTheme('textMuted', value)} />
+                </TokenGroup>
+
+                <TokenGroup title="Links e botoes">
+                  <ColorControl label="Links" value={layoutTheme.linkColor} onChange={(value) => updateLayoutTheme('linkColor', value)} />
+                  <ColorControl label="Links ao passar mouse" value={layoutTheme.linkHoverColor} onChange={(value) => updateLayoutTheme('linkHoverColor', value)} />
+                  <ColorControl label="Botao primario - fundo" value={layoutTheme.buttonPrimaryBg} onChange={(value) => updateLayoutTheme('buttonPrimaryBg', value)} />
+                  <ColorControl label="Botao primario - texto" value={layoutTheme.buttonPrimaryText} onChange={(value) => updateLayoutTheme('buttonPrimaryText', value)} />
+                  <ColorControl label="Botao primario - hover" value={layoutTheme.buttonPrimaryHover} onChange={(value) => updateLayoutTheme('buttonPrimaryHover', value)} />
+                  <ColorControl label="Botao secundario - fundo" value={layoutTheme.buttonSecondaryBg} onChange={(value) => updateLayoutTheme('buttonSecondaryBg', value)} />
+                  <ColorControl label="Botao secundario - texto" value={layoutTheme.buttonSecondaryText} onChange={(value) => updateLayoutTheme('buttonSecondaryText', value)} />
+                  <ColorControl label="Botao secundario - hover" value={layoutTheme.buttonSecondaryHover} onChange={(value) => updateLayoutTheme('buttonSecondaryHover', value)} />
+                </TokenGroup>
+
+                <TokenGroup title="Destaques, preco e status">
+                  <ColorControl label="Cor de destaque/acento" value={layoutTheme.accentColor} onChange={(value) => updateLayoutTheme('accentColor', value)} />
+                  <ColorControl label="Texto sobre destaque" value={layoutTheme.accentTextColor} onChange={(value) => updateLayoutTheme('accentTextColor', value)} />
+                  <ColorControl label="Sucesso/confirmacao" value={layoutTheme.successColor} onChange={(value) => updateLayoutTheme('successColor', value)} />
+                  <ColorControl label="Preco" value={layoutTheme.priceColor} onChange={(value) => updateLayoutTheme('priceColor', value)} />
+                  <ColorControl label="Estrelas/avaliacao" value={layoutTheme.ratingColor} onChange={(value) => updateLayoutTheme('ratingColor', value)} />
+                </TokenGroup>
+
+                <TokenGroup title="Sidebar dos painéis">
+                  <ColorControl label="Fundo da sidebar" value={layoutTheme.dashboardSidebarBg} onChange={(value) => updateLayoutTheme('dashboardSidebarBg', value)} />
+                  <ColorControl label="Fundo do topo da sidebar" value={layoutTheme.dashboardSidebarHeaderBg} onChange={(value) => updateLayoutTheme('dashboardSidebarHeaderBg', value)} />
+                  <ColorControl label="Texto da sidebar" value={layoutTheme.dashboardSidebarText} onChange={(value) => updateLayoutTheme('dashboardSidebarText', value)} />
+                  <ColorControl label="Item ativo - fundo" value={layoutTheme.dashboardSidebarActiveBg} onChange={(value) => updateLayoutTheme('dashboardSidebarActiveBg', value)} />
+                  <ColorControl label="Item ativo - texto" value={layoutTheme.dashboardSidebarActiveText} onChange={(value) => updateLayoutTheme('dashboardSidebarActiveText', value)} />
+                </TokenGroup>
+              </div>
+
+              <div className="mt-5 flex flex-col gap-3 rounded-sm border border-gray-200 bg-[var(--layout-subtle-background)] p-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-sm font-bold text-[var(--layout-text-primary)]">Preview rapido dos botoes</p>
+                  <p className="text-xs text-[var(--layout-text-muted)]">Essas cores alimentam os botoes principais da plataforma.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" className="layout-primary-button rounded-sm px-4 py-2 text-sm font-bold">Botao primario</button>
+                  <button type="button" className="layout-secondary-button rounded-sm px-4 py-2 text-sm font-bold">Botao secundario</button>
+                  <a className="layout-link px-2 py-2 text-sm font-bold" href="#tokens">Link</a>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card id="aba" className="rounded-sm border-gray-200 bg-white shadow-sm">
             <CardContent className="p-6">
               <SectionTitle title="Aba do navegador" subtitle="Controle o texto quando o usuario esta na pagina e quando sai dela." />
@@ -490,10 +553,10 @@ export function Personalizacao() {
             <CardContent className="p-6">
               <SectionTitle title="Banners da plataforma" subtitle="Crie, edite, habilite e desabilite cada campo de banner. Use upload direto ou URL manual." />
               <div className="grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
-                <form className="space-y-4 rounded-sm border border-gray-200 bg-[#f8fafc] p-4" onSubmit={saveBanner}>
+                <form className="space-y-4 rounded-sm border border-[var(--layout-border-color)] bg-[var(--layout-subtle-background)] p-4" onSubmit={saveBanner}>
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-bold text-[#111827]">{editingBannerId ? 'Editando banner' : 'Novo banner'}</p>
+                      <p className="text-sm font-bold text-[var(--layout-text-primary)]">{editingBannerId ? 'Editando banner' : 'Novo banner'}</p>
                       <p className="text-xs text-gray-500">{getBannerPositionLabel(bannerForm.position)}</p>
                     </div>
                     <Button type="button" variant="outline" onClick={() => resetBannerForm()} className="h-9 rounded-sm">
@@ -503,10 +566,10 @@ export function Personalizacao() {
 
                   <label className="flex items-center justify-between rounded-sm border border-gray-200 bg-white p-3">
                     <span>
-                      <span className="block text-sm font-bold text-[#111827]">Banner habilitado</span>
+                      <span className="block text-sm font-bold text-[var(--layout-text-primary)]">Banner habilitado</span>
                       <span className="text-xs text-gray-500">Quando desligado, nao aparece na home.</span>
                     </span>
-                    <input type="checkbox" checked={bannerForm.is_active} onChange={(event) => setBannerForm((current) => ({ ...current, is_active: event.target.checked }))} className="h-5 w-5 accent-[#ff9900]" />
+                    <input type="checkbox" checked={bannerForm.is_active} onChange={(event) => setBannerForm((current) => ({ ...current, is_active: event.target.checked }))} className="h-5 w-5 accent-[var(--layout-accent-color)]" />
                   </label>
 
                   <Field label="Posicao exata">
@@ -558,7 +621,7 @@ export function Personalizacao() {
 
                   {bannerMessage && <p className={`rounded-sm p-3 text-sm ${bannerMessage.includes('Banner') || bannerMessage.includes('habilitado') || bannerMessage.includes('desabilitado') || bannerMessage.includes('excluido') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{bannerMessage}</p>}
 
-                  <Button type="submit" disabled={bannerLoading} className="h-11 w-full rounded-sm bg-[#ff9900] font-bold text-[#131921] hover:bg-[#ffb84d]">
+                  <Button type="submit" disabled={bannerLoading} className="h-11 w-full rounded-sm font-bold">
                     <Save className="mr-2 h-4 w-4" /> {bannerLoading ? 'Salvando...' : editingBannerId ? 'Salvar banner' : 'Adicionar banner'}
                   </Button>
                 </form>
@@ -566,8 +629,8 @@ export function Personalizacao() {
                 <div className="space-y-4">
                   {groupedBannerOptions.map(([group, options]) => (
                     <div key={group} className="rounded-sm border border-gray-200 bg-white">
-                      <div className="border-b border-gray-100 bg-[#f8fafc] px-4 py-3">
-                        <p className="text-sm font-bold text-[#111827]">{group}</p>
+                      <div className="border-b border-[var(--layout-border-color)] bg-[var(--layout-subtle-background)] px-4 py-3">
+                        <p className="text-sm font-bold text-[var(--layout-text-primary)]">{group}</p>
                       </div>
                       <div className="divide-y divide-gray-100">
                         {options.map((option) => {
@@ -576,7 +639,7 @@ export function Personalizacao() {
                             <div key={option.value} className="p-4">
                               <div className="mb-3 flex items-center justify-between gap-3">
                                 <div>
-                                  <p className="text-sm font-bold text-[#111827]">{option.label}</p>
+                                  <p className="text-sm font-bold text-[var(--layout-text-primary)]">{option.label}</p>
                                   <p className="text-xs text-gray-500">{option.helper}</p>
                                 </div>
                                 <Button type="button" variant="outline" onClick={() => resetBannerForm(option.value)} className="h-8 rounded-sm px-3 text-xs">
@@ -592,7 +655,7 @@ export function Personalizacao() {
                                     </div>
                                     <div className="min-w-0">
                                       <div className="flex flex-wrap items-center gap-2">
-                                        <p className="truncate text-sm font-bold text-[#111827]">{banner.title || 'Banner sem texto'}</p>
+                                        <p className="truncate text-sm font-bold text-[var(--layout-text-primary)]">{banner.title || 'Banner sem texto'}</p>
                                         <span className={`inline-flex items-center gap-1 rounded-sm px-2 py-0.5 text-[11px] font-bold ${banner.is_active ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                                           {banner.is_active ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
                                           {banner.is_active ? 'Ativo' : 'Desativado'}
@@ -604,7 +667,7 @@ export function Personalizacao() {
                                       <button type="button" onClick={() => toggleBannerActive(banner)} className="rounded-sm border border-gray-200 p-2 text-gray-500 hover:bg-gray-50" title={banner.is_active ? 'Desabilitar' : 'Habilitar'}>
                                         {banner.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                       </button>
-                                      <button type="button" onClick={() => editBanner(banner)} className="rounded-sm border border-gray-200 p-2 text-[#007185] hover:bg-gray-50" title="Editar">
+                                      <button type="button" onClick={() => editBanner(banner)} className="rounded-sm border border-[var(--layout-border-color)] p-2 text-[var(--layout-link-color)] hover:bg-[var(--layout-subtle-background)]" title="Editar">
                                         <Pencil className="h-4 w-4" />
                                       </button>
                                       <button type="button" onClick={() => deleteBanner(banner.id)} className="rounded-sm border border-red-100 p-2 text-red-600 hover:bg-red-50" title="Excluir">
@@ -628,7 +691,7 @@ export function Personalizacao() {
           <div id="publish" className="flex items-center justify-end gap-3 pb-8">
             {saveMessage && <span className="text-sm text-red-600">{saveMessage}</span>}
             {saved && <span className="text-sm text-green-600">Publicado.</span>}
-            <Button onClick={saveSettings} className="h-12 rounded-sm bg-[#ff9900] px-8 font-bold text-[#131921] hover:bg-[#ffb84d]">
+            <Button onClick={saveSettings} className="h-12 rounded-sm px-8 font-bold">
               <Save className="mr-2 h-4 w-4" /> Publicar alteracoes
             </Button>
           </div>
@@ -641,7 +704,7 @@ export function Personalizacao() {
 function SectionTitle({ title, subtitle }: { title: string; subtitle: string }) {
   return (
     <div className="mb-5">
-      <h3 className="text-xl font-bold tracking-tight text-[#111827]">{title}</h3>
+      <h3 className="text-xl font-bold tracking-tight text-[var(--layout-text-primary)]">{title}</h3>
       <p className="mt-1 text-sm text-gray-500">{subtitle}</p>
     </div>
   )
@@ -653,6 +716,17 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <span className="mb-1 block text-sm font-bold text-gray-700">{label}</span>
       {children}
     </label>
+  )
+}
+
+function TokenGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-sm border border-[var(--layout-border-color)] bg-[var(--layout-subtle-background)] p-4">
+      <h4 className="mb-4 text-sm font-bold uppercase tracking-[0.08em] text-[var(--layout-text-primary)]">{title}</h4>
+      <div className="grid gap-4 md:grid-cols-2">
+        {children}
+      </div>
+    </div>
   )
 }
 
@@ -670,7 +744,7 @@ function ColorControl({ label, value, onChange }: { label: string; value: string
 function RangeControl({ label, min, max, value, onChange }: { label: string; min: number; max: number; value: number; onChange: (value: number) => void }) {
   return (
     <Field label={label}>
-      <input type="range" min={min} max={max} value={value} onChange={(event) => onChange(Number(event.target.value))} className="w-full accent-[#ff9900]" />
+      <input type="range" min={min} max={max} value={value} onChange={(event) => onChange(Number(event.target.value))} className="w-full accent-[var(--layout-accent-color)]" />
     </Field>
   )
 }
@@ -693,10 +767,10 @@ function ImageControl({
   onUpload: (file: File | null) => void
 }) {
   return (
-    <div className="rounded-sm border border-gray-200 bg-[#f8fafc] p-4">
+    <div className="rounded-sm border border-[var(--layout-border-color)] bg-[var(--layout-subtle-background)] p-4">
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-bold text-[#111827]">{label}</p>
+          <p className="text-sm font-bold text-[var(--layout-text-primary)]">{label}</p>
           <p className="text-xs text-gray-500">{helper}</p>
         </div>
         {value && (
@@ -709,7 +783,7 @@ function ImageControl({
         {value ? <img src={value} alt={label} className="h-full w-full object-contain p-2" /> : <ImageIcon className="h-7 w-7 text-gray-300" />}
       </div>
       <div className="grid gap-2">
-        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-sm border border-gray-300 bg-white px-3 py-2 text-sm font-bold text-[#007185] hover:bg-gray-50">
+        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-sm border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] px-3 py-2 text-sm font-bold text-[var(--layout-link-color)] hover:bg-[var(--layout-subtle-background)]">
           <Upload className="h-4 w-4" />
           {uploading ? 'Enviando...' : 'Enviar imagem'}
           <input

@@ -54,13 +54,13 @@ export function ProductGrid({
   }
 
   return (
-    <section className="group/carousel relative w-full rounded-md border border-gray-100 bg-white px-4 py-5 shadow-sm md:px-5">
+    <section className="layout-surface group/carousel relative w-full rounded-md px-4 py-5 shadow-sm md:px-5">
       <div className="mb-4 flex items-end justify-between gap-4">
         <div>
-          <h2 className="text-[22px] font-semibold tracking-tight text-gray-900">{title}</h2>
-          <p className="mt-1 text-xs text-gray-500">Produtos digitais verificados e prontos para compra via Pix.</p>
+          <h2 className="text-[22px] font-semibold tracking-tight text-[var(--layout-text-primary)]">{title}</h2>
+          <p className="mt-1 text-xs text-[var(--layout-text-muted)]">Produtos digitais verificados e prontos para compra via Pix.</p>
         </div>
-        <a href={linkUrl} className="shrink-0 text-[14px] font-semibold text-ml-blue transition-colors hover:text-ml-hover">
+        <a href={linkUrl} className="shrink-0 text-[14px] font-semibold text-[var(--layout-link-color)] transition-colors hover:text-[var(--layout-link-hover-color)]">
           {linkText}
         </a>
       </div>
@@ -68,13 +68,13 @@ export function ProductGrid({
       {loading && (
         <div className="flex gap-4 overflow-hidden">
           {[1, 2, 3, 4, 5].map((item) => (
-            <div key={item} className="h-[330px] w-[216px] flex-shrink-0 animate-pulse rounded-md bg-gray-100" />
+            <div key={item} className="h-[330px] w-[216px] flex-shrink-0 animate-pulse rounded-md bg-[var(--layout-subtle-background)]" />
           ))}
         </div>
       )}
       {error && <p className="text-sm text-red-500">Erro ao carregar produtos: {error}</p>}
       {!loading && !error && products.length === 0 && (
-        <div className="rounded-md border border-dashed border-gray-200 bg-gray-50 p-8 text-center text-gray-500">
+        <div className="rounded-md border border-dashed border-[var(--layout-border-color)] bg-[var(--layout-subtle-background)] p-8 text-center text-[var(--layout-text-muted)]">
           Nenhum produto ativo cadastrado no Supabase.
         </div>
       )}
@@ -84,7 +84,7 @@ export function ProductGrid({
           {showLeftBtn && (
             <button
               onClick={() => scroll('left')}
-              className="absolute -left-3 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white text-ml-blue opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition-all hover:text-ml-hover group-hover/carousel:opacity-100"
+              className="absolute -left-3 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-[var(--layout-surface-background)] text-[var(--layout-link-color)] opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition-all hover:text-[var(--layout-link-hover-color)] group-hover/carousel:opacity-100"
               aria-label="Produtos anteriores"
             >
               <ChevronLeft className="h-7 w-7" />
@@ -106,7 +106,7 @@ export function ProductGrid({
           {showRightBtn && (
             <button
               onClick={() => scroll('right')}
-              className="absolute -right-3 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white text-ml-blue opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition-all hover:text-ml-hover group-hover/carousel:opacity-100"
+              className="absolute -right-3 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-[var(--layout-surface-background)] text-[var(--layout-link-color)] opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition-all hover:text-[var(--layout-link-hover-color)] group-hover/carousel:opacity-100"
               aria-label="Proximos produtos"
             >
               <ChevronRight className="h-7 w-7" />

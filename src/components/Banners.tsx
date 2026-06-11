@@ -51,8 +51,8 @@ export function BannerSlot({
       )}
     </>
   ) : (
-    <div className="flex h-full w-full flex-col justify-between bg-gradient-to-br from-[#232f3e] via-[#2d425a] to-[#131921] p-4 text-white">
-      <span className="w-max rounded-sm bg-[#ff9900] px-2 py-1 text-[11px] font-bold text-[#131921]">Cookie market</span>
+    <div className="flex h-full w-full flex-col justify-between bg-[var(--layout-dashboard-sidebar-bg)] p-4 text-[var(--layout-dashboard-sidebar-text)]">
+      <span className="w-max rounded-sm bg-[var(--layout-accent-color)] px-2 py-1 text-[11px] font-bold text-[var(--layout-accent-text-color)]">Cookie market</span>
       <div>
         <p className={`${compact ? 'text-base' : 'text-2xl'} font-bold leading-tight`}>{fallbackTitle}</p>
         <p className="mt-1 text-xs text-white/75">{fallbackSubtitle}</p>
@@ -118,11 +118,11 @@ export function Banners({ position = 'home_hero' }: { position?: BannerPosition 
                     )}
                     {showText && (
                       <>
-                <div className="absolute inset-0 bg-gradient-to-r from-[#131921]/80 via-[#131921]/35 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/35 to-transparent" />
                 <div className="z-20 mr-auto w-full max-w-3xl p-7 text-left text-white md:p-12">
                   {banner.title && <h2 className="mb-3 text-3xl font-bold leading-tight drop-shadow-md md:text-5xl">{banner.title}</h2>}
                   {banner.subtitle && <p className="mb-5 text-base font-normal opacity-95 md:text-lg">{banner.subtitle}</p>}
-                  <span className="inline-flex rounded-sm bg-[#ff9900] px-6 py-3 text-sm font-bold text-[#131921] shadow-sm transition hover:bg-[#ffb84d]">Explorar agora</span>
+                  <span className="inline-flex rounded-sm bg-[var(--layout-button-primary-bg)] px-6 py-3 text-sm font-bold text-[var(--layout-button-primary-text)] shadow-sm transition hover:bg-[var(--layout-button-primary-hover)]">Explorar agora</span>
                 </div>
               </>
                     )}
@@ -130,7 +130,7 @@ export function Banners({ position = 'home_hero' }: { position?: BannerPosition 
                 )
               })
             ) : (
-              <div className="relative flex h-[220px] w-full flex-shrink-0 items-center justify-center overflow-hidden bg-gradient-to-r from-[#232f3e] to-[#131921]">
+              <div className="relative flex h-[220px] w-full flex-shrink-0 items-center justify-center overflow-hidden bg-[var(--layout-dashboard-sidebar-bg)]">
                 <div className="z-20 p-8 text-center text-white">
                   <h2 className="mb-2 text-3xl font-bold drop-shadow-md md:text-4xl">Cookie market</h2>
                   <p className="text-md opacity-90 md:text-lg">Navegue pelas ofertas verificadas abaixo.</p>
@@ -141,10 +141,10 @@ export function Banners({ position = 'home_hero' }: { position?: BannerPosition 
 
           {banners.length > 1 && (
             <>
-              <button onClick={prev} className="absolute left-3 top-1/2 z-30 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-ml-blue opacity-0 shadow-md transition-opacity hover:bg-white group-hover:opacity-100">
+              <button onClick={prev} className="absolute left-3 top-1/2 z-30 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-[var(--layout-surface-background)]/90 text-[var(--layout-link-color)] opacity-0 shadow-md transition-opacity hover:bg-[var(--layout-surface-background)] group-hover:opacity-100">
                 <ChevronLeft className="w-6 h-6" />
               </button>
-              <button onClick={next} className="absolute right-3 top-1/2 z-30 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-ml-blue opacity-0 shadow-md transition-opacity hover:bg-white group-hover:opacity-100">
+              <button onClick={next} className="absolute right-3 top-1/2 z-30 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-[var(--layout-surface-background)]/90 text-[var(--layout-link-color)] opacity-0 shadow-md transition-opacity hover:bg-[var(--layout-surface-background)] group-hover:opacity-100">
                 <ChevronRight className="w-6 h-6" />
               </button>
             </>

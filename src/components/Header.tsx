@@ -125,9 +125,9 @@ export function Header() {
             <input
               type="text"
               placeholder="Buscar contas, BMs, perfis, proxies..."
-              className="h-11 w-full rounded-sm border border-black/10 bg-white px-4 pr-12 text-sm shadow-sm outline-none transition focus:border-ml-blue focus:ring-2 focus:ring-ml-blue/20"
+              className="h-11 w-full rounded-sm border border-black/10 bg-[var(--layout-surface-background)] px-4 pr-12 text-sm text-[var(--layout-text-primary)] shadow-sm outline-none transition focus:border-[var(--layout-accent-color)] focus:ring-2 focus:ring-[var(--layout-accent-color)]"
             />
-            <button className="absolute right-0 top-0 flex h-11 w-12 items-center justify-center rounded-r-sm border-l border-gray-200 bg-gray-50 text-gray-500 hover:bg-white hover:text-ml-blue">
+            <button className="absolute right-0 top-0 flex h-11 w-12 items-center justify-center rounded-r-sm border-l border-[var(--layout-border-color)] bg-[var(--layout-subtle-background)] text-[var(--layout-text-muted)] hover:bg-[var(--layout-surface-background)] hover:text-[var(--layout-link-color)]">
               <Search className="h-5 w-5" />
             </button>
           </div>
@@ -161,13 +161,13 @@ export function Header() {
                 <Menu className="h-4 w-4" /> Categorias <ChevronDown className="ml-0.5 h-3 w-3" />
               </button>
 
-              <div className="invisible absolute left-0 top-full z-50 mt-0 w-52 overflow-hidden rounded-sm border border-gray-100 bg-white text-gray-600 opacity-0 shadow-lg transition-all duration-200 group-hover:visible group-hover:opacity-100">
+              <div className="invisible absolute left-0 top-full z-50 mt-0 w-52 overflow-hidden rounded-sm border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] text-[var(--layout-text-muted)] opacity-0 shadow-lg transition-all duration-200 group-hover:visible group-hover:opacity-100">
                 <div className="py-2">
-                  <Link to="/category/google" className="block px-4 py-2 text-sm hover:bg-ml-blue/10 hover:text-ml-blue transition-colors">Google Ads</Link>
-                  <Link to="/category/meta" className="block px-4 py-2 text-sm hover:bg-ml-blue/10 hover:text-ml-blue transition-colors">Meta Ads</Link>
-                  <Link to="/category/tiktok" className="block px-4 py-2 text-sm hover:bg-ml-blue/10 hover:text-ml-blue transition-colors">TikTok Ads</Link>
-                  <div className="my-1 border-t border-gray-100" />
-                  <Link to="/category/all" className="block px-4 py-2 text-sm font-medium text-ml-dark transition-colors hover:bg-ml-blue/10 hover:text-ml-blue">Ver todas</Link>
+                  <Link to="/category/google" className="block px-4 py-2 text-sm transition-colors hover:bg-[var(--layout-subtle-background)] hover:text-[var(--layout-link-color)]">Google Ads</Link>
+                  <Link to="/category/meta" className="block px-4 py-2 text-sm transition-colors hover:bg-[var(--layout-subtle-background)] hover:text-[var(--layout-link-color)]">Meta Ads</Link>
+                  <Link to="/category/tiktok" className="block px-4 py-2 text-sm transition-colors hover:bg-[var(--layout-subtle-background)] hover:text-[var(--layout-link-color)]">TikTok Ads</Link>
+                  <div className="my-1 border-t border-[var(--layout-border-color)]" />
+                  <Link to="/category/all" className="block px-4 py-2 text-sm font-medium text-[var(--layout-text-primary)] transition-colors hover:bg-[var(--layout-subtle-background)] hover:text-[var(--layout-link-color)]">Ver todas</Link>
                 </div>
               </div>
             </div>
@@ -202,7 +202,7 @@ export function Header() {
                   <Link to="/painel/vendedor" className="font-medium transition-opacity hover:opacity-75">Painel do Vendedor</Link>
                 )}
                 {role === 'admin' && (
-                  <Link to="/painel/admin" className="font-medium text-[#007185] transition-opacity hover:opacity-75">Painel Admin</Link>
+                  <Link to="/painel/admin" className="font-medium text-[var(--layout-link-color)] transition-opacity hover:opacity-75">Painel Admin</Link>
                 )}
                 <button onClick={handleLogout} className="flex items-center gap-1 text-red-500 transition-opacity hover:opacity-75">
                   <LogOut className="h-3 w-3" /> Sair

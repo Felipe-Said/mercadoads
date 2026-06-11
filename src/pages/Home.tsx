@@ -20,7 +20,7 @@ const departments = [
 
 function ProductTile({ product }: { product: Product }) {
   return (
-    <Link to={`/produto/${product.id}`} className="group block rounded-sm border border-gray-200 bg-white p-3 transition hover:border-[#ff9900] hover:shadow-md">
+    <Link to={`/produto/${product.id}`} className="group block rounded-sm border border-gray-200 bg-white p-3 transition hover:border-[var(--layout-accent-color)] hover:shadow-md">
       <div className="flex gap-3">
         <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-sm bg-gray-50">
           {product.image ? (
@@ -30,16 +30,16 @@ function ProductTile({ product }: { product: Product }) {
           )}
         </div>
         <div className="min-w-0">
-          <p className="line-clamp-2 text-sm font-semibold leading-snug text-[#111827] group-hover:text-[#007185]">{product.title}</p>
-          <div className="mt-2 flex items-center gap-1 text-xs text-[#ffa41c]">
+          <p className="line-clamp-2 text-sm font-semibold leading-snug text-[var(--layout-text-primary)] group-hover:text-[var(--layout-link-color)]">{product.title}</p>
+          <div className="mt-2 flex items-center gap-1 text-xs text-[var(--layout-rating-color)]">
             <Star className="h-3.5 w-3.5 fill-current" />
             <Star className="h-3.5 w-3.5 fill-current" />
             <Star className="h-3.5 w-3.5 fill-current" />
             <Star className="h-3.5 w-3.5 fill-current" />
             <Star className="h-3.5 w-3.5 fill-current" />
           </div>
-          <p className="mt-2 text-lg font-bold text-[#b12704]">{formatCurrency(product.price || 0)}</p>
-          <p className="mt-1 text-xs font-semibold text-[#007600]">Entrega digital pela plataforma</p>
+          <p className="mt-2 text-lg font-bold text-[var(--layout-price-color)]">{formatCurrency(product.price || 0)}</p>
+          <p className="mt-1 text-xs font-semibold text-[var(--layout-success-color)]">Entrega digital pela plataforma</p>
         </div>
       </div>
     </Link>
@@ -58,8 +58,8 @@ function MiniProductCard({ product }: { product: Product }) {
           </div>
         )}
       </div>
-      <p className="mt-2 line-clamp-2 text-xs font-semibold leading-snug text-[#111827] group-hover:text-[#007185]">{product.title}</p>
-      <p className="mt-1 text-sm font-bold text-[#b12704]">{formatCurrency(product.price || 0)}</p>
+      <p className="mt-2 line-clamp-2 text-xs font-semibold leading-snug text-[var(--layout-text-primary)] group-hover:text-[var(--layout-link-color)]">{product.title}</p>
+      <p className="mt-1 text-sm font-bold text-[var(--layout-price-color)]">{formatCurrency(product.price || 0)}</p>
     </Link>
   )
 }
@@ -68,8 +68,8 @@ function DenseShelf({ title, products, linkText = 'Ver tudo' }: { title: string;
   return (
     <section className="rounded-sm border border-gray-200 bg-white p-4 shadow-sm">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="text-lg font-bold tracking-tight text-[#111827]">{title}</h2>
-        <Link to="/ofertas" className="shrink-0 text-xs font-semibold text-[#007185] hover:text-[#c7511f]">{linkText}</Link>
+        <h2 className="text-lg font-bold tracking-tight text-[var(--layout-text-primary)]">{title}</h2>
+        <Link to="/ofertas" className="shrink-0 text-xs font-semibold text-[var(--layout-link-color)] hover:text-[var(--layout-link-hover-color)]">{linkText}</Link>
       </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {products.slice(0, 4).map((product) => (
@@ -110,17 +110,17 @@ export function Home() {
   const categories = useMemo(() => Array.from(new Set(products.map((item) => item.category).filter(Boolean))).slice(0, 8) as string[], [products])
 
   return (
-    <div className="min-h-screen bg-[#e3e6e6] pb-12 font-sans text-[#111827]">
-      <section className="bg-[#232f3e] text-white">
+    <div className="min-h-screen bg-[var(--layout-page-background)] pb-12 font-sans text-[var(--layout-text-primary)]">
+      <section className="bg-[var(--layout-dashboard-sidebar-header-bg)] text-white">
         <div className="mx-auto grid max-w-[1440px] gap-4 px-4 py-4 lg:grid-cols-[240px_minmax(0,1fr)_280px]">
-          <aside className="hidden rounded-sm bg-white text-[#111827] shadow-sm lg:block">
+          <aside className="hidden rounded-sm bg-[var(--layout-surface-background)] text-[var(--layout-text-primary)] shadow-sm lg:block">
             <div className="border-b border-gray-100 px-4 py-3">
               <p className="text-sm font-bold">Departamentos</p>
               <p className="text-xs text-gray-500">Cookie market</p>
             </div>
             <nav className="py-2">
               {departments.map((department) => (
-                <Link key={department} to={`/category/${encodeURIComponent(department.toLowerCase())}`} className="flex items-center justify-between px-4 py-2 text-sm font-medium hover:bg-[#f3f4f6] hover:text-[#007185]">
+                <Link key={department} to={`/category/${encodeURIComponent(department.toLowerCase())}`} className="flex items-center justify-between px-4 py-2 text-sm font-medium hover:bg-[var(--layout-subtle-background)] hover:text-[var(--layout-link-color)]">
                   {department}
                   <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
                 </Link>
@@ -152,19 +152,19 @@ export function Home() {
           <aside className="rounded-sm border border-gray-200 bg-white p-4 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-lg font-bold">Comprar com seguranca</h2>
-              <ShieldCheck className="h-5 w-5 text-[#007600]" />
+              <ShieldCheck className="h-5 w-5 text-[var(--layout-success-color)]" />
             </div>
             <div className="space-y-3 text-sm">
               <div className="flex gap-3">
-                <CreditCard className="mt-0.5 h-5 w-5 shrink-0 text-[#007185]" />
+                <CreditCard className="mt-0.5 h-5 w-5 shrink-0 text-[var(--layout-link-color)]" />
                 <p><strong>Pix integrado:</strong> finalize pedidos com codigo Pix e QR Code.</p>
               </div>
               <div className="flex gap-3">
-                <Clock3 className="mt-0.5 h-5 w-5 shrink-0 text-[#007185]" />
+                <Clock3 className="mt-0.5 h-5 w-5 shrink-0 text-[var(--layout-link-color)]" />
                 <p><strong>24 horas para reclamar:</strong> o saldo so libera depois do prazo.</p>
               </div>
               <div className="flex gap-3">
-                <Truck className="mt-0.5 h-5 w-5 shrink-0 text-[#007185]" />
+                <Truck className="mt-0.5 h-5 w-5 shrink-0 text-[var(--layout-link-color)]" />
                 <p><strong>Entrega digital:</strong> acompanhe tudo em Minhas Compras.</p>
               </div>
             </div>
@@ -187,7 +187,7 @@ export function Home() {
               <input
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                className="h-10 w-full rounded-sm border border-gray-300 pl-9 pr-3 text-sm outline-none focus:border-[#ff9900] focus:ring-2 focus:ring-[#ff9900]/20"
+                className="h-10 w-full rounded-sm border border-gray-300 pl-9 pr-3 text-sm outline-none focus:border-[var(--layout-accent-color)]"
                 placeholder="Buscar nesta vitrine"
               />
             </div>
@@ -222,12 +222,12 @@ export function Home() {
         <section className="mt-4 grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
           <aside className="rounded-sm border border-gray-200 bg-white p-4 shadow-sm">
             <div className="mb-3 flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-[#ff9900]" />
+              <Sparkles className="h-5 w-5 text-[var(--layout-accent-color)]" />
               <h2 className="text-lg font-bold">Categorias populares</h2>
             </div>
             <div className="flex flex-wrap gap-2">
               {(categories.length ? categories : departments.slice(0, 7)).map((category) => (
-                <Link key={category} to={`/category/${encodeURIComponent(category.toLowerCase())}`} className="rounded-sm border border-gray-200 px-3 py-2 text-xs font-semibold text-[#007185] hover:border-[#ff9900] hover:text-[#c7511f]">
+                <Link key={category} to={`/category/${encodeURIComponent(category.toLowerCase())}`} className="rounded-sm border border-gray-200 px-3 py-2 text-xs font-semibold text-[var(--layout-link-color)] hover:border-[var(--layout-accent-color)] hover:text-[var(--layout-link-hover-color)]">
                   {category}
                 </Link>
               ))}

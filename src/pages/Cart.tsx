@@ -100,19 +100,19 @@ export function Cart() {
   }
 
   return (
-    <div className="min-h-screen bg-[#e3e6e6]">
+    <div className="min-h-screen bg-[var(--layout-page-background)]">
       <main className="mx-auto max-w-[1440px] px-4 py-5">
         <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
-          <Link to="/" className="font-semibold text-[#007185] hover:text-[#c7511f]">Cookie market</Link>
+          <Link to="/" className="font-semibold text-[var(--layout-link-color)] hover:text-[var(--layout-link-hover-color)]">Cookie market</Link>
           <span className="text-gray-400">/</span>
-          <span className="text-gray-600">Carrinho</span>
+          <span className="text-[var(--layout-text-muted)]">Carrinho</span>
         </div>
 
-        <div className="mb-4 rounded-sm border border-gray-200 bg-white px-5 py-4 shadow-sm">
+        <div className="mb-4 rounded-sm border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] px-5 py-4 shadow-sm">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#007185]">Checkout</p>
-              <h1 className="text-2xl font-bold tracking-tight text-[#111827]">Carrinho ({totalItems})</h1>
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--layout-link-color)]">Checkout</p>
+              <h1 className="text-2xl font-bold tracking-tight text-[var(--layout-text-primary)]">Carrinho ({totalItems})</h1>
             </div>
             <p className="text-sm text-gray-500">Produtos digitais prontos para gerar Pix com validacao do comprador.</p>
           </div>
@@ -121,16 +121,16 @@ export function Cart() {
         {cart.length === 0 ? (
           <div className="rounded-sm border border-gray-200 bg-white px-6 py-16 text-center shadow-sm">
             <ShoppingBag className="mx-auto mb-4 h-16 w-16 text-gray-300" />
-            <h2 className="text-xl font-bold text-[#111827]">Seu carrinho esta vazio</h2>
+            <h2 className="text-xl font-bold text-[var(--layout-text-primary)]">Seu carrinho esta vazio</h2>
             <p className="mx-auto mt-2 max-w-md text-gray-500">Produtos digitais prontos para entrega dentro da plataforma.</p>
-            <Link to="/" className="mt-6 inline-flex rounded-sm bg-[#ff9900] px-6 py-3 font-bold text-[#131921] shadow-sm transition hover:bg-[#ffb84d]">
+            <Link to="/" className="layout-primary-button mt-6 inline-flex rounded-sm px-6 py-3 font-bold shadow-sm transition">
               Descobrir ofertas
             </Link>
           </div>
         ) : (
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_390px]">
             <section className="overflow-hidden rounded-sm border border-gray-200 bg-white shadow-sm">
-              <div className="flex items-center justify-between border-b border-gray-100 bg-[#f8fafc] px-5 py-4 text-xs font-bold uppercase tracking-[0.08em] text-gray-500">
+              <div className="flex items-center justify-between border-b border-gray-100 bg-[var(--layout-subtle-background)] px-5 py-4 text-xs font-bold uppercase tracking-[0.08em] text-[var(--layout-text-muted)]">
                 <span>Produtos</span>
                 <span className="hidden md:block">Quantidade</span>
                 <span className="hidden md:block">Preco</span>
@@ -148,11 +148,11 @@ export function Cart() {
                     </div>
 
                     <div className="min-w-0">
-                      <h3 className="line-clamp-2 text-base font-bold leading-snug text-[#111827]">{item.title}</h3>
+                      <h3 className="line-clamp-2 text-base font-bold leading-snug text-[var(--layout-text-primary)]">{item.title}</h3>
                       <div className="mt-3 flex flex-wrap items-center gap-3">
                         <button
                           onClick={() => removeFromCart(item.id)}
-                          className="inline-flex items-center gap-1 text-sm font-semibold text-[#007185] hover:text-[#c7511f]"
+                          className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--layout-link-color)] hover:text-[var(--layout-link-hover-color)]"
                         >
                           <Trash2 className="h-3.5 w-3.5" /> Excluir
                         </button>
@@ -164,21 +164,21 @@ export function Cart() {
                         <button
                           onClick={() => updateQuantity(item.id, item.quantity - 1)}
                           disabled={item.quantity <= 1}
-                          className="flex h-10 w-10 items-center justify-center text-[#007185] transition hover:bg-gray-50 disabled:text-gray-300"
+                          className="flex h-10 w-10 items-center justify-center text-[var(--layout-link-color)] transition hover:bg-gray-50 disabled:text-gray-300"
                         >
                           <Minus className="h-4 w-4" />
                         </button>
-                        <span className="w-10 text-center text-sm font-bold text-[#111827]">{item.quantity}</span>
+                        <span className="w-10 text-center text-sm font-bold text-[var(--layout-text-primary)]">{item.quantity}</span>
                         <button
                           onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                          className="flex h-10 w-10 items-center justify-center text-[#007185] transition hover:bg-gray-50"
+                          className="flex h-10 w-10 items-center justify-center text-[var(--layout-link-color)] transition hover:bg-gray-50"
                         >
                           <Plus className="h-4 w-4" />
                         </button>
                       </div>
 
                       <div className="text-right">
-                        <div className="text-2xl font-bold tracking-tight text-[#111827]">
+                        <div className="text-2xl font-bold tracking-tight text-[var(--layout-text-primary)]">
                           R$ {item.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </div>
                         {item.quantity > 1 && (
@@ -195,30 +195,30 @@ export function Cart() {
 
             <aside className="space-y-4">
               <div className="rounded-sm border border-gray-200 bg-white p-5 shadow-sm">
-                <h2 className="text-lg font-bold tracking-tight text-[#111827]">Resumo da compra</h2>
-                <div className="mt-4 space-y-3 rounded-sm bg-[#f8fafc] p-4 text-sm">
+                <h2 className="text-lg font-bold tracking-tight text-[var(--layout-text-primary)]">Resumo da compra</h2>
+                <div className="mt-4 space-y-3 rounded-sm bg-[var(--layout-subtle-background)] p-4 text-sm">
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600">Produtos ({totalItems})</span>
-                    <span className="font-semibold text-[#111827]">R$ {subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    <span className="font-semibold text-[var(--layout-text-primary)]">R$ {subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex items-center justify-between border-t border-gray-200 pt-3">
-                    <span className="text-base font-bold text-[#111827]">Total</span>
-                    <span className="text-2xl font-bold tracking-tight text-[#111827]">R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    <span className="text-base font-bold text-[var(--layout-text-primary)]">Total</span>
+                    <span className="text-2xl font-bold tracking-tight text-[var(--layout-text-primary)]">R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                   </div>
                 </div>
 
                 <div className="mt-4 grid gap-3 rounded-sm border border-gray-100 bg-white p-4 text-sm text-gray-600">
                   <div className="flex gap-3">
-                    <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#007185]" />
-                    <p><strong className="text-[#111827]">Compra segura:</strong> pedido acompanha o fluxo interno da plataforma.</p>
+                    <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[var(--layout-link-color)]" />
+                    <p><strong className="text-[var(--layout-text-primary)]">Compra segura:</strong> pedido acompanha o fluxo interno da plataforma.</p>
                   </div>
                   <div className="flex gap-3">
-                    <CreditCard className="mt-0.5 h-5 w-5 shrink-0 text-[#007185]" />
-                    <p><strong className="text-[#111827]">Pix via gateway:</strong> pagamento gerado com QR Code e copia e cola.</p>
+                    <CreditCard className="mt-0.5 h-5 w-5 shrink-0 text-[var(--layout-link-color)]" />
+                    <p><strong className="text-[var(--layout-text-primary)]">Pix via gateway:</strong> pagamento gerado com QR Code e copia e cola.</p>
                   </div>
                   <div className="flex gap-3">
-                    <Clock3 className="mt-0.5 h-5 w-5 shrink-0 text-[#007185]" />
-                    <p><strong className="text-[#111827]">Protecao:</strong> o cliente tem 24 horas para reclamar depois da compra.</p>
+                    <Clock3 className="mt-0.5 h-5 w-5 shrink-0 text-[var(--layout-link-color)]" />
+                    <p><strong className="text-[var(--layout-text-primary)]">Protecao:</strong> o cliente tem 24 horas para reclamar depois da compra.</p>
                   </div>
                 </div>
 
@@ -228,7 +228,7 @@ export function Cart() {
                     <input
                       value={buyerName}
                       onChange={(event) => setBuyerName(event.target.value)}
-                      className="h-11 w-full rounded-sm border border-gray-300 px-3 text-sm focus:border-[#ff9900] focus:outline-none focus:ring-2 focus:ring-[#ff9900]/20"
+                      className="h-11 w-full rounded-sm border border-gray-300 px-3 text-sm focus:border-[var(--layout-accent-color)] focus:outline-none focus:ring-2 focus:ring-[var(--layout-accent-color)]"
                       placeholder="Nome do comprador"
                     />
                   </div>
@@ -237,7 +237,7 @@ export function Cart() {
                     <input
                       value={buyerPhone}
                       onChange={(event) => setBuyerPhone(event.target.value)}
-                      className="h-11 w-full rounded-sm border border-gray-300 px-3 text-sm focus:border-[#ff9900] focus:outline-none focus:ring-2 focus:ring-[#ff9900]/20"
+                      className="h-11 w-full rounded-sm border border-gray-300 px-3 text-sm focus:border-[var(--layout-accent-color)] focus:outline-none focus:ring-2 focus:ring-[var(--layout-accent-color)]"
                       placeholder="DDD + numero"
                     />
                   </div>
@@ -246,7 +246,7 @@ export function Cart() {
                     <input
                       value={buyerDocument}
                       onChange={(event) => setBuyerDocument(event.target.value)}
-                      className="h-11 w-full rounded-sm border border-gray-300 px-3 text-sm focus:border-[#ff9900] focus:outline-none focus:ring-2 focus:ring-[#ff9900]/20"
+                      className="h-11 w-full rounded-sm border border-gray-300 px-3 text-sm focus:border-[var(--layout-accent-color)] focus:outline-none focus:ring-2 focus:ring-[var(--layout-accent-color)]"
                       placeholder="Somente numeros"
                     />
                   </div>
@@ -257,7 +257,7 @@ export function Cart() {
                   type="button"
                   onClick={handleContinuePurchase}
                   disabled={checkoutLoading}
-                  className="mt-4 w-full rounded-sm bg-[#ff9900] py-3.5 font-bold text-[#131921] shadow-sm transition hover:bg-[#ffb84d] disabled:opacity-60"
+                  className="layout-primary-button mt-4 w-full rounded-sm py-3.5 font-bold shadow-sm transition disabled:opacity-60"
                 >
                   {checkoutLoading ? 'Processando...' : 'Continuar a compra'}
                 </button>

@@ -9,7 +9,7 @@ export function PlatformTheme() {
     const syncPlatformSettings = async () => {
       const { data, error } = await supabase
         .from('platform_settings')
-        .select('primary_color, secondary_color, favicon_url, browser_title, browser_title_inactive')
+        .select('primary_color, secondary_color, favicon_url, browser_title, browser_title_inactive, layout_theme_json')
         .eq('id', 1)
         .maybeSingle()
 
@@ -21,6 +21,7 @@ export function PlatformTheme() {
         faviconUrl: data?.favicon_url,
         browserTitle: data?.browser_title,
         browserTitleInactive: data?.browser_title_inactive,
+        layoutTheme: data?.layout_theme_json,
       })
 
       cleanupTitle()

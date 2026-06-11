@@ -7,6 +7,61 @@ type PlatformTheme = {
   faviconUrl?: string | null
   browserTitle?: string | null
   browserTitleInactive?: string | null
+  layoutTheme?: Partial<LayoutTheme> | null
+}
+
+export type LayoutTheme = {
+  pageBackground: string
+  surfaceBackground: string
+  subtleBackground: string
+  borderColor: string
+  textPrimary: string
+  textMuted: string
+  linkColor: string
+  linkHoverColor: string
+  buttonPrimaryBg: string
+  buttonPrimaryText: string
+  buttonPrimaryHover: string
+  buttonSecondaryBg: string
+  buttonSecondaryText: string
+  buttonSecondaryHover: string
+  accentColor: string
+  accentTextColor: string
+  successColor: string
+  priceColor: string
+  ratingColor: string
+  dashboardSidebarBg: string
+  dashboardSidebarHeaderBg: string
+  dashboardSidebarText: string
+  dashboardSidebarActiveBg: string
+  dashboardSidebarActiveText: string
+}
+
+export const DEFAULT_LAYOUT_THEME: LayoutTheme = {
+  pageBackground: '#e3e6e6',
+  surfaceBackground: '#ffffff',
+  subtleBackground: '#f8fafc',
+  borderColor: '#e5e7eb',
+  textPrimary: '#111827',
+  textMuted: '#6b7280',
+  linkColor: '#007185',
+  linkHoverColor: '#c7511f',
+  buttonPrimaryBg: '#ff9900',
+  buttonPrimaryText: '#131921',
+  buttonPrimaryHover: '#ffb84d',
+  buttonSecondaryBg: '#ffd814',
+  buttonSecondaryText: '#111827',
+  buttonSecondaryHover: '#f7ca00',
+  accentColor: '#ff9900',
+  accentTextColor: '#131921',
+  successColor: '#007600',
+  priceColor: '#b12704',
+  ratingColor: '#ffa41c',
+  dashboardSidebarBg: '#131921',
+  dashboardSidebarHeaderBg: '#232f3e',
+  dashboardSidebarText: '#ffffff',
+  dashboardSidebarActiveBg: '#ff9900',
+  dashboardSidebarActiveText: '#131921',
 }
 
 function normalizeHex(value: string | null | undefined, fallback: string) {
@@ -56,6 +111,7 @@ export function applyPlatformTheme(theme: PlatformTheme) {
   const primary = normalizeHex(theme.primaryColor, DEFAULT_PRIMARY)
   const secondary = normalizeHex(theme.secondaryColor, DEFAULT_SECONDARY)
   const secondaryHover = darken(secondary, 0.18)
+  const layoutTheme = { ...DEFAULT_LAYOUT_THEME, ...(theme.layoutTheme ?? {}) }
   const root = document.documentElement
 
   root.style.setProperty('--platform-primary', primary)
@@ -66,6 +122,11 @@ export function applyPlatformTheme(theme: PlatformTheme) {
   root.style.setProperty('--color-ml-yellow', primary)
   root.style.setProperty('--color-ml-blue', secondary)
   root.style.setProperty('--color-ml-hover', secondaryHover)
+
+  Object.entries(layoutTheme).forEach(([key, value]) => {
+    const cssName = key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
+    root.style.setProperty(`--layout-${cssName}`, normalizeHex(value, DEFAULT_LAYOUT_THEME[key as keyof LayoutTheme]))
+  })
 
   if (theme.faviconUrl !== undefined) {
     const faviconUrl = theme.faviconUrl?.trim() || '/favicon.svg'

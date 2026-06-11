@@ -167,7 +167,7 @@ export function RegistrationModal({ open, onOpenChange, product }: RegistrationM
 
           {error && <p className="text-sm text-red-500">{error}</p>}
 
-          <Button type="submit" disabled={loading} className="w-full bg-ml-blue hover:bg-ml-hover text-white py-6 text-lg font-semibold">
+          <Button type="submit" disabled={loading} className="w-full py-6 text-lg font-semibold">
             {loading ? "Processando..." : mode === "register" ? "Criar conta e continuar" : "Entrar e continuar"}
           </Button>
         </form>
@@ -176,7 +176,7 @@ export function RegistrationModal({ open, onOpenChange, product }: RegistrationM
           {mode === "register" ? "Ja tem uma conta?" : "Ainda nao tem conta?"}{" "}
           <button
             type="button"
-            className="text-ml-blue hover:underline"
+            className="text-[var(--layout-link-color)] hover:text-[var(--layout-link-hover-color)] hover:underline"
             onClick={() => {
               setError(null)
               setMode((current) => current === "register" ? "login" : "register")

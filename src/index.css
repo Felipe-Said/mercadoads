@@ -40,6 +40,31 @@
   --color-ml-bg: #ebebeb;
   --color-ml-hover: var(--platform-secondary-hover);
 
+  --layout-page-background: #e3e6e6;
+  --layout-surface-background: #ffffff;
+  --layout-subtle-background: #f8fafc;
+  --layout-border-color: #e5e7eb;
+  --layout-text-primary: #111827;
+  --layout-text-muted: #6b7280;
+  --layout-link-color: #007185;
+  --layout-link-hover-color: #c7511f;
+  --layout-button-primary-bg: #ff9900;
+  --layout-button-primary-text: #131921;
+  --layout-button-primary-hover: #ffb84d;
+  --layout-button-secondary-bg: #ffd814;
+  --layout-button-secondary-text: #111827;
+  --layout-button-secondary-hover: #f7ca00;
+  --layout-accent-color: #ff9900;
+  --layout-accent-text-color: #131921;
+  --layout-success-color: #007600;
+  --layout-price-color: #b12704;
+  --layout-rating-color: #ffa41c;
+  --layout-dashboard-sidebar-bg: #131921;
+  --layout-dashboard-sidebar-header-bg: #232f3e;
+  --layout-dashboard-sidebar-text: #ffffff;
+  --layout-dashboard-sidebar-active-bg: #ff9900;
+  --layout-dashboard-sidebar-active-text: #131921;
+
   --radius-lg: 0.5rem;
   --radius-md: calc(0.5rem - 2px);
   --radius-sm: calc(0.5rem - 4px);
@@ -48,14 +73,14 @@
 
 @layer base {
   body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
+    background-color: var(--layout-page-background);
+    color: var(--layout-text-primary);
   }
 }
 
 @layer components {
   .dashboard-surface h2 {
-    color: #111827;
+    color: var(--layout-text-primary);
     font-weight: 700;
     letter-spacing: -0.01em;
   }
@@ -70,11 +95,11 @@
   }
 
   .dashboard-surface table thead {
-    background: #f8fafc;
+    background: var(--layout-subtle-background);
   }
 
   .dashboard-surface table th {
-    color: #4b5563;
+    color: var(--layout-text-muted);
     font-size: 0.75rem;
     font-weight: 800;
     letter-spacing: 0.04em;
@@ -88,14 +113,54 @@
   .dashboard-surface input,
   .dashboard-surface select,
   .dashboard-surface textarea {
-    border-color: #d5d9d9;
-    background-color: #fff;
+    border-color: var(--layout-border-color);
+    background-color: var(--layout-surface-background);
   }
 
   .dashboard-surface input:focus,
   .dashboard-surface select:focus,
   .dashboard-surface textarea:focus {
-    border-color: #ff9900;
-    box-shadow: 0 0 0 3px rgba(255, 153, 0, 0.16);
+    border-color: var(--layout-accent-color);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--layout-accent-color) 18%, transparent);
+  }
+
+  .layout-page-bg {
+    background-color: var(--layout-page-background);
+    color: var(--layout-text-primary);
+  }
+
+  .layout-surface {
+    background-color: var(--layout-surface-background);
+    border-color: var(--layout-border-color);
+  }
+
+  .layout-subtle {
+    background-color: var(--layout-subtle-background);
+  }
+
+  .layout-link {
+    color: var(--layout-link-color);
+  }
+
+  .layout-link:hover {
+    color: var(--layout-link-hover-color);
+  }
+
+  .layout-primary-button {
+    background-color: var(--layout-button-primary-bg);
+    color: var(--layout-button-primary-text);
+  }
+
+  .layout-primary-button:hover {
+    background-color: var(--layout-button-primary-hover);
+  }
+
+  .layout-secondary-button {
+    background-color: var(--layout-button-secondary-bg);
+    color: var(--layout-button-secondary-text);
+  }
+
+  .layout-secondary-button:hover {
+    background-color: var(--layout-button-secondary-hover);
   }
 }

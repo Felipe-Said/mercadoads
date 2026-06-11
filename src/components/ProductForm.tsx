@@ -134,7 +134,7 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
 
       <div className="md:col-span-2 flex items-center justify-end gap-3 pt-2">
         {message && <span className={`text-sm ${message.includes('Anuncio') ? 'text-green-600' : 'text-red-600'}`}>{message}</span>}
-        <Button type="submit" disabled={loading} className="bg-ml-blue text-white hover:bg-ml-hover rounded-sm">
+        <Button type="submit" disabled={loading} className="rounded-sm">
           {loading ? 'Salvando...' : 'Salvar anuncio'}
         </Button>
       </div>

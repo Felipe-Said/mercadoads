@@ -40,7 +40,7 @@ import { Configuracoes } from './pages/user/Configuracoes'
 
 function App() {
   return (
-    <div className="min-h-screen bg-[#f3f4f6] flex flex-col">
+    <div className="flex min-h-screen flex-col bg-[var(--layout-page-background)] text-[var(--layout-text-primary)]">
       <PlatformTheme />
       <Header />
       <main className="flex-grow">
@@ -85,10 +85,10 @@ function App() {
       </main>
       
       {/* Simple Footer */}
-      <footer className="bg-white py-8">
+      <footer className="bg-[var(--layout-surface-background)] py-8">
         <div className="max-w-7xl mx-auto px-4 text-center">
-          <p className="text-sm text-gray-500 mb-2">Trabalhe conosco Termos e condições Como cuidamos da sua privacidade Acessibilidade Contato</p>
-          <p className="text-xs text-gray-400">Copyright © 2026 Cookie market LTDA.</p>
+          <p className="mb-2 text-sm text-[var(--layout-text-muted)]">Trabalhe conosco Termos e condições Como cuidamos da sua privacidade Acessibilidade Contato</p>
+          <p className="text-xs text-[var(--layout-text-muted)]">Copyright © 2026 Cookie market LTDA.</p>
         </div>
       </footer>
     </div>
