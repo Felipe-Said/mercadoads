@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { UserLayout } from '../../components/layouts/UserLayout'
-import { CheckCircle2, Clock, Copy, Package, X } from 'lucide-react'
+import { CheckCircle2, Clock, Copy, Package, X, Download } from 'lucide-react'
 import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import {
@@ -26,6 +26,7 @@ export function Compras() {
   const [purchaseError, setPurchaseError] = useState<string | null>(null)
   const [saleToCancel, setSaleToCancel] = useState<Sale | null>(null)
   const [cleanupPromptOpen, setCleanupPromptOpen] = useState(false)
+  const [downloadingUrl, setDownloadingUrl] = useState<string | null>(null)
 
   const checkoutSaleIds = useMemo(() => {
     const state = location.state as { checkoutSaleIds?: string[] } | null
@@ -113,6 +114,25 @@ export function Compras() {
     const unpaidExists = sales.some((sale) => sale.status === 'pending' && !sale.payment_qrcode_text && !sale.payment_qrcode)
     if (!unpaidExists) return
     setCleanupPromptOpen(true)
+  }
+
+  const handleDownload = async (fileUrl: string) => {
+    if (fileUrl.startsWith('http')) {
+      window.open(fileUrl, '_blank')
+      return
+    }
+
+    setDownloadingUrl(fileUrl)
+    try {
+      const { data, error } = await supabase.storage.from('product_files').createSignedUrl(fileUrl, 3600)
+      if (error || !data) throw error
+      window.open(data.signedUrl, '_blank')
+    } catch (err) {
+      console.error(err)
+      alert('Não foi possível gerar o link de download.')
+    } finally {
+      setDownloadingUrl(null)
+    }
   }
 
   return (
@@ -209,12 +229,34 @@ export function Compras() {
                       </div>
                     )}
                     {sale.status === 'paid' && sale.claim_until && (
-                      <div className="rounded-md border border-green-100 bg-green-50 p-3 max-w-2xl">
-                        <p className="text-sm font-semibold text-green-700">Pedido confirmado</p>
-                        <p className="text-xs text-gray-600 mt-1 flex items-center gap-2">
-                          <Clock className="w-3 h-3" />
-                          Cliente pode reclamar ate {new Date(sale.claim_until).toLocaleString('pt-BR')}.
-                        </p>
+                      <div className="space-y-3">
+                        <div className="rounded-md border border-green-100 bg-green-50 p-4 max-w-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                          <div>
+                            <p className="text-sm font-semibold text-green-700">Pedido confirmado</p>
+                            <p className="text-xs text-green-600 mt-1 flex items-center gap-2">
+                              <Clock className="w-3 h-3" />
+                              Proteção de compra ativa até {new Date(sale.claim_until).toLocaleString('pt-BR')}.
+                            </p>
+                          </div>
+                          
+                          {sale.products?.file_url && (
+                            <Button 
+                              onClick={() => handleDownload(sale.products!.file_url!)}
+                              disabled={downloadingUrl === sale.products!.file_url}
+                              className="bg-green-600 text-white hover:bg-green-700 h-9 rounded-sm flex items-center gap-2 shadow-sm shrink-0"
+                            >
+                              <Download className="w-4 h-4" />
+                              {downloadingUrl === sale.products!.file_url ? 'Gerando link...' : 'Baixar Arquivo'}
+                            </Button>
+                          )}
+                        </div>
+
+                        {sale.products?.seller_note && (
+                          <div className="rounded-md border border-gray-100 bg-gray-50 p-4 max-w-2xl">
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Mensagem do Vendedor</p>
+                            <p className="text-sm text-gray-700 whitespace-pre-wrap">{sale.products.seller_note}</p>
+                          </div>
+                        )}
                       </div>
                     )}
                     {sale.status === 'pending' && (
