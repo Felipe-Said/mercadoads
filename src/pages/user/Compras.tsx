@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { UserLayout } from '../../components/layouts/UserLayout'
-import { CheckCircle2, Clock, Copy, Package, X, Download } from 'lucide-react'
+import { CheckCircle2, Clock, Copy, Package, X, Download, Star } from 'lucide-react'
 import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import {
@@ -27,6 +27,9 @@ export function Compras() {
   const [saleToCancel, setSaleToCancel] = useState<Sale | null>(null)
   const [cleanupPromptOpen, setCleanupPromptOpen] = useState(false)
   const [downloadingUrl, setDownloadingUrl] = useState<string | null>(null)
+  const [reviewDrafts, setReviewDrafts] = useState<Record<string, { rating: number; body: string }>>({})
+  const [reviewingSaleId, setReviewingSaleId] = useState<string | null>(null)
+  const [reviewMessage, setReviewMessage] = useState<Record<string, string>>({})
 
   const checkoutSaleIds = useMemo(() => {
     const state = location.state as { checkoutSaleIds?: string[] } | null
@@ -139,6 +142,35 @@ export function Compras() {
     await navigator.clipboard.writeText(value)
     setCopiedSaleId(saleId)
     setTimeout(() => setCopiedSaleId(null), 2000)
+  }
+
+  const handleSubmitReview = async (sale: Sale) => {
+    if (!user || !sale.product_id) return
+    const draft = reviewDrafts[sale.id]
+    if (!draft?.rating) {
+      setReviewMessage((current) => ({ ...current, [sale.id]: 'Escolha uma nota de 1 a 5 estrelas.' }))
+      return
+    }
+
+    setReviewingSaleId(sale.id)
+    setReviewMessage((current) => ({ ...current, [sale.id]: '' }))
+
+    const { error } = await supabase.from('product_reviews').insert({
+      sale_id: sale.id,
+      product_id: sale.product_id,
+      user_id: user.id,
+      rating: draft.rating,
+      body: draft.body.trim() || null,
+    })
+
+    if (error) {
+      setReviewMessage((current) => ({ ...current, [sale.id]: error.message }))
+    } else {
+      setReviewMessage((current) => ({ ...current, [sale.id]: 'Avaliacao enviada.' }))
+      await loadSales()
+    }
+
+    setReviewingSaleId(null)
   }
 
   return (
@@ -300,6 +332,63 @@ export function Compras() {
                             </div>
                           )
                         })}
+
+                        {sale.product_id && new Date(sale.claim_until).getTime() <= Date.now() && (
+                          <div className="rounded-md border border-gray-100 bg-white p-4 max-w-2xl">
+                            {sale.product_reviews?.length ? (
+                              <div>
+                                <p className="text-sm font-semibold text-ml-dark">Voce ja avaliou este produto</p>
+                                <div className="mt-2 flex text-[var(--layout-rating-color)]">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <Star key={star} className={`h-4 w-4 ${star <= Number(sale.product_reviews?.[0]?.rating ?? 0) ? 'fill-current' : ''}`} />
+                                  ))}
+                                </div>
+                                {sale.product_reviews[0]?.body && <p className="mt-2 text-sm text-gray-600">{sale.product_reviews[0].body}</p>}
+                              </div>
+                            ) : (
+                              <div className="space-y-3">
+                                <div>
+                                  <p className="text-sm font-semibold text-ml-dark">Avalie sua compra</p>
+                                  <p className="text-xs text-gray-500">A nota por estrela e obrigatoria. O comentario e opcional.</p>
+                                </div>
+                                <div className="flex gap-1">
+                                  {[1, 2, 3, 4, 5].map((star) => {
+                                    const currentRating = reviewDrafts[sale.id]?.rating ?? 0
+                                    return (
+                                      <button
+                                        key={star}
+                                        type="button"
+                                        onClick={() => setReviewDrafts((current) => ({ ...current, [sale.id]: { rating: star, body: current[sale.id]?.body ?? '' } }))}
+                                        className="rounded-sm p-1 text-[var(--layout-rating-color)] transition hover:bg-yellow-50"
+                                        aria-label={`${star} estrela${star > 1 ? 's' : ''}`}
+                                      >
+                                        <Star className={`h-6 w-6 ${star <= currentRating ? 'fill-current' : ''}`} />
+                                      </button>
+                                    )
+                                  })}
+                                </div>
+                                <textarea
+                                  value={reviewDrafts[sale.id]?.body ?? ''}
+                                  onChange={(event) => setReviewDrafts((current) => ({ ...current, [sale.id]: { rating: current[sale.id]?.rating ?? 0, body: event.target.value } }))}
+                                  rows={3}
+                                  placeholder="Comentario opcional sobre o vendedor e o produto..."
+                                  className="w-full resize-y rounded-sm border border-gray-200 p-3 text-sm outline-none focus:border-ml-blue"
+                                />
+                                {reviewMessage[sale.id] && (
+                                  <p className={`text-sm ${reviewMessage[sale.id].includes('enviada') ? 'text-green-600' : 'text-red-600'}`}>{reviewMessage[sale.id]}</p>
+                                )}
+                                <Button
+                                  type="button"
+                                  onClick={() => handleSubmitReview(sale)}
+                                  disabled={reviewingSaleId === sale.id}
+                                  className="h-10 rounded-sm bg-ml-blue px-5 text-white hover:bg-ml-hover"
+                                >
+                                  {reviewingSaleId === sale.id ? 'Enviando...' : 'Enviar avaliacao'}
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                     {sale.status === 'pending' && (

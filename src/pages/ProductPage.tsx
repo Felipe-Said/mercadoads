@@ -14,6 +14,16 @@ type Question = {
   question: string
   answer: string | null
   created_at: string
+  profiles?: { full_name: string | null; avatar_url: string | null } | null
+}
+
+type Review = {
+  id: string
+  rating: number
+  title: string | null
+  body: string | null
+  created_at: string
+  profiles?: { full_name: string | null; avatar_url: string | null } | null
 }
 
 export function ProductPage() {
@@ -23,6 +33,7 @@ export function ProductPage() {
   const { addToCart } = useCart()
   const [product, setProduct] = useState<Product | null>(null)
   const [questions, setQuestions] = useState<Question[]>([])
+  const [reviews, setReviews] = useState<Review[]>([])
   const [question, setQuestion] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [addedToCart, setAddedToCart] = useState(false)
@@ -38,14 +49,17 @@ export function ProductPage() {
 
     async function load() {
       setLoading(true)
-      const [productData, questionsResult] = await Promise.all([
+      const [productData, questionsResult, reviewsResult] = await Promise.all([
         getProduct(id),
-        supabase.from('product_questions').select('id, question, answer, created_at').eq('product_id', id).order('created_at', { ascending: false }).limit(5),
+        supabase.from('product_questions').select('id, question, answer, created_at, profiles:user_id(full_name, avatar_url)').eq('product_id', id).order('created_at', { ascending: false }).limit(5),
+        supabase.from('product_reviews').select('id, rating, title, body, created_at, profiles:user_id(full_name, avatar_url)').eq('product_id', id).order('created_at', { ascending: false }).limit(10),
       ])
 
       setProduct(productData)
       if (questionsResult.error) throw questionsResult.error
+      if (reviewsResult.error) throw reviewsResult.error
       setQuestions((questionsResult.data ?? []) as Question[])
+      setReviews((reviewsResult.data ?? []) as Review[])
     }
 
     load()
@@ -148,8 +162,8 @@ export function ProductPage() {
 
     const { data, error: insertError } = await supabase
       .from('product_questions')
-      .insert({ product_id: product.id, question: question.trim() })
-      .select('id, question, answer, created_at')
+      .insert({ product_id: product.id, user_id: sessionUser.id, question: question.trim() })
+      .select('id, question, answer, created_at, profiles:user_id(full_name, avatar_url)')
       .single()
 
     if (insertError) {
@@ -177,6 +191,8 @@ export function ProductPage() {
 
   const sellerStoreName = product.seller?.store_name || product.seller?.full_name || 'Vendedor verificado'
   const sellerSubtitle = product.seller?.seller_category || product.seller?.full_name || 'Loja verificada'
+  const sellerAvatar = product.seller?.avatar_url
+  const averageRating = reviews.length ? reviews.reduce((sum, item) => sum + Number(item.rating), 0) / reviews.length : 0
 
   return (
     <div className="min-h-screen bg-[var(--layout-page-background)] pb-16">
@@ -283,11 +299,62 @@ export function ProductPage() {
                 {questions.length === 0 && <p className="rounded-sm border border-dashed border-gray-200 bg-gray-50 p-4 text-sm text-gray-500">Ainda nao existem perguntas para este produto.</p>}
                 {questions.map((item) => (
                   <div key={item.id} className="rounded-sm border border-gray-100 bg-white p-4">
-                    <div className="mb-1 flex items-start gap-2">
-                      <MessageSquare className="mt-0.5 h-4 w-4 text-[var(--layout-link-color)]" />
-                      <p className="text-sm font-medium text-[var(--layout-text-primary)]">{item.question}</p>
+                    <div className="mb-2 flex items-start gap-2">
+                      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--layout-subtle-background)] text-[11px] font-bold text-[var(--layout-link-color)]">
+                        {item.profiles?.avatar_url ? <img src={item.profiles.avatar_url} alt="" className="h-full w-full object-cover" /> : (item.profiles?.full_name?.slice(0, 1) || 'U')}
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-[var(--layout-text-muted)]">{item.profiles?.full_name || 'Usuario'}</p>
+                        <p className="text-sm font-medium text-[var(--layout-text-primary)]">{item.question}</p>
+                      </div>
                     </div>
-                    {item.answer && <p className="pl-6 text-sm text-gray-600">{item.answer}</p>}
+                    {item.answer && (
+                      <div className="ml-9 rounded-sm border-l-2 border-[var(--layout-link-color)] bg-[var(--layout-subtle-background)] px-3 py-2">
+                        <p className="text-xs font-bold text-[var(--layout-link-color)]">Vendedor</p>
+                        <p className="text-sm text-gray-600">{item.answer}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="border-t border-gray-200 p-6 md:p-8">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight text-[var(--layout-text-primary)]">Reviews do produto</h2>
+                  <p className="mt-1 text-sm text-gray-500">Avaliacoes de compradores apos o periodo de protecao.</p>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <div className="flex text-[var(--layout-rating-color)]">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star key={star} className={`h-4 w-4 ${star <= Math.round(averageRating) ? 'fill-current' : ''}`} />
+                    ))}
+                  </div>
+                  <span className="font-bold text-[var(--layout-text-primary)]">{averageRating ? averageRating.toFixed(1) : '0.0'}</span>
+                  <span className="text-gray-500">({reviews.length})</span>
+                </div>
+              </div>
+
+              <div className="mt-5 space-y-3">
+                {reviews.length === 0 && <p className="rounded-sm border border-dashed border-gray-200 bg-gray-50 p-4 text-sm text-gray-500">Ainda nao existem reviews para este produto.</p>}
+                {reviews.map((review) => (
+                  <div key={review.id} className="rounded-sm border border-gray-100 bg-white p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--layout-subtle-background)] text-xs font-bold text-[var(--layout-link-color)]">
+                        {review.profiles?.avatar_url ? <img src={review.profiles.avatar_url} alt="" className="h-full w-full object-cover" /> : (review.profiles?.full_name?.slice(0, 1) || 'U')}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-bold text-[var(--layout-text-primary)]">{review.profiles?.full_name || 'Comprador'}</p>
+                          <div className="flex text-[var(--layout-rating-color)]">
+                            {[1, 2, 3, 4, 5].map((star) => <Star key={star} className={`h-3.5 w-3.5 ${star <= review.rating ? 'fill-current' : ''}`} />)}
+                          </div>
+                        </div>
+                        {review.title && <p className="mt-1 text-sm font-semibold text-[var(--layout-text-primary)]">{review.title}</p>}
+                        {review.body && <p className="mt-1 whitespace-pre-line text-sm text-gray-600">{review.body}</p>}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -359,7 +426,7 @@ export function ProductPage() {
               <h3 className="text-lg font-bold text-[var(--layout-text-primary)]">Informacoes sobre o vendedor</h3>
               <div className="mt-4 flex items-start gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--layout-subtle-background)]">
-                  <Shield className="h-5 w-5 text-[var(--layout-link-color)]" />
+                  {sellerAvatar ? <img src={sellerAvatar} alt="" className="h-full w-full rounded-full object-cover" /> : <Shield className="h-5 w-5 text-[var(--layout-link-color)]" />}
                 </div>
                 <div>
                   <p className="text-sm font-bold text-[var(--layout-text-primary)]">{sellerStoreName}</p>

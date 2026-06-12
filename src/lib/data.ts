@@ -94,6 +94,7 @@ export interface Sale {
   proxy_port?: string | null
   gateway_payload?: Record<string, unknown> | null
   products?: { title: string | null; image_url: string | null; file_url?: string | null; seller_note?: string | null } | null
+  product_reviews?: Array<{ id: string; rating: number; title: string | null; body: string | null }> | null
   proxy_offers?: { name: string | null; traffic: string | null; protocol: string | null } | null
   proxy_deliveries?: Array<{
     username: string
@@ -140,7 +141,7 @@ function mapProduct(row: Record<string, unknown>): Product {
 export async function getProducts(options: { offersOnly?: boolean; category?: string; sellerId?: string; includeInactive?: boolean } = {}) {
   let query = supabase
     .from('products')
-    .select('*, profiles:seller_id(id, role, full_name, store_name, seller_category, pix_key, created_at)')
+    .select('*, profiles:seller_id(id, role, full_name, store_name, seller_category, avatar_url, pix_key, created_at)')
     .order('created_at', { ascending: false })
 
   if (!options.includeInactive) query = query.eq('status', 'active')
@@ -157,7 +158,7 @@ export async function getProducts(options: { offersOnly?: boolean; category?: st
 export async function getProduct(id: string) {
   const { data, error } = await supabase
     .from('products')
-    .select('*, profiles:seller_id(id, role, full_name, store_name, seller_category, pix_key, created_at)')
+    .select('*, profiles:seller_id(id, role, full_name, store_name, seller_category, avatar_url, pix_key, created_at)')
     .eq('id', id)
     .eq('status', 'active')
     .eq('hidden_by_admin', false)
@@ -217,7 +218,7 @@ export async function getBanners(position?: Banner['position']) {
 export async function getSales(options: { buyerId?: string; sellerId?: string } = {}) {
   let query = supabase
     .from('sales')
-    .select('*, products(title, image_url, file_url, seller_note), proxy_offers(name, traffic, protocol), proxy_deliveries(username, password, host, port, traffic_limit_gb, status), buyer:buyer_id(full_name), seller:seller_id(full_name)')
+    .select('*, products(title, image_url, file_url, seller_note), product_reviews(id, rating, title, body), proxy_offers(name, traffic, protocol), proxy_deliveries(username, password, host, port, traffic_limit_gb, status), buyer:buyer_id(full_name), seller:seller_id(full_name)')
     .order('created_at', { ascending: false })
 
   if (options.buyerId) query = query.eq('buyer_id', options.buyerId)
