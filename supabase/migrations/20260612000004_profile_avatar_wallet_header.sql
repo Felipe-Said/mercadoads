@@ -2,11 +2,11 @@ ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS avatar_url TEXT;
 
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES ('profile_avatars', 'profile_avatars', true, 5242880, ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+VALUES ('profile_avatars', 'profile_avatars', true, 5242880, ARRAY['image/jpeg', 'image/png', 'image/svg+xml'])
 ON CONFLICT (id) DO UPDATE
   SET public = true,
       file_size_limit = 5242880,
-      allowed_mime_types = ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+      allowed_mime_types = ARRAY['image/jpeg', 'image/png', 'image/svg+xml'];
 
 DROP POLICY IF EXISTS "Public profile avatars are viewable." ON storage.objects;
 DROP POLICY IF EXISTS "Users upload own profile avatars." ON storage.objects;

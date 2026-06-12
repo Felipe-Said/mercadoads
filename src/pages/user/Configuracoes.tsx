@@ -83,7 +83,7 @@ export function Configuracoes() {
                   <label className="block text-sm text-gray-600 mb-2">Foto de perfil</label>
                   <input
                     type="file"
-                    accept="image/*"
+                    accept=".png,.jpg,.jpeg,.svg,image/png,image/jpeg,image/svg+xml"
                     onChange={(event) => uploadAvatar(event.target.files?.[0] ?? null)}
                     className="block w-full text-sm text-gray-600 file:mr-4 file:rounded-sm file:border-0 file:bg-ml-blue file:px-4 file:py-2 file:font-semibold file:text-white"
                     disabled={uploading}
