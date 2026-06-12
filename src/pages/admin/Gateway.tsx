@@ -4,6 +4,7 @@ import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { supabase } from '../../lib/supabase'
 import { getDecodoProxyCatalog } from '../../lib/decodo'
+import { getSmmBalance, getSmmServices } from '../../lib/smm'
 import { westPayStatus } from '../../lib/westpay'
 
 type GatewaySettings = {
@@ -46,6 +47,25 @@ type ProxyOfferSettings = {
   is_active: boolean
 }
 
+type SmmSettings = {
+  id: number
+  active: boolean
+  api_base_url: string | null
+  api_key: string | null
+  default_markup_percent: number | null
+}
+
+type SmmServiceOverride = {
+  id?: number
+  service_id: string
+  custom_name: string
+  custom_category: string
+  price_per_1000: number | null
+  markup_percent: number | null
+  is_active: boolean
+  sort_order: number
+}
+
 const emptyProxyOffer: ProxyOfferSettings = {
   name: '',
   type: 'Pool premium',
@@ -68,6 +88,16 @@ const emptyProxyOffer: ProxyOfferSettings = {
 
 const defaultUserAgent = 'Cookie market/1.0 (+suporte@mercadoads.com)'
 
+const emptySmmOverride: SmmServiceOverride = {
+  service_id: '',
+  custom_name: '',
+  custom_category: '',
+  price_per_1000: null,
+  markup_percent: null,
+  is_active: true,
+  sort_order: 10,
+}
+
 export function Gateway() {
   const [active, setActive] = useState(true)
   const [apiKey, setApiKey] = useState('')
@@ -89,6 +119,14 @@ export function Gateway() {
   const [proxyOffers, setProxyOffers] = useState<ProxyOfferSettings[]>([])
   const [proxyOfferForm, setProxyOfferForm] = useState<ProxyOfferSettings>(emptyProxyOffer)
   const [proxyOfferMessage, setProxyOfferMessage] = useState<string | null>(null)
+  const [smmActive, setSmmActive] = useState(false)
+  const [smmBaseUrl, setSmmBaseUrl] = useState('https://baratosociais.com/api/v2')
+  const [smmApiKey, setSmmApiKey] = useState('')
+  const [smmMarkup, setSmmMarkup] = useState(50)
+  const [smmMessage, setSmmMessage] = useState<string | null>(null)
+  const [smmTestMessage, setSmmTestMessage] = useState<string | null>(null)
+  const [smmOverrides, setSmmOverrides] = useState<SmmServiceOverride[]>([])
+  const [smmOverrideForm, setSmmOverrideForm] = useState<SmmServiceOverride>(emptySmmOverride)
 
   const functionBaseUrl = useMemo(() => {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
@@ -120,12 +158,24 @@ export function Gateway() {
         .select('id, name, type, country, city, protocol, endpoint, port, price, price_amount, traffic, traffic_limit_gb, stock, status, service_type, auto_disable, sort_order, is_active')
         .order('sort_order', { ascending: true })
         .order('id', { ascending: true }),
+      supabase
+        .from('smm_settings')
+        .select('id, active, api_base_url, api_key, default_markup_percent')
+        .eq('id', 1)
+        .maybeSingle(),
+      supabase
+        .from('smm_service_overrides')
+        .select('id, service_id, custom_name, custom_category, price_per_1000, markup_percent, is_active, sort_order')
+        .order('sort_order', { ascending: true })
+        .order('id', { ascending: true }),
     ])
-      .then(([gatewayResult, decodoResult, proxyOffersResult]) => {
+      .then(([gatewayResult, decodoResult, proxyOffersResult, smmResult, smmOverridesResult]) => {
         if (!mounted) return
         if (gatewayResult.error) throw gatewayResult.error
         if (decodoResult.error) throw decodoResult.error
         if (proxyOffersResult.error) throw proxyOffersResult.error
+        if (smmResult.error) throw smmResult.error
+        if (smmOverridesResult.error) throw smmOverridesResult.error
 
         const settings = gatewayResult.data as GatewaySettings | null
         setActive(settings?.active ?? true)
@@ -142,6 +192,22 @@ export function Gateway() {
         setDecodoUsername(decodoSettings?.username ?? '')
         setDecodoPassword(decodoSettings?.password ?? '')
         setProxyOffers((proxyOffersResult.data ?? []) as ProxyOfferSettings[])
+
+        const smmSettings = smmResult.data as SmmSettings | null
+        setSmmActive(smmSettings?.active ?? false)
+        setSmmBaseUrl(smmSettings?.api_base_url ?? 'https://baratosociais.com/api/v2')
+        setSmmApiKey(smmSettings?.api_key ?? '')
+        setSmmMarkup(Number(smmSettings?.default_markup_percent ?? 50))
+        setSmmOverrides(((smmOverridesResult.data ?? []) as Array<Record<string, unknown>>).map((item) => ({
+          id: item.id as number | undefined,
+          service_id: String(item.service_id ?? ''),
+          custom_name: String(item.custom_name ?? ''),
+          custom_category: String(item.custom_category ?? ''),
+          price_per_1000: item.price_per_1000 == null ? null : Number(item.price_per_1000),
+          markup_percent: item.markup_percent == null ? null : Number(item.markup_percent),
+          is_active: Boolean(item.is_active ?? true),
+          sort_order: Number(item.sort_order ?? 0),
+        })))
       })
       .catch((error) => setMessage(error instanceof Error ? error.message : 'Nao foi possivel carregar o gateway.'))
       .finally(() => {
@@ -206,6 +272,122 @@ export function Gateway() {
     } catch (error) {
       setTestMessage(error instanceof Error ? error.message : 'Nao foi possivel validar a conexao.')
     }
+  }
+
+  const saveSmm = async () => {
+    setSaving(true)
+    setSmmMessage(null)
+
+    const { error } = await supabase.from('smm_settings').upsert({
+      id: 1,
+      active: smmActive,
+      api_base_url: smmBaseUrl.trim() || 'https://baratosociais.com/api/v2',
+      api_key: smmApiKey.trim() || null,
+      default_markup_percent: Number(smmMarkup) || 0,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'id' })
+
+    if (error) {
+      setSmmMessage(error.message)
+      setSaving(false)
+      return
+    }
+
+    setSmmMessage(smmApiKey.trim() ? 'SMM salvo e chave registrada.' : 'SMM salvo, mas sem chave configurada.')
+    setSaving(false)
+  }
+
+  const testSmmConnection = async () => {
+    setSmmTestMessage('Testando servicos...')
+    try {
+      const [services, balance] = await Promise.all([
+        getSmmServices(),
+        getSmmBalance().catch(() => null),
+      ])
+      const balanceData = balance?.data as { balance?: string; currency?: string } | undefined
+      setSmmTestMessage(services.configured
+        ? `Servicos validados: ${services.items.length}.${balanceData?.balance ? ` Saldo: ${balanceData.balance} ${balanceData.currency ?? ''}` : ''}`
+        : 'SMM ativo, mas sem chave salva.')
+    } catch (error) {
+      setSmmTestMessage(error instanceof Error ? error.message : 'Nao foi possivel validar os servicos.')
+    }
+  }
+
+  const resetSmmOverrideForm = () => {
+    setSmmOverrideForm({ ...emptySmmOverride, sort_order: (smmOverrides.length + 1) * 10 })
+  }
+
+  const saveSmmOverride = async () => {
+    setSmmMessage(null)
+    const payload = {
+      service_id: smmOverrideForm.service_id.trim(),
+      custom_name: smmOverrideForm.custom_name.trim() || null,
+      custom_category: smmOverrideForm.custom_category.trim() || null,
+      price_per_1000: smmOverrideForm.price_per_1000,
+      markup_percent: smmOverrideForm.markup_percent,
+      is_active: smmOverrideForm.is_active,
+      sort_order: Number(smmOverrideForm.sort_order) || 0,
+      updated_at: new Date().toISOString(),
+    }
+
+    if (!payload.service_id) {
+      setSmmMessage('Informe o ID do servico.')
+      return
+    }
+
+    const request = smmOverrideForm.id
+      ? supabase.from('smm_service_overrides').update(payload).eq('id', smmOverrideForm.id)
+      : supabase.from('smm_service_overrides').insert(payload)
+
+    const { error } = await request
+    if (error) {
+      setSmmMessage(error.message)
+      return
+    }
+
+    const { data, error: reloadError } = await supabase
+      .from('smm_service_overrides')
+      .select('id, service_id, custom_name, custom_category, price_per_1000, markup_percent, is_active, sort_order')
+      .order('sort_order', { ascending: true })
+      .order('id', { ascending: true })
+
+    if (reloadError) {
+      setSmmMessage(reloadError.message)
+      return
+    }
+
+    setSmmOverrides(((data ?? []) as Array<Record<string, unknown>>).map((item) => ({
+      id: item.id as number | undefined,
+      service_id: String(item.service_id ?? ''),
+      custom_name: String(item.custom_name ?? ''),
+      custom_category: String(item.custom_category ?? ''),
+      price_per_1000: item.price_per_1000 == null ? null : Number(item.price_per_1000),
+      markup_percent: item.markup_percent == null ? null : Number(item.markup_percent),
+      is_active: Boolean(item.is_active ?? true),
+      sort_order: Number(item.sort_order ?? 0),
+    })))
+    setSmmMessage('Servico SMM salvo.')
+    resetSmmOverrideForm()
+  }
+
+  const editSmmOverride = (override: SmmServiceOverride) => {
+    setSmmOverrideForm({ ...override })
+  }
+
+  const deleteSmmOverride = async (id?: number) => {
+    if (!id) return
+    const { error } = await supabase.from('smm_service_overrides').delete().eq('id', id)
+    if (error) {
+      setSmmMessage(error.message)
+      return
+    }
+    setSmmOverrides((current) => current.filter((item) => item.id !== id))
+    setSmmMessage('Servico SMM removido.')
+    if (smmOverrideForm.id === id) resetSmmOverrideForm()
+  }
+
+  const updateSmmOverrideForm = <K extends keyof SmmServiceOverride>(key: K, value: SmmServiceOverride[K]) => {
+    setSmmOverrideForm((current) => ({ ...current, [key]: value }))
   }
 
   const saveDecodo = async () => {
@@ -470,6 +652,155 @@ export function Gateway() {
 
             {message && <p className={`text-sm ${message.includes('confirmadas') ? 'text-green-600' : 'text-red-600'}`}>{message}</p>}
             {testMessage && <p className={`text-sm ${testMessage.includes('ativa') ? 'text-green-600' : 'text-red-600'}`}>{testMessage}</p>}
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-none shadow-sm rounded-md">
+          <CardContent className="p-6 space-y-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-medium text-ml-dark">SMM</h3>
+                <p className="text-sm text-gray-500">Catalogo de servicos, saldo e precos exibidos na pagina /smm.</p>
+              </div>
+              <label className="flex items-center gap-2 text-sm text-gray-600">
+                <input
+                  type="checkbox"
+                  checked={smmActive}
+                  onChange={(event) => setSmmActive(event.target.checked)}
+                  className="h-4 w-4 accent-ml-blue"
+                />
+                Ativo
+              </label>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              <GatewayField label="Base URL">
+                <input
+                  type="url"
+                  value={smmBaseUrl}
+                  onChange={(event) => setSmmBaseUrl(event.target.value)}
+                  placeholder="https://baratosociais.com/api/v2"
+                  className="w-full h-12 px-4 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-ml-blue focus:border-transparent transition-all"
+                />
+              </GatewayField>
+              <GatewayField label="API Key">
+                <input
+                  type="password"
+                  value={smmApiKey}
+                  onChange={(event) => setSmmApiKey(event.target.value)}
+                  placeholder="Chave da API SMM"
+                  className="w-full h-12 px-4 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-ml-blue focus:border-transparent transition-all"
+                />
+              </GatewayField>
+              <GatewayField label="Margem global (%)">
+                <input
+                  type="number"
+                  step="0.01"
+                  value={smmMarkup}
+                  onChange={(event) => setSmmMarkup(Number(event.target.value))}
+                  className="w-full h-12 px-4 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-ml-blue focus:border-transparent transition-all"
+                />
+              </GatewayField>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <Button
+                type="button"
+                onClick={saveSmm}
+                disabled={saving || loading}
+                className="bg-ml-blue text-white hover:bg-ml-hover font-semibold py-3 px-6 rounded-sm shadow-sm"
+              >
+                {saving ? 'Salvando...' : 'Salvar SMM'}
+              </Button>
+              <Button
+                type="button"
+                onClick={testSmmConnection}
+                disabled={loading}
+                className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold py-3 px-6 rounded-sm shadow-sm"
+              >
+                Testar servicos
+              </Button>
+            </div>
+
+            {smmMessage && <p className={`text-sm ${smmMessage.includes('salvo') || smmMessage.includes('registrada') || smmMessage.includes('removido') ? 'text-green-600' : 'text-red-600'}`}>{smmMessage}</p>}
+            {smmTestMessage && <p className={`text-sm ${smmTestMessage.includes('validados') ? 'text-green-600' : 'text-red-600'}`}>{smmTestMessage}</p>}
+
+            <div className="rounded-md border border-gray-100 bg-gray-50 p-4">
+              <div className="mb-4">
+                <h4 className="font-semibold text-gray-900">Precos por servico</h4>
+                <p className="text-sm text-gray-500">Use o ID do servico retornado pela API. Se nao houver override, vale a margem global.</p>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <GatewayField label="ID do servico">
+                  <input value={smmOverrideForm.service_id} onChange={(event) => updateSmmOverrideForm('service_id', event.target.value)} placeholder="Ex: 1234" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+                </GatewayField>
+                <GatewayField label="Nome exibido">
+                  <input value={smmOverrideForm.custom_name} onChange={(event) => updateSmmOverrideForm('custom_name', event.target.value)} placeholder="Opcional" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+                </GatewayField>
+                <GatewayField label="Categoria exibida">
+                  <input value={smmOverrideForm.custom_category} onChange={(event) => updateSmmOverrideForm('custom_category', event.target.value)} placeholder="Opcional" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+                </GatewayField>
+                <GatewayField label="Preco por 1.000 (R$)">
+                  <input type="number" step="0.0001" value={smmOverrideForm.price_per_1000 ?? ''} onChange={(event) => updateSmmOverrideForm('price_per_1000', event.target.value ? Number(event.target.value) : null)} placeholder="Opcional" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+                </GatewayField>
+                <GatewayField label="Margem especifica (%)">
+                  <input type="number" step="0.01" value={smmOverrideForm.markup_percent ?? ''} onChange={(event) => updateSmmOverrideForm('markup_percent', event.target.value ? Number(event.target.value) : null)} placeholder="Opcional" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+                </GatewayField>
+                <GatewayField label="Ordem">
+                  <input type="number" value={smmOverrideForm.sort_order} onChange={(event) => updateSmmOverrideForm('sort_order', Number(event.target.value))} className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+                </GatewayField>
+              </div>
+              <label className="mt-4 flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" checked={smmOverrideForm.is_active} onChange={(event) => updateSmmOverrideForm('is_active', event.target.checked)} className="h-4 w-4 accent-ml-blue" />
+                Mostrar este servico na pagina SMM
+              </label>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Button type="button" onClick={saveSmmOverride} className="bg-ml-blue text-white hover:bg-ml-hover font-semibold py-3 px-6 rounded-sm shadow-sm">
+                  {smmOverrideForm.id ? 'Salvar servico' : 'Adicionar override'}
+                </Button>
+                <Button type="button" onClick={resetSmmOverrideForm} className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold py-3 px-6 rounded-sm shadow-sm">
+                  Novo override
+                </Button>
+              </div>
+            </div>
+
+            <div className="overflow-hidden rounded-sm border border-gray-100">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-gray-50 text-gray-500">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Servico</th>
+                    <th className="px-4 py-3 font-medium">Preco 1.000</th>
+                    <th className="px-4 py-3 font-medium">Margem</th>
+                    <th className="px-4 py-3 font-medium">Ativo</th>
+                    <th className="px-4 py-3 font-medium text-right">Acoes</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {smmOverrides.map((override) => (
+                    <tr key={override.id}>
+                      <td className="px-4 py-3">
+                        <p className="font-semibold text-gray-900">#{override.service_id}</p>
+                        <p className="text-xs text-gray-500">{override.custom_name || 'Nome original da API'}</p>
+                      </td>
+                      <td className="px-4 py-3 text-gray-700">{override.price_per_1000 ?? '-'}</td>
+                      <td className="px-4 py-3 text-gray-700">{override.markup_percent ?? '-'}</td>
+                      <td className="px-4 py-3 text-gray-700">{override.is_active ? 'Sim' : 'Nao'}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-2">
+                          <button type="button" onClick={() => editSmmOverride(override)} className="text-ml-blue hover:underline">Editar</button>
+                          <button type="button" onClick={() => deleteSmmOverride(override.id)} className="text-red-500 hover:underline">Remover</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {smmOverrides.length === 0 && (
+                    <tr>
+                      <td className="px-4 py-6 text-center text-gray-500" colSpan={5}>Nenhum override cadastrado.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </CardContent>
         </Card>
 

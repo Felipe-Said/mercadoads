@@ -10,6 +10,7 @@ import { History } from './pages/History'
 import { SellerRegistration } from './pages/SellerRegistration'
 import { Contact } from './pages/Contact'
 import { Proxy } from './pages/Proxy'
+import { SMM } from './pages/SMM'
 import { ProductPage } from './pages/ProductPage'
 import { Login } from './pages/Login'
 import { Register } from './pages/Register'
@@ -53,6 +54,7 @@ function App() {
           <Route path="/vender" element={<SellerRegistration />} />
           <Route path="/contato" element={<Contact />} />
           <Route path="/proxy" element={<Proxy />} />
+          <Route path="/smm" element={<SMM />} />
           <Route path="/category/:name" element={<Offers />} />
           <Route path="/produto/:id" element={<ProductPage />} />
           <Route path="/login" element={<Login />} />
