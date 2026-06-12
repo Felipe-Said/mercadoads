@@ -38,7 +38,7 @@ export function BannerSlot({
           <img
             src={banner.image || banner.mobile_image || ''}
             alt={title || 'Banner'}
-            className={`h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02] ${imageClassName}`}
+            className={`h-full w-full object-contain ${imageClassName}`}
           />
         </picture>
       ) : (
