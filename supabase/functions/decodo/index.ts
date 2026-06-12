@@ -363,12 +363,13 @@ Deno.serve(async (req) => {
   const body = req.method === 'GET' ? {} : await parseRequestBody(req)
   const action = String(url.searchParams.get('action') || body.action || 'catalog').toLowerCase()
   const hasCredentials = Boolean(settings.api_key?.trim())
+  const hasPoolAccess = hasProxyPoolAccess(settings)
 
   if (action === 'status') {
     const capacity = hasCredentials ? await getCapacity(settings) : null
     return json({
       success: capacity ? capacity.success !== false : true,
-      configured: hasCredentials,
+      configured: hasPoolAccess,
       active: settings.active,
       availableLimit: capacity && 'availableLimit' in capacity ? capacity.availableLimit : null,
       totalLimit: capacity && 'totalLimit' in capacity ? capacity.totalLimit : null,
@@ -378,12 +379,14 @@ Deno.serve(async (req) => {
     }, capacity?.success === false ? 400 : 200)
   }
 
-  if (!hasCredentials) {
+  if (!hasPoolAccess) {
     return json({ success: true, configured: false, items: [] })
   }
 
   if (action === 'catalog') {
-    const capacity = await getCapacity(settings)
+    const capacity = hasCredentials
+      ? await getCapacity(settings)
+      : { configured: true as const, success: false as const, status: 206, data: { message: 'Catalogo carregado pelos planos configurados.' } }
     const offers = await loadProxyOffers(supabaseAdmin)
     const capacityAvailable = capacity.configured !== false && capacity.success !== false
       ? (capacity as CapacityResult).availableLimit
@@ -392,7 +395,7 @@ Deno.serve(async (req) => {
       .map((offer) => mapOffer(offer, capacityAvailable))
       .filter(Boolean) as ProxyOffer[]
 
-    if ((capacity.configured === false || capacity.success === false) && !hasProxyPoolAccess(settings)) {
+    if ((capacity.configured === false || capacity.success === false) && !hasPoolAccess) {
       return json({ configured: true, ...capacity, items: [] }, capacity.success === false ? 400 : 200)
     }
 
