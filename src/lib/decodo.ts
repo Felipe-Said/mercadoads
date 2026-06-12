@@ -174,3 +174,11 @@ export async function createProxyTopupSale(deliveryId: string, offerId: string) 
   }
   return result as DecodoInvokeResult & { sale?: { id: string; amount: number } }
 }
+
+export async function provisionProxySale(saleId: string) {
+  const result = await invokeDecodo('provision_sale', { saleId })
+  if (result.success === false) {
+    throw new Error(friendlyProviderMessage(extractMessage(result.data) || result.error || null, result.status))
+  }
+  return result
+}

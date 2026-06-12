@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Copy, Globe2, LockKeyhole, RefreshCw, Search, Server, Wifi } from 'lucide-react'
-import { createProxyTopupSale, getDecodoProxyCatalog, getMyProxyDeliveries, type DecodoProxyDelivery, type DecodoProxyOffer } from '../lib/decodo'
+import { createProxyTopupSale, getDecodoProxyCatalog, getMyProxyDeliveries, provisionProxySale, type DecodoProxyDelivery, type DecodoProxyOffer } from '../lib/decodo'
 import { useAuth } from '../contexts/AuthContext'
 import { createWestPayPixInOrThrow, validateWestPayCustomer } from '../lib/westpay'
 import { supabase } from '../lib/supabase'
 import { formatCurrency } from '../lib/data'
+import { getWalletBalances } from '../lib/wallet'
 
 function displayValue(value: string, fallback = 'Consultar') {
   return value?.trim() || fallback
@@ -126,7 +127,7 @@ function ProxyCard({
         disabled={buying || !proxy.priceAmount}
         className="layout-primary-button mt-5 h-11 rounded-sm text-sm font-bold disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {buying ? 'Gerando Pix...' : 'Comprar proxy'}
+        {buying ? 'Processando...' : 'Comprar proxy'}
       </button>
     </article>
   )
@@ -154,11 +155,28 @@ export function Proxy() {
   const [topupBuyingId, setTopupBuyingId] = useState<string | null>(null)
   const [selectedCountries, setSelectedCountries] = useState<Record<string, string>>({})
   const [selectedCountry, setSelectedCountry] = useState<ProxyCountry>(proxyCountries[0])
+  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'wallet'>('pix')
+  const [topupPaymentMethod, setTopupPaymentMethod] = useState<'pix' | 'wallet'>('pix')
+  const [walletBalance, setWalletBalance] = useState(0)
 
   useEffect(() => {
     setBuyerName(profile?.full_name ?? user?.user_metadata?.full_name ?? '')
     setBuyerPhone(profile?.phone ?? '')
   }, [profile?.full_name, profile?.phone, user?.user_metadata?.full_name])
+
+  const loadWalletBalance = async () => {
+    if (!user) {
+      setWalletBalance(0)
+      return 0
+    }
+    const balances = await getWalletBalances(user.id)
+    setWalletBalance(balances.purchaseBalance)
+    return balances.purchaseBalance
+  }
+
+  useEffect(() => {
+    loadWalletBalance().catch(console.error)
+  }, [user?.id])
 
   const load = async () => {
     setLoading(true)
@@ -221,18 +239,25 @@ export function Proxy() {
     setSelectedProxy(proxy)
     setSelectedCountry(country)
 
-    if (!buyerName.trim() || !buyerPhone.trim() || !buyerDocument.trim()) return
+    if (paymentMethod === 'pix' && (!buyerName.trim() || !buyerPhone.trim() || !buyerDocument.trim())) return
 
     setBuyingId(proxy.id)
     let saleId: string | null = null
 
     try {
-      const customer = validateWestPayCustomer({
-        name: buyerName,
-        email: user.email ?? '',
-        phone: buyerPhone,
-        documentNumber: buyerDocument,
-      })
+      const customer = paymentMethod === 'pix'
+        ? validateWestPayCustomer({
+          name: buyerName,
+          email: user.email ?? '',
+          phone: buyerPhone,
+          documentNumber: buyerDocument,
+        })
+        : null
+
+      if (paymentMethod === 'wallet') {
+        const balance = await loadWalletBalance()
+        if (balance < proxy.priceAmount) throw new Error('Você não possui fundos suficiente')
+      }
 
       const { data: saleData, error: saleError } = await supabase.from('sales').insert({
         product_id: null,
@@ -251,17 +276,28 @@ export function Proxy() {
       saleId = saleData?.id ? String(saleData.id) : null
       if (!saleId) throw new Error('Nao foi possivel gerar o pedido.')
 
-      await createWestPayPixInOrThrow({
-        saleId,
-        amount: proxy.priceAmount,
-        customer,
-        itemTitle: proxy.name,
-      })
+      if (paymentMethod === 'wallet') {
+        const { error: spendError } = await supabase.from('wallet_spends').insert({
+          user_id: user.id,
+          sale_id: saleId,
+          amount: proxy.priceAmount,
+        })
+        if (spendError) throw spendError
+        await provisionProxySale(saleId)
+        await loadWalletBalance()
+      } else if (customer) {
+        await createWestPayPixInOrThrow({
+          saleId,
+          amount: proxy.priceAmount,
+          customer,
+          itemTitle: proxy.name,
+        })
+      }
 
       navigate('/painel/usuario/compras', { state: { checkoutSaleIds: [saleId] } })
     } catch (buyError) {
-      if (saleId) await supabase.from('sales').delete().eq('id', saleId)
-      setError(buyError instanceof Error ? buyError.message : 'Nao foi possivel gerar o Pix.')
+      if (saleId && paymentMethod === 'pix') await supabase.from('sales').delete().eq('id', saleId)
+      setError(buyError instanceof Error ? buyError.message : 'Nao foi possivel concluir a compra.')
     } finally {
       setBuyingId(null)
     }
@@ -285,34 +321,52 @@ export function Proxy() {
     setSelectedTopupDelivery(delivery)
     setSelectedTopupOfferId(offerId)
 
-    if (!buyerName.trim() || !buyerPhone.trim() || !buyerDocument.trim()) return
+    if (topupPaymentMethod === 'pix' && (!buyerName.trim() || !buyerPhone.trim() || !buyerDocument.trim())) return
 
     setTopupBuyingId(delivery.id)
     let saleId: string | null = null
 
     try {
-      const customer = validateWestPayCustomer({
-        name: buyerName,
-        email: user.email ?? '',
-        phone: buyerPhone,
-        documentNumber: buyerDocument,
-      })
+      const customer = topupPaymentMethod === 'pix'
+        ? validateWestPayCustomer({
+          name: buyerName,
+          email: user.email ?? '',
+          phone: buyerPhone,
+          documentNumber: buyerDocument,
+        })
+        : null
+
+      if (topupPaymentMethod === 'wallet') {
+        const balance = await loadWalletBalance()
+        if (balance < offer.priceAmount) throw new Error('Você não possui fundos suficiente')
+      }
 
       const result = await createProxyTopupSale(delivery.id, offerId)
       saleId = result.sale?.id ? String(result.sale.id) : null
       if (!saleId) throw new Error('Nao foi possivel gerar o pedido de recarga.')
 
-      await createWestPayPixInOrThrow({
-        saleId,
-        amount: offer.priceAmount,
-        customer,
-        itemTitle: `Recarga ${offer.traffic} - ${delivery.username}`,
-      })
+      if (topupPaymentMethod === 'wallet') {
+        const { error: spendError } = await supabase.from('wallet_spends').insert({
+          user_id: user.id,
+          sale_id: saleId,
+          amount: offer.priceAmount,
+        })
+        if (spendError) throw spendError
+        await provisionProxySale(saleId)
+        await loadWalletBalance()
+      } else if (customer) {
+        await createWestPayPixInOrThrow({
+          saleId,
+          amount: offer.priceAmount,
+          customer,
+          itemTitle: `Recarga ${offer.traffic} - ${delivery.username}`,
+        })
+      }
 
       navigate('/painel/usuario/compras', { state: { checkoutSaleIds: [saleId] } })
     } catch (topupError) {
-      if (saleId) await supabase.from('sales').delete().eq('id', saleId)
-      setDeliveryError(topupError instanceof Error ? topupError.message : 'Nao foi possivel gerar o Pix da recarga.')
+      if (saleId && topupPaymentMethod === 'pix') await supabase.from('sales').delete().eq('id', saleId)
+      setDeliveryError(topupError instanceof Error ? topupError.message : 'Nao foi possivel concluir a recarga.')
     } finally {
       setTopupBuyingId(null)
     }
@@ -401,20 +455,35 @@ export function Proxy() {
                 <p className="mt-1 text-sm text-[var(--layout-text-muted)]">
                 {selectedProxy.traffic} de trafego em {selectedCountry.name}. A credencial exclusiva e liberada depois da confirmacao do pagamento.
                 </p>
-                <div className="mt-4 grid gap-3 md:grid-cols-3">
-                  <label className="block">
-                    <span className="mb-1 block text-sm font-bold text-[var(--layout-text-primary)]">Nome completo</span>
-                    <input value={buyerName} onChange={(event) => setBuyerName(event.target.value)} className="h-11 w-full rounded-sm border border-[var(--layout-border-color)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)]" />
+                <div className="mt-4 grid gap-2 md:grid-cols-2">
+                  <label className={`flex cursor-pointer items-center justify-between rounded-sm border p-3 text-sm ${paymentMethod === 'pix' ? 'border-[var(--layout-accent-color)] bg-[var(--layout-subtle-background)]' : 'border-[var(--layout-border-color)]'}`}>
+                    <span className="font-semibold text-[var(--layout-text-primary)]">Gerar Pix agora</span>
+                    <input type="radio" checked={paymentMethod === 'pix'} onChange={() => setPaymentMethod('pix')} />
                   </label>
-                  <label className="block">
-                    <span className="mb-1 block text-sm font-bold text-[var(--layout-text-primary)]">WhatsApp</span>
-                    <input value={buyerPhone} onChange={(event) => setBuyerPhone(event.target.value)} className="h-11 w-full rounded-sm border border-[var(--layout-border-color)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)]" placeholder="DDD + numero" />
-                  </label>
-                  <label className="block">
-                    <span className="mb-1 block text-sm font-bold text-[var(--layout-text-primary)]">CPF ou CNPJ</span>
-                    <input value={buyerDocument} onChange={(event) => setBuyerDocument(event.target.value)} className="h-11 w-full rounded-sm border border-[var(--layout-border-color)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)]" placeholder="Somente numeros" />
+                  <label className={`flex cursor-pointer items-center justify-between rounded-sm border p-3 text-sm ${paymentMethod === 'wallet' ? 'border-[var(--layout-accent-color)] bg-[var(--layout-subtle-background)]' : 'border-[var(--layout-border-color)]'}`}>
+                    <span>
+                      <span className="block font-semibold text-[var(--layout-text-primary)]">Fundos da carteira</span>
+                      <span className="text-xs text-[var(--layout-text-muted)]">Saldo: {formatCurrency(walletBalance)}</span>
+                    </span>
+                    <input type="radio" checked={paymentMethod === 'wallet'} onChange={() => setPaymentMethod('wallet')} />
                   </label>
                 </div>
+                {paymentMethod === 'pix' && (
+                  <div className="mt-4 grid gap-3 md:grid-cols-3">
+                    <label className="block">
+                      <span className="mb-1 block text-sm font-bold text-[var(--layout-text-primary)]">Nome completo</span>
+                      <input value={buyerName} onChange={(event) => setBuyerName(event.target.value)} className="h-11 w-full rounded-sm border border-[var(--layout-border-color)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)]" />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-sm font-bold text-[var(--layout-text-primary)]">WhatsApp</span>
+                      <input value={buyerPhone} onChange={(event) => setBuyerPhone(event.target.value)} className="h-11 w-full rounded-sm border border-[var(--layout-border-color)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)]" placeholder="DDD + numero" />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-sm font-bold text-[var(--layout-text-primary)]">CPF ou CNPJ</span>
+                      <input value={buyerDocument} onChange={(event) => setBuyerDocument(event.target.value)} className="h-11 w-full rounded-sm border border-[var(--layout-border-color)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)]" placeholder="Somente numeros" />
+                    </label>
+                  </div>
+                )}
               </div>
               <button
                 type="button"
@@ -422,7 +491,7 @@ export function Proxy() {
                 disabled={Boolean(buyingId)}
                 className="layout-primary-button h-12 rounded-sm px-5 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {buyingId ? 'Gerando Pix...' : `Pagar ${formatCurrency(selectedProxy.priceAmount)}`}
+                {buyingId ? 'Processando...' : `Pagar ${formatCurrency(selectedProxy.priceAmount)}`}
               </button>
             </div>
           </div>
@@ -437,20 +506,35 @@ export function Proxy() {
                 <p className="mt-1 text-sm text-[var(--layout-text-muted)]">
                   O pacote escolhido sera somado ao limite da mesma credencial apos a confirmacao do pagamento.
                 </p>
-                <div className="mt-4 grid gap-3 md:grid-cols-3">
-                  <label className="block">
-                    <span className="mb-1 block text-sm font-bold text-[var(--layout-text-primary)]">Nome completo</span>
-                    <input value={buyerName} onChange={(event) => setBuyerName(event.target.value)} className="h-11 w-full rounded-sm border border-[var(--layout-border-color)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)]" />
+                <div className="mt-4 grid gap-2 md:grid-cols-2">
+                  <label className={`flex cursor-pointer items-center justify-between rounded-sm border p-3 text-sm ${topupPaymentMethod === 'pix' ? 'border-[var(--layout-accent-color)] bg-[var(--layout-subtle-background)]' : 'border-[var(--layout-border-color)]'}`}>
+                    <span className="font-semibold text-[var(--layout-text-primary)]">Gerar Pix agora</span>
+                    <input type="radio" checked={topupPaymentMethod === 'pix'} onChange={() => setTopupPaymentMethod('pix')} />
                   </label>
-                  <label className="block">
-                    <span className="mb-1 block text-sm font-bold text-[var(--layout-text-primary)]">WhatsApp</span>
-                    <input value={buyerPhone} onChange={(event) => setBuyerPhone(event.target.value)} className="h-11 w-full rounded-sm border border-[var(--layout-border-color)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)]" placeholder="DDD + numero" />
-                  </label>
-                  <label className="block">
-                    <span className="mb-1 block text-sm font-bold text-[var(--layout-text-primary)]">CPF ou CNPJ</span>
-                    <input value={buyerDocument} onChange={(event) => setBuyerDocument(event.target.value)} className="h-11 w-full rounded-sm border border-[var(--layout-border-color)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)]" placeholder="Somente numeros" />
+                  <label className={`flex cursor-pointer items-center justify-between rounded-sm border p-3 text-sm ${topupPaymentMethod === 'wallet' ? 'border-[var(--layout-accent-color)] bg-[var(--layout-subtle-background)]' : 'border-[var(--layout-border-color)]'}`}>
+                    <span>
+                      <span className="block font-semibold text-[var(--layout-text-primary)]">Fundos da carteira</span>
+                      <span className="text-xs text-[var(--layout-text-muted)]">Saldo: {formatCurrency(walletBalance)}</span>
+                    </span>
+                    <input type="radio" checked={topupPaymentMethod === 'wallet'} onChange={() => setTopupPaymentMethod('wallet')} />
                   </label>
                 </div>
+                {topupPaymentMethod === 'pix' && (
+                  <div className="mt-4 grid gap-3 md:grid-cols-3">
+                    <label className="block">
+                      <span className="mb-1 block text-sm font-bold text-[var(--layout-text-primary)]">Nome completo</span>
+                      <input value={buyerName} onChange={(event) => setBuyerName(event.target.value)} className="h-11 w-full rounded-sm border border-[var(--layout-border-color)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)]" />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-sm font-bold text-[var(--layout-text-primary)]">WhatsApp</span>
+                      <input value={buyerPhone} onChange={(event) => setBuyerPhone(event.target.value)} className="h-11 w-full rounded-sm border border-[var(--layout-border-color)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)]" placeholder="DDD + numero" />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-sm font-bold text-[var(--layout-text-primary)]">CPF ou CNPJ</span>
+                      <input value={buyerDocument} onChange={(event) => setBuyerDocument(event.target.value)} className="h-11 w-full rounded-sm border border-[var(--layout-border-color)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)]" placeholder="Somente numeros" />
+                    </label>
+                  </div>
+                )}
               </div>
               <button
                 type="button"
@@ -458,7 +542,7 @@ export function Proxy() {
                 disabled={Boolean(topupBuyingId)}
                 className="layout-primary-button h-12 rounded-sm px-5 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {topupBuyingId ? 'Gerando Pix...' : 'Pagar recarga'}
+                {topupBuyingId ? 'Processando...' : 'Pagar recarga'}
               </button>
             </div>
           </div>
@@ -593,7 +677,7 @@ export function Proxy() {
                     disabled={!items.length || topupBuyingId === delivery.id}
                     className="layout-primary-button mt-3 h-11 w-full rounded-sm text-sm font-bold disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {topupBuyingId === delivery.id ? 'Gerando Pix...' : 'Recarregar esta proxy'}
+                    {topupBuyingId === delivery.id ? 'Processando...' : 'Recarregar esta proxy'}
                   </button>
                 </article>
               )

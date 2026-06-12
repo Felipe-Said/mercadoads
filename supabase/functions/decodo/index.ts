@@ -653,8 +653,23 @@ Deno.serve(async (req) => {
   }
 
   if (action === 'provision_sale') {
+    const user = await getRequestUser(req, supabaseAdmin)
+    if (!user) return json({ success: false, configured: true, error: 'Login necessario.' }, 401)
+
     const saleId = firstString(body.saleId, url.searchParams.get('saleId'))
     if (!saleId) return json({ success: false, configured: true, error: 'Pedido nao informado.' }, 400)
+
+    const { data: sale, error: saleError } = await supabaseAdmin
+      .from('sales')
+      .select('buyer_id')
+      .eq('id', saleId)
+      .maybeSingle()
+
+    if (saleError) throw saleError
+    if (!sale || asRecord(sale)?.buyer_id !== user.id) {
+      return json({ success: false, configured: true, error: 'Pedido nao encontrado.' }, 404)
+    }
+
     const result = await provisionProxySale(supabaseAdmin, settings, saleId)
     return json({ configured: true, ...result }, (result as { success?: boolean }).success === false ? 400 : 200)
   }
