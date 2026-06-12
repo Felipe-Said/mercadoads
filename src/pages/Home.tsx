@@ -113,16 +113,16 @@ export function Home() {
     <div className="min-h-screen bg-[var(--layout-page-background)] pb-12 font-sans text-[var(--layout-text-primary)]">
       <section className="bg-[var(--layout-dashboard-sidebar-header-bg)] text-white">
         <div className="mx-auto grid max-w-[1440px] gap-4 px-4 py-4 lg:grid-cols-[240px_minmax(0,1fr)_280px]">
-          <aside className="hidden rounded-sm bg-[var(--layout-surface-background)] text-[var(--layout-text-primary)] shadow-sm lg:block">
-            <div className="border-b border-gray-100 px-4 py-3">
+          <aside className="hidden rounded-sm border bg-[var(--layout-home-departments-bg)] text-[var(--layout-home-departments-text)] shadow-sm lg:block" style={{ borderColor: 'var(--layout-home-departments-border)' }}>
+            <div className="border-b px-4 py-3" style={{ borderColor: 'var(--layout-home-departments-border)' }}>
               <p className="text-sm font-bold">Departamentos</p>
-              <p className="text-xs text-gray-500">Cookie market</p>
+              <p className="text-xs text-[var(--layout-home-departments-muted-text)]">Cookie market</p>
             </div>
             <nav className="py-2">
               {departments.map((department) => (
-                <Link key={department} to={`/category/${encodeURIComponent(department.toLowerCase())}`} className="flex items-center justify-between px-4 py-2 text-sm font-medium hover:bg-[var(--layout-subtle-background)] hover:text-[var(--layout-link-color)]">
+                <Link key={department} to={`/category/${encodeURIComponent(department.toLowerCase())}`} className="flex items-center justify-between px-4 py-2 text-sm font-medium hover:bg-[var(--layout-home-departments-hover-bg)] hover:text-[var(--layout-home-departments-hover-text)]">
                   {department}
-                  <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
+                  <ChevronRight className="h-3.5 w-3.5 text-[var(--layout-home-departments-icon)]" />
                 </Link>
               ))}
             </nav>

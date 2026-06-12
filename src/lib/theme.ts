@@ -42,6 +42,21 @@ export type LayoutTheme = {
   dashboardSidebarActiveText: string
   headerAccountLinkColor: string
   headerLogoutColor: string
+  homeDepartmentsBg: string
+  homeDepartmentsText: string
+  homeDepartmentsMutedText: string
+  homeDepartmentsBorder: string
+  homeDepartmentsHoverBg: string
+  homeDepartmentsHoverText: string
+  homeDepartmentsIcon: string
+  whatsappGroupsBg: string
+  whatsappGroupsText: string
+  whatsappGroupsMutedText: string
+  whatsappGroupsBorder: string
+  whatsappGroupsLink: string
+  whatsappGroupsStoryRingStart: string
+  whatsappGroupsStoryRingMiddle: string
+  whatsappGroupsStoryRingEnd: string
 }
 
 export const DEFAULT_LAYOUT_THEME: LayoutTheme = {
@@ -76,6 +91,21 @@ export const DEFAULT_LAYOUT_THEME: LayoutTheme = {
   dashboardSidebarActiveText: '#131921',
   headerAccountLinkColor: '#007185',
   headerLogoutColor: '#ef4444',
+  homeDepartmentsBg: '#ffffff',
+  homeDepartmentsText: '#111827',
+  homeDepartmentsMutedText: '#6b7280',
+  homeDepartmentsBorder: '#e5e7eb',
+  homeDepartmentsHoverBg: '#f8fafc',
+  homeDepartmentsHoverText: '#007185',
+  homeDepartmentsIcon: '#9ca3af',
+  whatsappGroupsBg: '#ffffff',
+  whatsappGroupsText: '#111827',
+  whatsappGroupsMutedText: '#6b7280',
+  whatsappGroupsBorder: '#e5e7eb',
+  whatsappGroupsLink: '#007185',
+  whatsappGroupsStoryRingStart: '#007600',
+  whatsappGroupsStoryRingMiddle: '#ff9900',
+  whatsappGroupsStoryRingEnd: '#c7511f',
 }
 
 function normalizeHex(value: string | null | undefined, fallback: string) {

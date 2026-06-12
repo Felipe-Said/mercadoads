@@ -32,12 +32,15 @@ export function BannerSlot({
   const hasText = Boolean(title || subtitle)
   const content = banner ? (
     <>
-      {banner.image ? (
-        <img
-          src={banner.image}
-          alt={title || 'Banner'}
-          className={`h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02] ${imageClassName}`}
-        />
+      {banner.image || banner.mobile_image ? (
+        <picture>
+          {banner.mobile_image && <source media="(max-width: 767px)" srcSet={banner.mobile_image} />}
+          <img
+            src={banner.image || banner.mobile_image || ''}
+            alt={title || 'Banner'}
+            className={`h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02] ${imageClassName}`}
+          />
+        </picture>
       ) : (
         <div className="h-full w-full" style={{ backgroundColor: banner.color }} />
       )}
@@ -109,12 +112,15 @@ export function Banners({ position = 'home_hero' }: { position?: BannerPosition 
                     className={`relative flex w-full flex-shrink-0 items-center justify-center overflow-hidden ${showText || !banner.image ? 'h-[240px] md:h-[320px]' : ''}`}
                     style={{ backgroundColor: banner.color }}
                   >
-                    {banner.image && (
-                      <img
-                        src={banner.image}
-                        alt={banner.title || 'Banner principal'}
-                        className={showText ? 'absolute inset-0 h-full w-full object-cover opacity-75' : 'relative block h-auto w-full object-contain'}
-                      />
+                    {(banner.image || banner.mobile_image) && (
+                      <picture>
+                        {banner.mobile_image && <source media="(max-width: 767px)" srcSet={banner.mobile_image} />}
+                        <img
+                          src={banner.image || banner.mobile_image || ''}
+                          alt={banner.title || 'Banner principal'}
+                          className={showText ? 'absolute inset-0 h-full w-full object-cover opacity-75' : 'relative block h-auto w-full object-contain'}
+                        />
+                      </picture>
                     )}
                     {showText && (
                       <>

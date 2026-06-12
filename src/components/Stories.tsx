@@ -20,13 +20,13 @@ export function Stories() {
   }, [])
 
   return (
-    <section className="layout-surface w-full rounded-sm px-4 py-3 shadow-sm md:px-5">
+    <section className="w-full rounded-sm border bg-[var(--layout-whatsapp-groups-bg)] px-4 py-3 text-[var(--layout-whatsapp-groups-text)] shadow-sm md:px-5" style={{ borderColor: 'var(--layout-whatsapp-groups-border)' }}>
       <div className="mb-2 flex items-center justify-between">
         <div>
-          <h2 className="text-[16px] font-bold text-[var(--layout-text-primary)]">Grupos do WhatsApp</h2>
-          <p className="text-xs text-[var(--layout-text-muted)]">Stories com comunidades, fornecedores e links verificados.</p>
+          <h2 className="text-[16px] font-bold text-[var(--layout-whatsapp-groups-text)]">Grupos do WhatsApp</h2>
+          <p className="text-xs text-[var(--layout-whatsapp-groups-muted-text)]">Stories com comunidades, fornecedores e links verificados.</p>
         </div>
-        <Link to="/groups" className="hidden text-sm font-semibold text-[var(--layout-link-color)] hover:text-[var(--layout-link-hover-color)] sm:block">Ver todos</Link>
+        <Link to="/groups" className="hidden text-sm font-semibold text-[var(--layout-whatsapp-groups-link)] hover:opacity-80 sm:block">Ver todos</Link>
       </div>
 
       <div className="flex min-h-[98px] items-start gap-4 overflow-x-auto pb-1 pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -48,7 +48,7 @@ export function Stories() {
               rel="noopener noreferrer"
               className="group/story flex w-[76px] shrink-0 flex-col items-center gap-2 outline-none"
             >
-              <div className="rounded-full p-[2px] transition group-hover/story:scale-105" style={{ background: 'linear-gradient(35deg, var(--layout-success-color), var(--layout-accent-color), var(--layout-link-hover-color))' }}>
+              <div className="rounded-full p-[2px] transition group-hover/story:scale-105" style={{ background: 'linear-gradient(35deg, var(--layout-whatsapp-groups-story-ring-start), var(--layout-whatsapp-groups-story-ring-middle), var(--layout-whatsapp-groups-story-ring-end))' }}>
                 <div className="flex h-[64px] w-[64px] items-center justify-center overflow-hidden rounded-full border-2 border-[var(--layout-surface-background)] bg-[var(--layout-subtle-background)]">
                   {group.image ? (
                     <img src={group.image} alt={group.name} className="h-full w-full object-cover" />
@@ -57,11 +57,11 @@ export function Stories() {
                   )}
                 </div>
               </div>
-              <span className="w-full truncate text-center text-[11px] font-semibold leading-tight text-[var(--layout-text-primary)] transition-colors group-hover/story:text-[var(--layout-link-color)]">{group.name}</span>
+              <span className="w-full truncate text-center text-[11px] font-semibold leading-tight text-[var(--layout-whatsapp-groups-text)] transition-colors group-hover/story:text-[var(--layout-whatsapp-groups-link)]">{group.name}</span>
             </a>
           ))
         ) : (
-          <div className="flex items-center gap-3 rounded-sm border border-dashed border-[var(--layout-border-color)] bg-[var(--layout-subtle-background)] px-4 py-3 text-sm text-[var(--layout-text-muted)]">
+          <div className="flex items-center gap-3 rounded-sm border border-dashed bg-[var(--layout-subtle-background)] px-4 py-3 text-sm text-[var(--layout-whatsapp-groups-muted-text)]" style={{ borderColor: 'var(--layout-whatsapp-groups-border)' }}>
             <MessageCircle className="h-5 w-5 text-[var(--layout-success-color)]" />
             Nenhum grupo disponivel no momento.
           </div>

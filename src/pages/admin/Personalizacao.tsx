@@ -514,6 +514,27 @@ export function Personalizacao() {
                   <ColorControl label="Estrelas/avaliacao" value={layoutTheme.ratingColor} onChange={(value) => updateLayoutTheme('ratingColor', value)} />
                 </TokenGroup>
 
+                <TokenGroup title="Home - Departamentos">
+                  <ColorControl label="Fundo da barra Departamentos" value={layoutTheme.homeDepartmentsBg} onChange={(value) => updateLayoutTheme('homeDepartmentsBg', value)} />
+                  <ColorControl label="Texto da barra Departamentos" value={layoutTheme.homeDepartmentsText} onChange={(value) => updateLayoutTheme('homeDepartmentsText', value)} />
+                  <ColorControl label="Texto secundario" value={layoutTheme.homeDepartmentsMutedText} onChange={(value) => updateLayoutTheme('homeDepartmentsMutedText', value)} />
+                  <ColorControl label="Borda/divisoria" value={layoutTheme.homeDepartmentsBorder} onChange={(value) => updateLayoutTheme('homeDepartmentsBorder', value)} />
+                  <ColorControl label="Item hover - fundo" value={layoutTheme.homeDepartmentsHoverBg} onChange={(value) => updateLayoutTheme('homeDepartmentsHoverBg', value)} />
+                  <ColorControl label="Item hover - texto" value={layoutTheme.homeDepartmentsHoverText} onChange={(value) => updateLayoutTheme('homeDepartmentsHoverText', value)} />
+                  <ColorControl label="Setas dos itens" value={layoutTheme.homeDepartmentsIcon} onChange={(value) => updateLayoutTheme('homeDepartmentsIcon', value)} />
+                </TokenGroup>
+
+                <TokenGroup title="Home - Grupos do WhatsApp">
+                  <ColorControl label="Fundo do bloco" value={layoutTheme.whatsappGroupsBg} onChange={(value) => updateLayoutTheme('whatsappGroupsBg', value)} />
+                  <ColorControl label="Texto principal" value={layoutTheme.whatsappGroupsText} onChange={(value) => updateLayoutTheme('whatsappGroupsText', value)} />
+                  <ColorControl label="Texto secundario" value={layoutTheme.whatsappGroupsMutedText} onChange={(value) => updateLayoutTheme('whatsappGroupsMutedText', value)} />
+                  <ColorControl label="Borda do bloco" value={layoutTheme.whatsappGroupsBorder} onChange={(value) => updateLayoutTheme('whatsappGroupsBorder', value)} />
+                  <ColorControl label="Link Ver todos" value={layoutTheme.whatsappGroupsLink} onChange={(value) => updateLayoutTheme('whatsappGroupsLink', value)} />
+                  <ColorControl label="Aro stories - inicio" value={layoutTheme.whatsappGroupsStoryRingStart} onChange={(value) => updateLayoutTheme('whatsappGroupsStoryRingStart', value)} />
+                  <ColorControl label="Aro stories - meio" value={layoutTheme.whatsappGroupsStoryRingMiddle} onChange={(value) => updateLayoutTheme('whatsappGroupsStoryRingMiddle', value)} />
+                  <ColorControl label="Aro stories - fim" value={layoutTheme.whatsappGroupsStoryRingEnd} onChange={(value) => updateLayoutTheme('whatsappGroupsStoryRingEnd', value)} />
+                </TokenGroup>
+
                 <TokenGroup title="Sidebar dos painéis">
                   <ColorControl label="Fundo da sidebar" value={layoutTheme.dashboardSidebarBg} onChange={(value) => updateLayoutTheme('dashboardSidebarBg', value)} />
                   <ColorControl label="Fundo do topo da sidebar" value={layoutTheme.dashboardSidebarHeaderBg} onChange={(value) => updateLayoutTheme('dashboardSidebarHeaderBg', value)} />
