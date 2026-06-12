@@ -8,6 +8,7 @@ import { useCart } from '../contexts/CartContext'
 import { formatCurrency, getProduct, type Product } from '../lib/data'
 import { createWestPayPixInOrThrow, validateWestPayCustomer } from '../lib/westpay'
 import { supabase } from '../lib/supabase'
+import { getWalletBalances } from '../lib/wallet'
 
 type Question = {
   id: string
@@ -43,6 +44,8 @@ export function ProductPage() {
   const [buyerName, setBuyerName] = useState('')
   const [buyerPhone, setBuyerPhone] = useState('')
   const [buyerDocument, setBuyerDocument] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'wallet'>('pix')
+  const [walletBalance, setWalletBalance] = useState(0)
 
   useEffect(() => {
     if (!id) return
@@ -71,6 +74,14 @@ export function ProductPage() {
     setBuyerName(profile?.full_name ?? user?.user_metadata?.full_name ?? '')
     setBuyerPhone(profile?.phone ?? '')
   }, [profile?.full_name, profile?.phone, user?.user_metadata?.full_name])
+
+  useEffect(() => {
+    if (!user) {
+      setWalletBalance(0)
+      return
+    }
+    getWalletBalances(user.id).then((balances) => setWalletBalance(balances.purchaseBalance)).catch(console.error)
+  }, [user])
 
   const handleAddToCart = async () => {
     if (!product) return
@@ -105,12 +116,22 @@ export function ProductPage() {
     let saleId: string | null = null
 
     try {
-      const westPayCustomer = validateWestPayCustomer({
-        name: buyerName,
-        email: user.email ?? '',
-        phone: buyerPhone,
-        documentNumber: buyerDocument,
-      })
+      const westPayCustomer = paymentMethod === 'pix'
+        ? validateWestPayCustomer({
+          name: buyerName,
+          email: user.email ?? '',
+          phone: buyerPhone,
+          documentNumber: buyerDocument,
+        })
+        : null
+
+      if (paymentMethod === 'wallet') {
+        const balances = await getWalletBalances(user.id)
+        setWalletBalance(balances.purchaseBalance)
+        if (balances.purchaseBalance < product.price) {
+          throw new Error('Você não possui fundos suficiente')
+        }
+      }
 
       const { data: saleData, error: saleError } = await supabase.from('sales').insert({
         product_id: Number(product.id),
@@ -125,15 +146,24 @@ export function ProductPage() {
       saleId = saleData?.id ? String(saleData.id) : null
       if (!saleId) throw new Error('Nao foi possivel gerar o pedido.')
 
-      await createWestPayPixInOrThrow({
-        saleId,
-        amount: product.price,
-        customer: westPayCustomer,
-        itemTitle: product.title,
-      })
+      if (paymentMethod === 'wallet') {
+        const { error: spendError } = await supabase.from('wallet_spends').insert({
+          user_id: user.id,
+          sale_id: saleId,
+          amount: product.price,
+        })
+        if (spendError) throw spendError
+      } else if (westPayCustomer) {
+        await createWestPayPixInOrThrow({
+          saleId,
+          amount: product.price,
+          customer: westPayCustomer,
+          itemTitle: product.title,
+        })
+      }
     } catch (err) {
-      if (saleId) await supabase.from('sales').delete().eq('id', saleId)
-      setError(err instanceof Error ? err.message : 'Nao foi possivel gerar o Pix.')
+      if (saleId && paymentMethod === 'pix') await supabase.from('sales').delete().eq('id', saleId)
+      setError(err instanceof Error ? err.message : 'Nao foi possivel concluir a compra.')
       setBuying(false)
       return
     }
@@ -365,6 +395,24 @@ export function ProductPage() {
             <div className="rounded-sm border border-gray-200 bg-white p-5 shadow-sm">
               {user && (
                 <div className="mb-5 space-y-3">
+                  <div className="rounded-sm border border-gray-200 p-3">
+                    <p className="mb-2 text-sm font-bold text-gray-700">Forma de pagamento</p>
+                    <div className="grid gap-2">
+                      <label className={`flex cursor-pointer items-center justify-between rounded-sm border p-3 text-sm ${paymentMethod === 'pix' ? 'border-[var(--layout-accent-color)] bg-[var(--layout-subtle-background)]' : 'border-gray-200'}`}>
+                        <span className="font-semibold text-[var(--layout-text-primary)]">Gerar Pix agora</span>
+                        <input type="radio" checked={paymentMethod === 'pix'} onChange={() => setPaymentMethod('pix')} />
+                      </label>
+                      <label className={`flex cursor-pointer items-center justify-between rounded-sm border p-3 text-sm ${paymentMethod === 'wallet' ? 'border-[var(--layout-accent-color)] bg-[var(--layout-subtle-background)]' : 'border-gray-200'}`}>
+                        <span>
+                          <span className="block font-semibold text-[var(--layout-text-primary)]">Fundos da carteira</span>
+                          <span className="text-xs text-gray-500">Saldo: {formatCurrency(walletBalance)}</span>
+                        </span>
+                        <input type="radio" checked={paymentMethod === 'wallet'} onChange={() => setPaymentMethod('wallet')} />
+                      </label>
+                    </div>
+                  </div>
+                  {paymentMethod === 'pix' && (
+                    <>
                   <div>
                     <label className="mb-1 block text-sm font-bold text-gray-700">Nome completo</label>
                     <input
@@ -392,6 +440,8 @@ export function ProductPage() {
                       placeholder="Somente numeros"
                     />
                   </div>
+                    </>
+                  )}
                 </div>
               )}
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Copy, Plus, Wallet, Banknote, CheckCircle2 } from 'lucide-react'
 import { UserLayout } from '../../components/layouts/UserLayout'
 import { Card, CardContent } from '../../components/ui/card'
@@ -8,6 +8,7 @@ import { supabase } from '../../lib/supabase'
 import { formatCurrency } from '../../lib/data'
 import { createWestPayWalletDepositPixIn, validateWestPayCustomer } from '../../lib/westpay'
 import { PixQrCode } from '../../components/PixQrCode'
+import { getWalletBalances, type WalletBalances } from '../../lib/wallet'
 
 type WalletDeposit = {
   id: number
@@ -34,6 +35,7 @@ export function Resumo() {
   const { user, profile } = useAuth()
   const [deposits, setDeposits] = useState<WalletDeposit[]>([])
   const [withdrawals, setWithdrawals] = useState<WalletWithdrawal[]>([])
+  const [balances, setBalances] = useState<WalletBalances>({ purchaseBalance: 0, withdrawBalance: 0, lockedForWithdrawal: 0, pendingDeposit: 0 })
   const [withdrawalFeePercent, setWithdrawalFeePercent] = useState(5)
   const [depositAmount, setDepositAmount] = useState('')
   const [depositName, setDepositName] = useState('')
@@ -71,6 +73,7 @@ export function Resumo() {
       })) as WalletWithdrawal[])
     }
     if (!settingsResult.error) setWithdrawalFeePercent(Number(settingsResult.data?.wallet_withdrawal_fee_percent ?? 5))
+    setBalances(await getWalletBalances(user.id))
   }
 
   useEffect(() => {
@@ -80,24 +83,6 @@ export function Resumo() {
     setDestinationName(profile?.full_name ?? '')
     loadWallet().catch(console.error)
   }, [user, profile?.full_name, profile?.phone])
-
-  const walletStats = useMemo(() => {
-    const now = Date.now()
-    const paidDeposits = deposits.filter((deposit) => deposit.status === 'paid')
-    const availableDeposits = paidDeposits.filter((deposit) => deposit.available_at && new Date(deposit.available_at).getTime() <= now)
-    const lockedDeposits = paidDeposits.filter((deposit) => !deposit.available_at || new Date(deposit.available_at).getTime() > now)
-    const pendingDeposits = deposits.filter((deposit) => deposit.status === 'pending')
-    const reservedWithdrawals = withdrawals
-      .filter((withdrawal) => ['pending', 'paid'].includes(withdrawal.status))
-      .reduce((sum, withdrawal) => sum + Number(withdrawal.gross_amount ?? withdrawal.amount ?? 0), 0)
-    const available = Math.max(availableDeposits.reduce((sum, deposit) => sum + deposit.amount, 0) - reservedWithdrawals, 0)
-
-    return {
-      available,
-      locked: lockedDeposits.reduce((sum, deposit) => sum + deposit.amount, 0),
-      pending: pendingDeposits.reduce((sum, deposit) => sum + deposit.amount, 0),
-    }
-  }, [deposits, withdrawals])
 
   const handleCopyPix = async (deposit: WalletDeposit) => {
     const value = deposit.payment_qrcode_text || deposit.payment_qrcode
@@ -156,7 +141,7 @@ export function Resumo() {
       return
     }
 
-    if (grossAmount > walletStats.available) {
+    if (grossAmount > balances.withdrawBalance) {
       setWithdrawMessage('Saldo insuficiente.')
       return
     }
@@ -211,16 +196,16 @@ export function Resumo() {
 
             <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[520px]">
               <div className="rounded-sm border border-green-100 bg-green-50 p-4">
-                <p className="text-xs font-bold uppercase text-green-700">Disponivel</p>
-                <p className="mt-1 text-2xl font-bold text-green-700">{formatCurrency(walletStats.available)}</p>
+                <p className="text-xs font-bold uppercase text-green-700">Para compras</p>
+                <p className="mt-1 text-2xl font-bold text-green-700">{formatCurrency(balances.purchaseBalance)}</p>
               </div>
               <div className="rounded-sm border border-yellow-100 bg-yellow-50 p-4">
-                <p className="text-xs font-bold uppercase text-yellow-700">A liberar</p>
-                <p className="mt-1 text-2xl font-bold text-yellow-700">{formatCurrency(walletStats.locked)}</p>
+                <p className="text-xs font-bold uppercase text-yellow-700">Para saque</p>
+                <p className="mt-1 text-2xl font-bold text-yellow-700">{formatCurrency(balances.withdrawBalance)}</p>
               </div>
               <div className="rounded-sm border border-blue-100 bg-blue-50 p-4">
                 <p className="text-xs font-bold uppercase text-blue-700">Pendente</p>
-                <p className="mt-1 text-2xl font-bold text-blue-700">{formatCurrency(walletStats.pending)}</p>
+                <p className="mt-1 text-2xl font-bold text-blue-700">{formatCurrency(balances.pendingDeposit)}</p>
               </div>
             </div>
           </CardContent>
@@ -281,7 +266,7 @@ export function Resumo() {
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-ml-dark">Solicitar saque</h2>
-                  <p className="text-sm text-gray-500">Valor disponivel: {formatCurrency(walletStats.available)}</p>
+                  <p className="text-sm text-gray-500">Valor disponivel: {formatCurrency(balances.withdrawBalance)}</p>
                 </div>
               </div>
 

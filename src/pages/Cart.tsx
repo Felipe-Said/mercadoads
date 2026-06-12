@@ -5,6 +5,7 @@ import { Trash2, Plus, Minus, ShoppingBag, ShieldCheck, CreditCard, Clock3 } fro
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { createWestPayPixInOrThrow, validateWestPayCustomer } from '../lib/westpay'
+import { getWalletBalances } from '../lib/wallet'
 
 export function Cart() {
   const navigate = useNavigate()
@@ -15,6 +16,8 @@ export function Cart() {
   const [buyerName, setBuyerName] = useState('')
   const [buyerPhone, setBuyerPhone] = useState('')
   const [buyerDocument, setBuyerDocument] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'wallet'>('pix')
+  const [walletBalance, setWalletBalance] = useState(0)
 
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0)
   const total = subtotal
@@ -23,6 +26,14 @@ export function Cart() {
     setBuyerName(profile?.full_name ?? user?.user_metadata?.full_name ?? '')
     setBuyerPhone(profile?.phone ?? '')
   }, [profile?.full_name, profile?.phone, user?.user_metadata?.full_name])
+
+  useEffect(() => {
+    if (!user) {
+      setWalletBalance(0)
+      return
+    }
+    getWalletBalances(user.id).then((balances) => setWalletBalance(balances.purchaseBalance)).catch(console.error)
+  }, [user])
 
   const handleContinuePurchase = async () => {
     if (checkoutLoading) return
@@ -39,12 +50,22 @@ export function Cart() {
     const createdSaleIds: string[] = []
 
     try {
-      const westPayCustomer = validateWestPayCustomer({
-        name: buyerName,
-        email: user.email ?? '',
-        phone: buyerPhone,
-        documentNumber: buyerDocument,
-      })
+      const westPayCustomer = paymentMethod === 'pix'
+        ? validateWestPayCustomer({
+          name: buyerName,
+          email: user.email ?? '',
+          phone: buyerPhone,
+          documentNumber: buyerDocument,
+        })
+        : null
+
+      if (paymentMethod === 'wallet') {
+        const balances = await getWalletBalances(user.id)
+        setWalletBalance(balances.purchaseBalance)
+        if (balances.purchaseBalance < total) {
+          throw new Error('Você não possui fundos suficiente')
+        }
+      }
 
       const productIds = cart.map((item) => item.id)
       const { data: products, error } = await supabase
@@ -79,20 +100,27 @@ export function Cart() {
         if (!saleId) throw new Error('Nao foi possivel gerar o pedido.')
         createdSaleIds.push(saleId)
 
-        await createWestPayPixInOrThrow({
-          saleId,
-          amount,
-          customer: westPayCustomer,
-          itemTitle: product.title,
-        })
+        if (paymentMethod === 'wallet') {
+          const { error: spendError } = await supabase.from('wallet_spends').insert({
+            user_id: user.id,
+            sale_id: saleId,
+            amount,
+          })
+          if (spendError) throw spendError
+        } else if (westPayCustomer) {
+          await createWestPayPixInOrThrow({
+            saleId,
+            amount,
+            customer: westPayCustomer,
+            itemTitle: product.title,
+          })
+        }
       }
 
       await clearCart()
       navigate('/painel/usuario/compras', { state: { checkoutSaleIds: createdSaleIds } })
     } catch (err) {
-      if (createdSaleIds.length > 0) {
-        await supabase.from('sales').delete().in('id', createdSaleIds)
-      }
+      if (createdSaleIds.length > 0 && paymentMethod === 'pix') await supabase.from('sales').delete().in('id', createdSaleIds)
       setCheckoutError(err instanceof Error ? err.message : 'Nao foi possivel concluir a compra.')
     } finally {
       setCheckoutLoading(false)
@@ -223,7 +251,24 @@ export function Cart() {
                 </div>
 
                 <div className="mt-5 space-y-3">
-                  <div>
+                  <div className="rounded-sm border border-gray-200 p-3">
+                    <p className="mb-2 text-sm font-bold text-gray-700">Forma de pagamento</p>
+                    <div className="grid gap-2">
+                      <label className={`flex cursor-pointer items-center justify-between rounded-sm border p-3 text-sm ${paymentMethod === 'pix' ? 'border-[var(--layout-accent-color)] bg-[var(--layout-subtle-background)]' : 'border-gray-200'}`}>
+                        <span className="font-semibold text-[var(--layout-text-primary)]">Gerar Pix agora</span>
+                        <input type="radio" checked={paymentMethod === 'pix'} onChange={() => setPaymentMethod('pix')} />
+                      </label>
+                      <label className={`flex cursor-pointer items-center justify-between rounded-sm border p-3 text-sm ${paymentMethod === 'wallet' ? 'border-[var(--layout-accent-color)] bg-[var(--layout-subtle-background)]' : 'border-gray-200'}`}>
+                        <span>
+                          <span className="block font-semibold text-[var(--layout-text-primary)]">Fundos da carteira</span>
+                          <span className="text-xs text-gray-500">Saldo: R$ {walletBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                        </span>
+                        <input type="radio" checked={paymentMethod === 'wallet'} onChange={() => setPaymentMethod('wallet')} />
+                      </label>
+                    </div>
+                  </div>
+
+                  {paymentMethod === 'pix' && <div>
                     <label className="mb-1 block text-sm font-bold text-gray-700">Nome completo</label>
                     <input
                       value={buyerName}
@@ -231,8 +276,8 @@ export function Cart() {
                       className="h-11 w-full rounded-sm border border-gray-300 px-3 text-sm focus:border-[var(--layout-accent-color)] focus:outline-none focus:ring-2 focus:ring-[var(--layout-accent-color)]"
                       placeholder="Nome do comprador"
                     />
-                  </div>
-                  <div>
+                  </div>}
+                  {paymentMethod === 'pix' && <div>
                     <label className="mb-1 block text-sm font-bold text-gray-700">WhatsApp</label>
                     <input
                       value={buyerPhone}
@@ -240,8 +285,8 @@ export function Cart() {
                       className="h-11 w-full rounded-sm border border-gray-300 px-3 text-sm focus:border-[var(--layout-accent-color)] focus:outline-none focus:ring-2 focus:ring-[var(--layout-accent-color)]"
                       placeholder="DDD + numero"
                     />
-                  </div>
-                  <div>
+                  </div>}
+                  {paymentMethod === 'pix' && <div>
                     <label className="mb-1 block text-sm font-bold text-gray-700">CPF ou CNPJ</label>
                     <input
                       value={buyerDocument}
@@ -249,7 +294,7 @@ export function Cart() {
                       className="h-11 w-full rounded-sm border border-gray-300 px-3 text-sm focus:border-[var(--layout-accent-color)] focus:outline-none focus:ring-2 focus:ring-[var(--layout-accent-color)]"
                       placeholder="Somente numeros"
                     />
-                  </div>
+                  </div>}
                 </div>
 
                 {checkoutError && <p className="mt-4 rounded-sm border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">{checkoutError}</p>}
