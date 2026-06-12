@@ -270,9 +270,8 @@ async function provisionProxySale(supabaseAdmin: ReturnType<typeof createClient>
     ? await callProxyProvider(settings, '/sub-users', {
       username,
       password,
-      proxy_type: serviceType,
+      service_type: serviceType,
       traffic_limit: trafficLimitGb,
-      traffic_limit_unit: 'gb',
       auto_disable: offer?.auto_disable ?? true,
     })
     : { success: false as const, configured: false as const, data: null }

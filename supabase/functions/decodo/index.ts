@@ -128,6 +128,23 @@ function extractResidentialTrafficLimit(data: unknown) {
   return limits.length > 0 ? Math.max(...limits) : null
 }
 
+function extractAllocatedTraffic(data: unknown) {
+  const root = asRecord(data)
+  const candidates: unknown[] = []
+  if (Array.isArray(data)) candidates.push(...data)
+  if (Array.isArray(root?.data)) candidates.push(...root.data)
+  if (Array.isArray(root?.items)) candidates.push(...root.items)
+  if (Array.isArray(root?.results)) candidates.push(...root.results)
+  if (Array.isArray(root?.statistics)) candidates.push(...root.statistics)
+  if (candidates.length === 0) candidates.push(data)
+
+  const values = candidates.flatMap((item) => findNumbersByKey(item, /(traffic|traffic.*used|used.*traffic|consumed.*traffic|bytes|gb)$/i))
+  if (values.length === 0) return 0
+
+  const total = values.reduce((sum, value) => sum + value, 0)
+  return total > 1024 ? total / 1024 / 1024 / 1024 : total
+}
+
 function makePassword() {
   const random = crypto.getRandomValues(new Uint32Array(3))
   return `Cm_9${random[0].toString(36)}A+z${random[1].toString(36)}`.slice(0, 20)
@@ -212,14 +229,17 @@ async function getCapacity(settings: ProviderSettings) {
   const subscriptions = await callProvider(settings, settings.products_path || '/subscriptions')
   if (subscriptions.configured === false || subscriptions.success === false) return subscriptions
 
-  let allocated = await callProvider(settings, '/allocated-traffic-limit?service_type=residential_proxies')
-  if (allocated.configured !== false && allocated.success === false) {
-    allocated = await callProvider(settings, '/allocated-traffic-limit')
-  }
+  const allocated = await callProvider(settings, 'https://api.decodo.com/api/v2/statistics/traffic', {
+    method: 'POST',
+    body: JSON.stringify({
+      proxyType: 'residential_proxies',
+      groupBy: 'proxy_user',
+    }),
+  })
   if (allocated.configured === false || allocated.success === false) return allocated
 
   const totalLimit = extractResidentialTrafficLimit(subscriptions.data)
-  const allocatedLimit = toNumber(asRecord(allocated.data)?.allocated_traffic_limit) ?? 0
+  const allocatedLimit = extractAllocatedTraffic(allocated.data)
 
   if (totalLimit === null) {
     return {
@@ -299,9 +319,8 @@ async function provisionProxySale(supabaseAdmin: ReturnType<typeof createClient>
     body: JSON.stringify({
       username,
       password,
-      proxy_type: serviceType,
+      service_type: serviceType,
       traffic_limit: trafficLimitGb,
-      traffic_limit_unit: 'gb',
       auto_disable: offer?.auto_disable ?? true,
     }),
   })
