@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Copy, Globe2, LockKeyhole, RefreshCw, Search, Server, ShieldCheck, Wifi } from 'lucide-react'
+import { Copy, Globe2, LockKeyhole, RefreshCw, Search, Server, Wifi } from 'lucide-react'
 import { createProxyTopupSale, getDecodoProxyCatalog, getMyProxyDeliveries, type DecodoProxyDelivery, type DecodoProxyOffer } from '../lib/decodo'
 import { useAuth } from '../contexts/AuthContext'
 import { createWestPayPixInOrThrow, validateWestPayCustomer } from '../lib/westpay'
@@ -321,24 +321,13 @@ export function Proxy() {
   return (
     <div className="min-h-screen bg-[var(--layout-page-background)] pb-12 text-[var(--layout-text-primary)]">
       <section className="bg-[var(--layout-dashboard-sidebar-header-bg)] text-[var(--layout-dashboard-sidebar-text)]">
-        <div className="mx-auto max-w-[1440px] px-4 py-8">
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--layout-dashboard-sidebar-kicker-text)]">Cookie Proxy</p>
-              <h1 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">Proxies disponiveis</h1>
-              <p className="mt-3 max-w-2xl text-sm text-[var(--layout-dashboard-sidebar-muted-text)]">
-                Catalogo de proxies com disponibilidade atualizada automaticamente.
-              </p>
-            </div>
-            <div className="layout-surface rounded-sm p-4 text-[var(--layout-text-primary)] shadow-sm">
-              <div className="flex gap-3">
-                <ShieldCheck className="h-9 w-9 text-[var(--layout-success-color)]" />
-                <div>
-                  <p className="font-bold">Conexao protegida</p>
-                  <p className="mt-1 text-sm text-[var(--layout-text-muted)]">As credenciais ficam protegidas e as consultas passam pela estrutura da plataforma.</p>
-                </div>
-              </div>
-            </div>
+        <div className="mx-auto max-w-[1440px] px-4 py-5">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--layout-dashboard-sidebar-kicker-text)]">Cookie Proxy</p>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">Proxies disponiveis</h1>
+            <p className="mt-2 max-w-2xl text-sm text-[var(--layout-dashboard-sidebar-muted-text)]">
+              Catalogo de proxies com disponibilidade atualizada automaticamente.
+            </p>
           </div>
         </div>
       </section>
