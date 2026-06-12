@@ -18,6 +18,7 @@ const NAV_ITEMS: NavItem[] = [
   { title: "Vendas e Entregas", href: "/painel/admin/entregas", icon: PackageOpen },
   { title: "Meus Afiliados", href: "/painel/admin/afiliados", icon: Users },
   { title: "Central de Perguntas", href: "/painel/admin/perguntas", icon: MessageSquare },
+  { title: "Minha Conta", href: "/painel/admin/minha-conta", icon: Settings },
 ]
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {

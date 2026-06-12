@@ -5,6 +5,7 @@ import { useAuth } from "../contexts/AuthContext"
 import { useCart } from "../contexts/CartContext"
 import { supabase } from "../lib/supabase"
 import { PlatformLogo } from "./PlatformLogo"
+import { formatCurrency } from "../lib/data"
 
 type HeaderSettings = {
   headerPromo: {
@@ -37,10 +38,11 @@ const defaultSettings: HeaderSettings = {
 }
 
 export function Header() {
-  const { role, logout } = useAuth()
+  const { user, profile, role, logout } = useAuth()
   const { totalItems } = useCart()
   const navigate = useNavigate()
   const [settings, setSettings] = useState<HeaderSettings>(defaultSettings)
+  const [walletBalance, setWalletBalance] = useState(0)
 
   useEffect(() => {
     let mounted = true
@@ -83,10 +85,58 @@ export function Header() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!user) {
+      setWalletBalance(0)
+      return
+    }
+
+    let mounted = true
+
+    const loadWalletBalance = async () => {
+      if (role === 'user') {
+        if (mounted) setWalletBalance(0)
+        return
+      }
+
+      const [{ data: sales, error: salesError }, { data: withdrawals, error: withdrawalsError }] = await Promise.all([
+        supabase
+          .from('sales')
+          .select('amount, claim_until')
+          .eq('seller_id', user.id)
+          .eq('status', 'paid'),
+        supabase
+          .from('withdrawals')
+          .select('amount, status')
+          .eq('user_id', user.id)
+          .in('status', ['pending', 'paid']),
+      ])
+
+      if (salesError || withdrawalsError || !mounted) return
+
+      const now = Date.now()
+      const available = (sales ?? [])
+        .filter((sale) => !sale.claim_until || new Date(sale.claim_until).getTime() <= now)
+        .reduce((sum, sale) => sum + Number(sale.amount ?? 0), 0)
+      const withdrawn = (withdrawals ?? []).reduce((sum, withdrawal) => sum + Number(withdrawal.amount ?? 0), 0)
+      setWalletBalance(Math.max(available - withdrawn, 0))
+    }
+
+    loadWalletBalance().catch(console.error)
+
+    return () => {
+      mounted = false
+    }
+  }, [role, user])
+
   const handleLogout = async () => {
     await logout()
     navigate('/', { replace: true })
   }
+
+  const firstName = profile?.full_name?.trim().split(/\s+/)[0] || user?.email?.split('@')[0] || 'usuario'
+  const panelLink = role === 'admin' ? '/painel/admin' : role === 'seller' ? '/painel/vendedor' : '/painel/usuario'
+  const panelLabel = role === 'admin' ? 'Painel Admin' : role === 'seller' ? 'Painel do Vendedor' : 'Meu Perfil'
 
   return (
     <header
@@ -193,23 +243,28 @@ export function Header() {
                 </Link>
               </>
             ) : (
-              <>
-                {role === 'user' && (
-                  <>
-                    <Link to="/painel/usuario/compras" className="transition-opacity hover:opacity-75">Minhas Compras</Link>
-                    <Link to="/painel/usuario" className="font-medium transition-opacity hover:opacity-75">Meu Perfil</Link>
-                  </>
-                )}
-                {role === 'seller' && (
-                  <Link to="/painel/vendedor" className="font-medium transition-opacity hover:opacity-75">Painel do Vendedor</Link>
-                )}
-                {role === 'admin' && (
-                  <Link to="/painel/admin" className="font-medium text-[var(--layout-header-account-link-color)] transition-opacity hover:opacity-75">Painel Admin</Link>
-                )}
+              <div className="flex items-center gap-3">
+                <Link to={panelLink} className="font-medium text-[var(--layout-header-account-link-color)] transition-opacity hover:opacity-75">{panelLabel}</Link>
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 overflow-hidden rounded-full border border-white/30 bg-white/20">
+                    {profile?.avatar_url ? (
+                      <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-xs font-bold uppercase">
+                        {firstName.slice(0, 1)}
+                      </div>
+                    )}
+                  </div>
+                  <span className="max-w-[140px] truncate font-medium">Ola, {firstName}</span>
+                </div>
+                <div className="rounded-sm border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold shadow-sm">
+                  <span className="mr-1 opacity-75">Carteira</span>
+                  <span>{formatCurrency(walletBalance)}</span>
+                </div>
                 <button onClick={handleLogout} className="flex items-center gap-1 text-[var(--layout-header-logout-color)] transition-opacity hover:opacity-75">
                   <LogOut className="h-3 w-3" /> Sair
                 </button>
-              </>
+              </div>
             )}
           </div>
         </div>

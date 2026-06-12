@@ -11,7 +11,7 @@ interface AuthContextType {
   loading: boolean
   signIn: (email: string, password: string) => Promise<Profile | null>
   signUp: (fullName: string, email: string, password: string, role?: Role) => Promise<void>
-  updateProfile: (updates: Partial<Pick<Profile, 'full_name' | 'phone' | 'pix_key'>>) => Promise<void>
+  updateProfile: (updates: Partial<Pick<Profile, 'full_name' | 'phone' | 'pix_key' | 'avatar_url'>>) => Promise<void>
   logout: () => Promise<void>
 }
 
@@ -42,6 +42,7 @@ async function ensureProfile(user: User) {
     full_name: (user.user_metadata?.full_name as string | undefined) ?? null,
     email: user.email ?? null,
     phone: null,
+    avatar_url: null,
     pix_key: null,
     status: 'active',
     store_name: null,

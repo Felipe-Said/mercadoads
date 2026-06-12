@@ -8,6 +8,7 @@ export interface Profile {
   full_name: string | null
   email?: string | null
   phone?: string | null
+  avatar_url?: string | null
   pix_key?: string | null
   status?: 'active' | 'blocked'
   store_name?: string | null

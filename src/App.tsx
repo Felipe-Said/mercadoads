@@ -71,6 +71,7 @@ function App() {
           <Route path="/painel/vendedor/financeiro" element={<ProtectedRoute allowedRoles={['seller']}><Financeiro /></ProtectedRoute>} />
           <Route path="/painel/vendedor/ads" element={<ProtectedRoute allowedRoles={['seller']}><AdsManagerSeller /></ProtectedRoute>} />
           <Route path="/painel/vendedor/afiliados" element={<ProtectedRoute allowedRoles={['seller']}><AfiliadosSeller /></ProtectedRoute>} />
+          <Route path="/painel/vendedor/configuracoes" element={<ProtectedRoute allowedRoles={['seller']}><Configuracoes /></ProtectedRoute>} />
 
           <Route path="/painel/admin" element={<ProtectedRoute allowedRoles={['admin']}><DashboardGlobal /></ProtectedRoute>} />
           <Route path="/painel/admin/usuarios" element={<ProtectedRoute allowedRoles={['admin']}><Usuarios /></ProtectedRoute>} />
@@ -85,6 +86,7 @@ function App() {
           <Route path="/painel/admin/entregas" element={<ProtectedRoute allowedRoles={['admin']}><VendasEntregasAdmin /></ProtectedRoute>} />
           <Route path="/painel/admin/perguntas" element={<ProtectedRoute allowedRoles={['admin']}><PerguntasAdmin /></ProtectedRoute>} />
           <Route path="/painel/admin/afiliados" element={<ProtectedRoute allowedRoles={['admin']}><AfiliadosAdmin /></ProtectedRoute>} />
+          <Route path="/painel/admin/minha-conta" element={<ProtectedRoute allowedRoles={['admin']}><Configuracoes /></ProtectedRoute>} />
         </Routes>
       </main>
       

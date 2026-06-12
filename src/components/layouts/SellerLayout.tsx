@@ -1,6 +1,6 @@
 import React from 'react'
 import { DashboardLayout, NavItem } from '../DashboardLayout'
-import { Store, DollarSign, PackageOpen, Tag, Megaphone, Users } from 'lucide-react'
+import { Store, DollarSign, PackageOpen, Tag, Megaphone, Users, Settings } from 'lucide-react'
 
 const NAV_ITEMS: NavItem[] = [
   { title: "Resumo de Vendas", href: "/painel/vendedor", icon: Store },
@@ -9,6 +9,7 @@ const NAV_ITEMS: NavItem[] = [
   { title: "Meus Afiliados", href: "/painel/vendedor/afiliados", icon: Users },
   { title: "Financeiro", href: "/painel/vendedor/financeiro", icon: DollarSign },
   { title: "Ads Manager", href: "/painel/vendedor/ads", icon: Megaphone },
+  { title: "ConfiguraÃ§Ãµes", href: "/painel/vendedor/configuracoes", icon: Settings },
 ]
 
 export function SellerLayout({ children }: { children: React.ReactNode }) {
