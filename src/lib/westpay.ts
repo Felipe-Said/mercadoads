@@ -284,6 +284,28 @@ export async function createWestPayPixOut(payload: {
   })
 }
 
+export async function createWestPayWalletDepositPixIn(payload: {
+  depositId: string
+  amount: number
+  customer: WestPayCustomer
+}) {
+  const customer = {
+    name: payload.customer.name,
+    email: payload.customer.email,
+    phone: payload.customer.phone,
+    document: {
+      number: payload.customer.documentNumber,
+      type: payload.customer.documentType,
+    },
+  }
+
+  return invokeWestPayStrict('create_wallet_deposit_pix_in', {
+    depositId: payload.depositId,
+    amount: payload.amount,
+    customer,
+  })
+}
+
 export async function westPayBalance() {
   return invokeWestPay('balance')
 }
