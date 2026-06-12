@@ -179,13 +179,13 @@ function unwrapPayload(value: unknown): Record<string, unknown> {
 
 function makeProxyPassword() {
   const random = crypto.getRandomValues(new Uint32Array(3))
-  return `Cm_9${random[0].toString(36)}A+${random[1].toString(36)}z${random[2].toString(36)}`.slice(0, 24)
+  return `Cm_9${random[0].toString(36)}A+z${random[1].toString(36)}`.slice(0, 20)
 }
 
 function makeProxyUsername(saleId: string, buyerId: string) {
-  const compactSale = saleId.replace(/\D/g, '').slice(-10).padStart(6, '0')
+  const compactSale = saleId.replace(/\D/g, '').slice(-8).padStart(6, '0')
   const compactBuyer = buyerId.replace(/-/g, '').slice(0, 8).toLowerCase()
-  return `cm_${compactSale}_${compactBuyer}`.slice(0, 64)
+  return `cm${compactSale}${compactBuyer}`.slice(0, 20)
 }
 
 async function loadGatewaySettings(supabaseAdmin: ReturnType<typeof createClient>) {
@@ -270,8 +270,9 @@ async function provisionProxySale(supabaseAdmin: ReturnType<typeof createClient>
     ? await callProxyProvider(settings, '/sub-users', {
       username,
       password,
-      service_type: serviceType,
+      proxy_type: serviceType,
       traffic_limit: trafficLimitGb,
+      traffic_limit_unit: 'gb',
       auto_disable: offer?.auto_disable ?? true,
     })
     : { success: false as const, configured: false as const, data: null }

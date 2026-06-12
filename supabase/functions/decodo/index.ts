@@ -33,6 +33,16 @@ type ProxyOfferRow = {
   auto_disable: boolean
 }
 
+type CapacityResult = {
+  configured: boolean
+  success: boolean
+  status: number
+  data?: unknown
+  totalLimit: number | null
+  allocatedLimit: number
+  availableLimit: number | null
+}
+
 type ProxyOffer = {
   id: string
   name: string
@@ -120,13 +130,13 @@ function extractResidentialTrafficLimit(data: unknown) {
 
 function makePassword() {
   const random = crypto.getRandomValues(new Uint32Array(3))
-  return `Cm_9${random[0].toString(36)}A+${random[1].toString(36)}z${random[2].toString(36)}`.slice(0, 24)
+  return `Cm_9${random[0].toString(36)}A+z${random[1].toString(36)}`.slice(0, 20)
 }
 
 function makeUsername(saleId: string, buyerId: string) {
-  const compactSale = saleId.replace(/\D/g, '').slice(-10).padStart(6, '0')
+  const compactSale = saleId.replace(/\D/g, '').slice(-8).padStart(6, '0')
   const compactBuyer = buyerId.replace(/-/g, '').slice(0, 8).toLowerCase()
-  return `cm_${compactSale}_${compactBuyer}`.slice(0, 64)
+  return `cm${compactSale}${compactBuyer}`.slice(0, 20)
 }
 
 async function parseRequestBody(req: Request) {
@@ -231,10 +241,11 @@ async function getCapacity(settings: ProviderSettings) {
   }
 }
 
-function mapOffer(row: ProxyOfferRow, availableLimit: number): ProxyOffer | null {
+function mapOffer(row: ProxyOfferRow, availableLimit: number | null): ProxyOffer | null {
   const priceAmount = Number(row.price_amount ?? 0)
   const trafficLimitGb = Number(row.traffic_limit_gb ?? 0)
-  if (!priceAmount || !trafficLimitGb || availableLimit < trafficLimitGb) return null
+  if (!priceAmount || !trafficLimitGb) return null
+  if (availableLimit !== null && availableLimit < trafficLimitGb) return null
 
   return {
     id: String(row.id),
@@ -249,9 +260,13 @@ function mapOffer(row: ProxyOfferRow, availableLimit: number): ProxyOffer | null
     priceAmount,
     traffic: firstString(row.traffic, `${trafficLimitGb}GB`),
     trafficLimitGb,
-    stock: `${Math.floor(availableLimit / trafficLimitGb)} disponivel`,
+    stock: availableLimit === null ? firstString(row.stock, 'Plano ativo') : `${Math.floor(availableLimit / trafficLimitGb)} disponivel`,
     status: firstString(row.status, 'Disponivel'),
   }
+}
+
+function hasProxyPoolAccess(settings: ProviderSettings) {
+  return Boolean(settings.api_key?.trim() || (settings.username?.trim() && settings.password?.trim()))
 }
 
 async function provisionProxySale(supabaseAdmin: ReturnType<typeof createClient>, settings: ProviderSettings, saleId: string) {
@@ -284,8 +299,9 @@ async function provisionProxySale(supabaseAdmin: ReturnType<typeof createClient>
     body: JSON.stringify({
       username,
       password,
-      service_type: serviceType,
+      proxy_type: serviceType,
       traffic_limit: trafficLimitGb,
+      traffic_limit_unit: 'gb',
       auto_disable: offer?.auto_disable ?? true,
     }),
   })
@@ -368,20 +384,24 @@ Deno.serve(async (req) => {
 
   if (action === 'catalog') {
     const capacity = await getCapacity(settings)
-    if (capacity.configured === false || capacity.success === false) {
+    const offers = await loadProxyOffers(supabaseAdmin)
+    const capacityAvailable = capacity.configured !== false && capacity.success !== false
+      ? (capacity as CapacityResult).availableLimit
+      : null
+    const items = offers
+      .map((offer) => mapOffer(offer, capacityAvailable))
+      .filter(Boolean) as ProxyOffer[]
+
+    if ((capacity.configured === false || capacity.success === false) && !hasProxyPoolAccess(settings)) {
       return json({ configured: true, ...capacity, items: [] }, capacity.success === false ? 400 : 200)
     }
-
-    const offers = await loadProxyOffers(supabaseAdmin)
-    const items = offers
-      .map((offer) => mapOffer(offer, capacity.availableLimit))
-      .filter(Boolean) as ProxyOffer[]
 
     return json({
       success: true,
       configured: true,
-      status: 200,
-      availableLimit: capacity.availableLimit,
+      status: capacity.success === false ? 206 : 200,
+      availableLimit: capacityAvailable,
+      capacityWarning: capacity.success === false ? capacity.data : null,
       items,
     })
   }
