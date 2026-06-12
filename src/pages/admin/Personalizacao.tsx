@@ -524,6 +524,18 @@ export function Personalizacao() {
                   <ColorControl label="Setas dos itens" value={layoutTheme.homeDepartmentsIcon} onChange={(value) => updateLayoutTheme('homeDepartmentsIcon', value)} />
                 </TokenGroup>
 
+                <TokenGroup title="Header - Menu Categorias">
+                  <ColorControl label="Fundo do dropdown" value={layoutTheme.categoryMenuBg} onChange={(value) => updateLayoutTheme('categoryMenuBg', value)} />
+                  <ColorControl label="Fundo do topo/rodape" value={layoutTheme.categoryMenuHeaderBg} onChange={(value) => updateLayoutTheme('categoryMenuHeaderBg', value)} />
+                  <ColorControl label="Texto principal" value={layoutTheme.categoryMenuText} onChange={(value) => updateLayoutTheme('categoryMenuText', value)} />
+                  <ColorControl label="Texto secundario" value={layoutTheme.categoryMenuMutedText} onChange={(value) => updateLayoutTheme('categoryMenuMutedText', value)} />
+                  <ColorControl label="Bordas/divisorias" value={layoutTheme.categoryMenuBorder} onChange={(value) => updateLayoutTheme('categoryMenuBorder', value)} />
+                  <ColorControl label="Links" value={layoutTheme.categoryMenuLink} onChange={(value) => updateLayoutTheme('categoryMenuLink', value)} />
+                  <ColorControl label="Item hover - fundo" value={layoutTheme.categoryMenuHoverBg} onChange={(value) => updateLayoutTheme('categoryMenuHoverBg', value)} />
+                  <ColorControl label="Item hover - texto" value={layoutTheme.categoryMenuHoverText} onChange={(value) => updateLayoutTheme('categoryMenuHoverText', value)} />
+                  <ColorControl label="Fundo dos icones" value={layoutTheme.categoryMenuIconBg} onChange={(value) => updateLayoutTheme('categoryMenuIconBg', value)} />
+                </TokenGroup>
+
                 <TokenGroup title="Home - Grupos do WhatsApp">
                   <ColorControl label="Fundo do bloco" value={layoutTheme.whatsappGroupsBg} onChange={(value) => updateLayoutTheme('whatsappGroupsBg', value)} />
                   <ColorControl label="Texto principal" value={layoutTheme.whatsappGroupsText} onChange={(value) => updateLayoutTheme('whatsappGroupsText', value)} />

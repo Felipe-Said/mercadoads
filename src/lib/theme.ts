@@ -57,6 +57,15 @@ export type LayoutTheme = {
   whatsappGroupsStoryRingStart: string
   whatsappGroupsStoryRingMiddle: string
   whatsappGroupsStoryRingEnd: string
+  categoryMenuBg: string
+  categoryMenuHeaderBg: string
+  categoryMenuText: string
+  categoryMenuMutedText: string
+  categoryMenuBorder: string
+  categoryMenuLink: string
+  categoryMenuHoverBg: string
+  categoryMenuHoverText: string
+  categoryMenuIconBg: string
 }
 
 export const DEFAULT_LAYOUT_THEME: LayoutTheme = {
@@ -106,6 +115,15 @@ export const DEFAULT_LAYOUT_THEME: LayoutTheme = {
   whatsappGroupsStoryRingStart: '#007600',
   whatsappGroupsStoryRingMiddle: '#ff9900',
   whatsappGroupsStoryRingEnd: '#c7511f',
+  categoryMenuBg: '#ffffff',
+  categoryMenuHeaderBg: '#f8fafc',
+  categoryMenuText: '#111827',
+  categoryMenuMutedText: '#6b7280',
+  categoryMenuBorder: '#e5e7eb',
+  categoryMenuLink: '#007185',
+  categoryMenuHoverBg: '#f8fafc',
+  categoryMenuHoverText: '#c7511f',
+  categoryMenuIconBg: '#ffffff',
 }
 
 function normalizeHex(value: string | null | undefined, fallback: string) {

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { Search, Menu, ChevronDown, ChevronRight, LogOut, ShieldCheck, Store, UserRound } from "lucide-react"
+import { Facebook, Google } from "iconsax-react"
 import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
 import { useCart } from "../contexts/CartContext"
@@ -41,25 +42,27 @@ const defaultSettings: HeaderSettings = {
 function BrandMark({ brand }: { brand: ProductTaxonomyGroup['brand'] }) {
   if (brand === 'meta') {
     return (
-      <span className="inline-flex h-9 w-9 items-center justify-center rounded-sm bg-[#0866ff] text-[13px] font-black text-white shadow-sm">
-        M
+      <span className="inline-flex h-8 w-8 items-center justify-center rounded-sm bg-[var(--layout-category-menu-icon-bg)] text-[#0866ff] shadow-sm ring-1 ring-black/10">
+        <Facebook size="20" variant="Bold" color="currentColor" />
       </span>
     )
   }
 
   if (brand === 'google') {
     return (
-      <span className="inline-grid h-9 w-9 place-items-center rounded-sm bg-white text-[18px] font-black shadow-sm ring-1 ring-black/10">
-        <span>
-          <span className="text-[#4285f4]">G</span>
-        </span>
+      <span className="inline-grid h-8 w-8 place-items-center rounded-sm bg-[var(--layout-category-menu-icon-bg)] text-[#4285f4] shadow-sm ring-1 ring-black/10">
+        <Google size="20" variant="Bold" color="currentColor" />
       </span>
     )
   }
 
   return (
-    <span className="inline-flex h-9 w-9 items-center justify-center rounded-sm bg-black text-[13px] font-black text-white shadow-sm">
-      TK
+    <span className="inline-flex h-8 w-8 items-center justify-center rounded-sm bg-[var(--layout-category-menu-icon-bg)] shadow-sm ring-1 ring-black/10">
+      <svg viewBox="0 0 32 32" className="h-5 w-5" aria-hidden="true">
+        <path fill="#25F4EE" d="M14.7 5.1h4.1c.2 2.1 1.5 4 3.4 4.9 1 .5 2 .8 3.1.8v4.1a9.4 9.4 0 0 1-5.9-2v8.3c0 4.2-3.4 7.6-7.6 7.6a7.6 7.6 0 0 1-4.5-13.7 7.6 7.6 0 0 1 5.1-1.3v4.3a3.4 3.4 0 1 0 2.3 3.2V5.1Z" />
+        <path fill="#FE2C55" d="M16.2 5.1h2.6c.2 2.1 1.5 4 3.4 4.9 1 .5 2 .8 3.1.8v2.6a9.3 9.3 0 0 1-5.9-2v8.3c0 4.2-3.4 7.6-7.6 7.6a7.6 7.6 0 0 1-5.1-1.9 7.6 7.6 0 0 0 12.7-5.6v-8.3a9.3 9.3 0 0 0 5.9 2v-2.7a7.6 7.6 0 0 1-9.1-5.7Z" opacity=".9" />
+        <path fill="#111827" d="M14.7 7.3h2.8c.4 3.3 2.6 6.1 5.7 7.2v2.9a11.4 11.4 0 0 1-5.2-1.7v6.2a5.6 5.6 0 1 1-5.6-5.6h.5v3a2.7 2.7 0 1 0 1.8 2.6V7.3Z" />
+      </svg>
     </span>
   )
 }
@@ -262,42 +265,42 @@ export function Header() {
               </button>
 
               {categoryMenuOpen && (
-                <div className="absolute left-0 top-full z-50 mt-1 w-[min(92vw,820px)] overflow-hidden rounded-sm border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] text-[var(--layout-text-primary)] shadow-2xl">
-                  <div className="border-b border-[var(--layout-border-color)] bg-[var(--layout-subtle-background)] px-4 py-3">
-                    <p className="text-sm font-bold">Categorias de ativos</p>
-                    <p className="text-xs text-[var(--layout-text-muted)]">Escolha a rede, o tipo e o nivel do produto.</p>
+                <div className="absolute left-0 top-full z-50 mt-1 w-[min(92vw,680px)] overflow-hidden rounded-sm border bg-[var(--layout-category-menu-bg)] text-[var(--layout-category-menu-text)] shadow-2xl" style={{ borderColor: 'var(--layout-category-menu-border)' }}>
+                  <div className="border-b px-3 py-2" style={{ backgroundColor: 'var(--layout-category-menu-header-bg)', borderColor: 'var(--layout-category-menu-border)' }}>
+                    <p className="text-[13px] font-black">Categorias</p>
+                    <p className="text-[11px] text-[var(--layout-category-menu-muted-text)]">Ativos organizados por plataforma.</p>
                   </div>
                   <div className="grid gap-0 md:grid-cols-3">
                     {productTaxonomy.map((group) => (
-                      <div key={group.brand} className="border-b border-[var(--layout-border-color)] p-4 last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0">
-                        <div className="mb-4 flex items-center gap-3">
+                      <div key={group.brand} className="border-b p-3 last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0" style={{ borderColor: 'var(--layout-category-menu-border)' }}>
+                        <div className="mb-2 flex items-center gap-2">
                           <BrandMark brand={group.brand} />
                           <div>
-                            <p className="text-base font-black leading-tight">{group.label}</p>
+                            <p className="text-sm font-black leading-tight">{group.label}</p>
                             <Link
                               to={`/category/${encodeURIComponent(group.label.toLowerCase())}`}
                               onClick={() => setCategoryMenuOpen(false)}
-                              className="text-xs font-semibold text-[var(--layout-link-color)] hover:text-[var(--layout-link-hover-color)]"
+                              className="text-[11px] font-semibold text-[var(--layout-category-menu-link)] hover:text-[var(--layout-category-menu-hover-text)]"
                             >
-                              Ver tudo de {group.label}
+                              Ver tudo
                             </Link>
                           </div>
                         </div>
 
-                        <div className="space-y-3">
+                        <div className="space-y-2">
                           {group.items.map((section) => (
                             <div key={section.label}>
-                              <div className="mb-1 flex items-center justify-between text-[12px] font-black uppercase tracking-[0.12em] text-[var(--layout-text-muted)]">
+                              <div className="mb-1 flex items-center justify-between text-[10px] font-black uppercase text-[var(--layout-category-menu-muted-text)]">
                                 <span>{section.label}</span>
-                                <ChevronRight className="h-3.5 w-3.5" />
+                                <ChevronRight className="h-3 w-3" />
                               </div>
-                              <div className="space-y-1">
+                              <div className="space-y-0.5">
                                 {section.children.map((item) => (
                                   <Link
                                     key={item.value}
                                     to={`/category/${encodeURIComponent(item.value.toLowerCase())}`}
                                     onClick={() => setCategoryMenuOpen(false)}
-                                    className="block rounded-sm px-3 py-2 text-sm font-semibold text-[var(--layout-text-primary)] transition hover:bg-[var(--layout-subtle-background)] hover:text-[var(--layout-link-color)]"
+                                    className="block rounded-sm px-2 py-1.5 text-xs font-semibold text-[var(--layout-category-menu-text)] transition hover:bg-[var(--layout-category-menu-hover-bg)] hover:text-[var(--layout-category-menu-hover-text)]"
                                   >
                                     {item.label}
                                   </Link>
@@ -309,11 +312,11 @@ export function Header() {
                       </div>
                     ))}
                   </div>
-                  <div className="border-t border-[var(--layout-border-color)] bg-[var(--layout-subtle-background)] px-4 py-3">
+                  <div className="border-t px-3 py-2" style={{ backgroundColor: 'var(--layout-category-menu-header-bg)', borderColor: 'var(--layout-category-menu-border)' }}>
                     <Link
                       to="/category/all"
                       onClick={() => setCategoryMenuOpen(false)}
-                      className="text-sm font-black text-[var(--layout-link-color)] hover:text-[var(--layout-link-hover-color)]"
+                      className="text-xs font-black text-[var(--layout-category-menu-link)] hover:text-[var(--layout-category-menu-hover-text)]"
                     >
                       Ver todas as categorias
                     </Link>
