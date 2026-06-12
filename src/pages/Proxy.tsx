@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Globe2, LockKeyhole, RefreshCw, Search, Server, ShieldCheck, Wifi } from 'lucide-react'
-import { getDecodoProxyCatalog, type DecodoProxyOffer } from '../lib/decodo'
+import { Copy, Globe2, LockKeyhole, RefreshCw, Search, Server, ShieldCheck, Wifi } from 'lucide-react'
+import { createProxyTopupSale, getDecodoProxyCatalog, getMyProxyDeliveries, type DecodoProxyDelivery, type DecodoProxyOffer } from '../lib/decodo'
 import { useAuth } from '../contexts/AuthContext'
 import { createWestPayPixInOrThrow, validateWestPayCustomer } from '../lib/westpay'
 import { supabase } from '../lib/supabase'
@@ -45,6 +45,11 @@ const proxyCountries: ProxyCountry[] = [
 
 function getProxyCountry(code?: string) {
   return proxyCountries.find((country) => country.code === code) ?? proxyCountries[0]
+}
+
+function formatGb(value: number | null | undefined) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return 'Atualizando'
+  return `${Number(value).toLocaleString('pt-BR', { maximumFractionDigits: 2 })}GB`
 }
 
 function ProxyCard({
@@ -131,15 +136,22 @@ export function Proxy() {
   const navigate = useNavigate()
   const { user, profile, loading: authLoading } = useAuth()
   const [items, setItems] = useState<DecodoProxyOffer[]>([])
+  const [deliveries, setDeliveries] = useState<DecodoProxyDelivery[]>([])
   const [configured, setConfigured] = useState(true)
   const [loading, setLoading] = useState(true)
+  const [deliveriesLoading, setDeliveriesLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [deliveryError, setDeliveryError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
+  const [activeTab, setActiveTab] = useState<'catalog' | 'mine'>('catalog')
   const [selectedProxy, setSelectedProxy] = useState<DecodoProxyOffer | null>(null)
+  const [selectedTopupDelivery, setSelectedTopupDelivery] = useState<DecodoProxyDelivery | null>(null)
+  const [selectedTopupOfferId, setSelectedTopupOfferId] = useState('')
   const [buyerName, setBuyerName] = useState('')
   const [buyerPhone, setBuyerPhone] = useState('')
   const [buyerDocument, setBuyerDocument] = useState('')
   const [buyingId, setBuyingId] = useState<string | null>(null)
+  const [topupBuyingId, setTopupBuyingId] = useState<string | null>(null)
   const [selectedCountries, setSelectedCountries] = useState<Record<string, string>>({})
   const [selectedCountry, setSelectedCountry] = useState<ProxyCountry>(proxyCountries[0])
 
@@ -162,9 +174,27 @@ export function Proxy() {
     }
   }
 
+  const loadDeliveries = async () => {
+    if (!user) return
+    setDeliveriesLoading(true)
+    setDeliveryError(null)
+    try {
+      const result = await getMyProxyDeliveries()
+      setDeliveries(result.items)
+    } catch (loadError) {
+      setDeliveryError(loadError instanceof Error ? loadError.message : 'Nao foi possivel carregar suas proxies agora.')
+    } finally {
+      setDeliveriesLoading(false)
+    }
+  }
+
   useEffect(() => {
     load().catch(console.error)
   }, [])
+
+  useEffect(() => {
+    if (activeTab === 'mine' && user) loadDeliveries().catch(console.error)
+  }, [activeTab, user?.id])
 
   const filteredItems = useMemo(() => {
     const term = query.trim().toLowerCase()
@@ -237,6 +267,57 @@ export function Proxy() {
     }
   }
 
+  const handleTopup = async (delivery: DecodoProxyDelivery, offerId: string) => {
+    if (authLoading) return
+    if (!user) {
+      setDeliveryError('Entre na sua conta para recarregar proxy.')
+      return
+    }
+
+    const offer = items.find((item) => item.id === offerId)
+    if (!offer) {
+      setDeliveryError('Escolha um pacote de GB para recarregar.')
+      return
+    }
+
+    setDeliveryError(null)
+    setSelectedProxy(null)
+    setSelectedTopupDelivery(delivery)
+    setSelectedTopupOfferId(offerId)
+
+    if (!buyerName.trim() || !buyerPhone.trim() || !buyerDocument.trim()) return
+
+    setTopupBuyingId(delivery.id)
+    let saleId: string | null = null
+
+    try {
+      const customer = validateWestPayCustomer({
+        name: buyerName,
+        email: user.email ?? '',
+        phone: buyerPhone,
+        documentNumber: buyerDocument,
+      })
+
+      const result = await createProxyTopupSale(delivery.id, offerId)
+      saleId = result.sale?.id ? String(result.sale.id) : null
+      if (!saleId) throw new Error('Nao foi possivel gerar o pedido de recarga.')
+
+      await createWestPayPixInOrThrow({
+        saleId,
+        amount: offer.priceAmount,
+        customer,
+        itemTitle: `Recarga ${offer.traffic} - ${delivery.username}`,
+      })
+
+      navigate('/painel/usuario/compras', { state: { checkoutSaleIds: [saleId] } })
+    } catch (topupError) {
+      if (saleId) await supabase.from('sales').delete().eq('id', saleId)
+      setDeliveryError(topupError instanceof Error ? topupError.message : 'Nao foi possivel gerar o Pix da recarga.')
+    } finally {
+      setTopupBuyingId(null)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[var(--layout-page-background)] pb-12 text-[var(--layout-text-primary)]">
       <section className="bg-[var(--layout-dashboard-sidebar-header-bg)] text-[var(--layout-dashboard-sidebar-text)]">
@@ -279,6 +360,23 @@ export function Proxy() {
           </button>
         </div>
 
+        <div className="mb-5 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab('catalog')}
+            className={`rounded-sm px-4 py-2 text-sm font-bold ${activeTab === 'catalog' ? 'layout-primary-button' : 'layout-secondary-button'}`}
+          >
+            Comprar proxy
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('mine')}
+            className={`rounded-sm px-4 py-2 text-sm font-bold ${activeTab === 'mine' ? 'layout-primary-button' : 'layout-secondary-button'}`}
+          >
+            Minhas proxies
+          </button>
+        </div>
+
         {!configured && (
           <div className="layout-surface rounded-sm p-6 shadow-sm">
             <div className="flex gap-3">
@@ -296,6 +394,12 @@ export function Proxy() {
         {error && (
           <div className="rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-600">
             {error}
+          </div>
+        )}
+
+        {deliveryError && (
+          <div className="mb-5 rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+            {deliveryError}
           </div>
         )}
 
@@ -335,7 +439,43 @@ export function Proxy() {
           </div>
         )}
 
-        {loading && (
+        {selectedTopupDelivery && user && (
+          <div className="layout-surface mb-5 rounded-sm p-5 shadow-sm">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-end">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--layout-link-color)]">Recarga de proxy</p>
+                <h2 className="mt-1 text-lg font-bold text-[var(--layout-text-primary)]">{selectedTopupDelivery.username}</h2>
+                <p className="mt-1 text-sm text-[var(--layout-text-muted)]">
+                  O pacote escolhido sera somado ao limite da mesma credencial apos a confirmacao do pagamento.
+                </p>
+                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                  <label className="block">
+                    <span className="mb-1 block text-sm font-bold text-[var(--layout-text-primary)]">Nome completo</span>
+                    <input value={buyerName} onChange={(event) => setBuyerName(event.target.value)} className="h-11 w-full rounded-sm border border-[var(--layout-border-color)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)]" />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-sm font-bold text-[var(--layout-text-primary)]">WhatsApp</span>
+                    <input value={buyerPhone} onChange={(event) => setBuyerPhone(event.target.value)} className="h-11 w-full rounded-sm border border-[var(--layout-border-color)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)]" placeholder="DDD + numero" />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-sm font-bold text-[var(--layout-text-primary)]">CPF ou CNPJ</span>
+                    <input value={buyerDocument} onChange={(event) => setBuyerDocument(event.target.value)} className="h-11 w-full rounded-sm border border-[var(--layout-border-color)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)]" placeholder="Somente numeros" />
+                  </label>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleTopup(selectedTopupDelivery, selectedTopupOfferId)}
+                disabled={Boolean(topupBuyingId)}
+                className="layout-primary-button h-12 rounded-sm px-5 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {topupBuyingId ? 'Gerando Pix...' : 'Pagar recarga'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'catalog' && loading && (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {[1, 2, 3, 4, 5, 6].map((item) => (
               <div key={item} className="h-72 animate-pulse rounded-sm bg-[var(--layout-surface-background)]" />
@@ -343,13 +483,13 @@ export function Proxy() {
           </div>
         )}
 
-        {!loading && configured && !error && filteredItems.length === 0 && (
+        {activeTab === 'catalog' && !loading && configured && !error && filteredItems.length === 0 && (
           <div className="layout-surface rounded-sm p-8 text-center text-sm text-[var(--layout-text-muted)] shadow-sm">
             Nenhum proxy disponivel no momento.
           </div>
         )}
 
-        {!loading && filteredItems.length > 0 && (
+        {activeTab === 'catalog' && !loading && filteredItems.length > 0 && (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {filteredItems.map((item, index) => (
               <ProxyCard
@@ -361,6 +501,114 @@ export function Proxy() {
                 onCountryChange={(country) => setSelectedCountries((current) => ({ ...current, [item.id]: country.code }))}
               />
             ))}
+          </div>
+        )}
+
+        {activeTab === 'mine' && !user && (
+          <div className="layout-surface rounded-sm p-8 text-center text-sm text-[var(--layout-text-muted)] shadow-sm">
+            Entre na sua conta para ver suas proxies.
+          </div>
+        )}
+
+        {activeTab === 'mine' && user && deliveriesLoading && (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {[1, 2, 3].map((item) => (
+              <div key={item} className="h-80 animate-pulse rounded-sm bg-[var(--layout-surface-background)]" />
+            ))}
+          </div>
+        )}
+
+        {activeTab === 'mine' && user && !deliveriesLoading && deliveries.length === 0 && (
+          <div className="layout-surface rounded-sm p-8 text-center text-sm text-[var(--layout-text-muted)] shadow-sm">
+            Nenhuma proxy ativa encontrada na sua conta.
+          </div>
+        )}
+
+        {activeTab === 'mine' && user && !deliveriesLoading && deliveries.length > 0 && (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {deliveries.map((delivery) => {
+              const selectedOffer = items.find((item) => item.id === (selectedTopupDelivery?.id === delivery.id ? selectedTopupOfferId : '')) ?? items[0]
+              const proxyLine = `${delivery.host}:${delivery.port}:${delivery.username}:${delivery.password}`
+
+              return (
+                <article key={delivery.id} className="layout-surface rounded-sm p-5 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--layout-link-color)]">Proxy ativa</p>
+                      <h3 className="mt-1 truncate text-lg font-bold text-[var(--layout-text-primary)]">{delivery.offer?.name ?? delivery.username}</h3>
+                    </div>
+                    <span className="rounded-sm bg-[var(--layout-subtle-background)] px-2 py-1 text-xs font-bold text-[var(--layout-success-color)]">
+                      {delivery.providerStatus || delivery.status}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 grid gap-2 text-sm text-[var(--layout-text-muted)]">
+                    <p><strong className="text-[var(--layout-text-primary)]">Endpoint:</strong> {delivery.host}:{delivery.port}</p>
+                    <p><strong className="text-[var(--layout-text-primary)]">Usuario:</strong> {delivery.username}</p>
+                    <p><strong className="text-[var(--layout-text-primary)]">Senha:</strong> {delivery.password}</p>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-3 gap-2 border-t border-[var(--layout-border-color)] pt-4 text-xs">
+                    <div>
+                      <p className="font-bold text-[var(--layout-text-primary)]">Limite</p>
+                      <p className="mt-1 text-[var(--layout-text-muted)]">{formatGb(delivery.trafficLimitGb)}</p>
+                    </div>
+                    <div>
+                      <p className="font-bold text-[var(--layout-text-primary)]">Usado</p>
+                      <p className="mt-1 text-[var(--layout-text-muted)]">{formatGb(delivery.trafficUsedGb)}</p>
+                    </div>
+                    <div>
+                      <p className="font-bold text-[var(--layout-text-primary)]">Restante</p>
+                      <p className="mt-1 text-[var(--layout-price-color)]">{formatGb(delivery.trafficRemainingGb)}</p>
+                    </div>
+                  </div>
+
+                  {delivery.providerError && <p className="mt-3 text-xs text-amber-700">{delivery.providerError}</p>}
+
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => navigator.clipboard.writeText(proxyLine)}
+                      className="layout-secondary-button inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-sm px-3 text-sm font-bold"
+                    >
+                      <Copy className="h-4 w-4" />
+                      Copiar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={loadDeliveries}
+                      className="layout-secondary-button inline-flex h-10 items-center justify-center rounded-sm px-3 text-sm font-bold"
+                    >
+                      Testar
+                    </button>
+                  </div>
+
+                  <label className="mt-4 block">
+                    <span className="mb-1 block text-xs font-bold uppercase tracking-[0.08em] text-[var(--layout-text-muted)]">Adicionar GB</span>
+                    <select
+                      value={selectedTopupDelivery?.id === delivery.id ? selectedTopupOfferId : selectedOffer?.id ?? ''}
+                      onChange={(event) => {
+                        setSelectedTopupDelivery(delivery)
+                        setSelectedTopupOfferId(event.target.value)
+                      }}
+                      className="h-11 w-full rounded-sm border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] px-3 text-sm text-[var(--layout-text-primary)] outline-none focus:border-[var(--layout-accent-color)]"
+                    >
+                      {items.map((item) => (
+                        <option key={item.id} value={item.id}>{item.traffic} - {formatCurrency(item.priceAmount)}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleTopup(delivery, selectedTopupDelivery?.id === delivery.id ? selectedTopupOfferId : selectedOffer?.id ?? '')}
+                    disabled={!items.length || topupBuyingId === delivery.id}
+                    className="layout-primary-button mt-3 h-11 w-full rounded-sm text-sm font-bold disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {topupBuyingId === delivery.id ? 'Gerando Pix...' : 'Recarregar esta proxy'}
+                  </button>
+                </article>
+              )
+            })}
           </div>
         )}
       </main>

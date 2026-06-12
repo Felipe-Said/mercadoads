@@ -210,20 +210,20 @@ async function loadProxyProviderSettings(supabaseAdmin: ReturnType<typeof create
   return data as ProxyProviderSettings | null
 }
 
-async function callProxyProvider(settings: ProxyProviderSettings, path: string, body: Record<string, unknown>) {
+async function callProxyProvider(settings: ProxyProviderSettings, path: string, body?: Record<string, unknown>, method: 'GET' | 'POST' | 'PUT' = 'POST') {
   if (!settings.active || !settings.api_key?.trim()) {
     return { success: false as const, configured: false as const, data: null }
   }
 
   const base = (settings.api_base_url || 'https://api.decodo.com/v2').replace(/\/+$/, '')
   const response = await fetch(`${base}${path.startsWith('/') ? path : `/${path}`}`, {
-    method: 'POST',
+    method,
     headers: {
       Accept: 'application/json',
       Authorization: settings.api_key.trim(),
-      'Content-Type': 'application/json',
+      ...(body ? { 'Content-Type': 'application/json' } : {}),
     },
-    body: JSON.stringify(body),
+    body: body ? JSON.stringify(body) : undefined,
   })
   const text = await response.text()
   let data: unknown = text
@@ -241,16 +241,79 @@ async function callProxyProvider(settings: ProxyProviderSettings, path: string, 
   return { success: true as const, configured: true as const, status: response.status, data }
 }
 
+function unwrapProviderRows(data: unknown) {
+  const root = asRecord(data)
+  if (Array.isArray(data)) return data
+  if (Array.isArray(root?.data)) return root.data
+  if (Array.isArray(root?.items)) return root.items
+  if (Array.isArray(root?.results)) return root.results
+  return root ? [root] : []
+}
+
+async function resolveProxySubUserId(settings: ProxyProviderSettings, delivery: Record<string, unknown>) {
+  const current = firstString(delivery.provider_sub_user_id)
+  if (current && /^\d+$/.test(current)) return current
+
+  const username = firstString(delivery.username)
+  if (!username) return current
+
+  const users = await callProxyProvider(settings, '/sub-users?service_type=residential_proxies', undefined, 'GET')
+  if (users.success === false) return current
+
+  const matched = unwrapProviderRows(users.data).find((item) => firstString(asRecord(item)?.username) === username)
+  return firstString(asRecord(matched)?.id, current)
+}
+
 async function provisionProxySale(supabaseAdmin: ReturnType<typeof createClient>, saleId: string) {
   const { data: sale, error: saleError } = await supabaseAdmin
     .from('sales')
-    .select('id, buyer_id, proxy_offer_id, proxy_endpoint, proxy_port, status, proxy_offers(id, traffic_limit_gb, service_type, auto_disable)')
+    .select('id, buyer_id, proxy_offer_id, proxy_delivery_id, proxy_topup_gb, proxy_endpoint, proxy_port, status, proxy_offers(id, traffic_limit_gb, service_type, auto_disable)')
     .eq('id', saleId)
     .maybeSingle()
 
   if (saleError) throw saleError
   const saleRecord = asRecord(sale)
   if (!saleRecord?.proxy_offer_id || saleRecord.status !== 'paid') return { skipped: true }
+
+  const settings = await loadProxyProviderSettings(supabaseAdmin)
+  if (saleRecord.proxy_delivery_id) {
+    const { data: delivery, error: deliveryError } = await supabaseAdmin
+      .from('proxy_deliveries')
+      .select('id, buyer_id, provider_sub_user_id, username, traffic_limit_gb, status')
+      .eq('id', saleRecord.proxy_delivery_id)
+      .eq('buyer_id', saleRecord.buyer_id)
+      .maybeSingle()
+
+    if (deliveryError) throw deliveryError
+    const deliveryRecord = asRecord(delivery)
+    const providerSubUserId = settings && deliveryRecord ? await resolveProxySubUserId(settings, deliveryRecord) : null
+    const addedGb = Number(saleRecord.proxy_topup_gb ?? asRecord(saleRecord.proxy_offers)?.traffic_limit_gb ?? 0)
+    const currentLimit = Number(deliveryRecord?.traffic_limit_gb ?? 0)
+    const nextLimit = currentLimit + addedGb
+    const providerResult = settings && providerSubUserId
+      ? await callProxyProvider(settings, `/sub-users/${providerSubUserId}`, {
+        traffic_limit: nextLimit,
+        auto_disable: asRecord(saleRecord.proxy_offers)?.auto_disable ?? true,
+        status: 'active',
+      }, 'PUT')
+      : { success: false as const, configured: Boolean(settings), data: { message: 'Proxy para recarga nao encontrada.' } }
+
+    if (deliveryRecord) {
+      await supabaseAdmin
+        .from('proxy_deliveries')
+        .update({
+          provider_sub_user_id: providerSubUserId || deliveryRecord.provider_sub_user_id,
+          traffic_limit_gb: providerResult.success === false ? currentLimit : nextLimit,
+          status: providerResult.success === false ? 'failed' : 'active',
+          provider_payload: providerResult,
+        })
+        .eq('id', deliveryRecord.id)
+    }
+
+    return providerResult.success === false
+      ? providerResult
+      : { success: true, topup: true, trafficLimitGb: nextLimit }
+  }
 
   const existing = await supabaseAdmin
     .from('proxy_deliveries')
@@ -260,7 +323,6 @@ async function provisionProxySale(supabaseAdmin: ReturnType<typeof createClient>
 
   if (existing.data) return { skipped: true, existing: true }
 
-  const settings = await loadProxyProviderSettings(supabaseAdmin)
   const offer = asRecord(saleRecord.proxy_offers)
   const username = makeProxyUsername(String(saleRecord.id), String(saleRecord.buyer_id))
   const password = makeProxyPassword()

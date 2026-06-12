@@ -60,6 +60,11 @@ type ProxyOffer = {
   status: string
 }
 
+type RequestUser = {
+  id: string
+  email?: string
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -166,6 +171,16 @@ async function parseRequestBody(req: Request) {
   }
 }
 
+async function getRequestUser(req: Request, supabaseAdmin: ReturnType<typeof createClient>) {
+  const authorization = req.headers.get('Authorization') || ''
+  const token = authorization.replace(/^Bearer\s+/i, '').trim()
+  if (!token) return null
+
+  const { data, error } = await supabaseAdmin.auth.getUser(token)
+  if (error || !data.user) return null
+  return data.user as RequestUser
+}
+
 async function loadSettings(supabaseAdmin: ReturnType<typeof createClient>) {
   const { data, error } = await supabaseAdmin
     .from('decodo_settings')
@@ -225,6 +240,70 @@ async function callProvider(settings: ProviderSettings, path: string, init: Requ
   return { configured: true as const, success: true as const, status: response.status, data }
 }
 
+function unwrapProviderRows(data: unknown) {
+  const root = asRecord(data)
+  if (Array.isArray(data)) return data
+  if (Array.isArray(root?.data)) return root.data
+  if (Array.isArray(root?.items)) return root.items
+  if (Array.isArray(root?.results)) return root.results
+  return root ? [root] : []
+}
+
+function getProviderSubUserId(value: unknown) {
+  const record = asRecord(value)
+  return firstString(record?.id, record?.sub_user_id, record?.subUserId)
+}
+
+async function resolveProviderSubUserId(settings: ProviderSettings, delivery: Record<string, unknown>) {
+  const existing = firstString(delivery.provider_sub_user_id)
+  if (existing && /^\d+$/.test(existing)) return existing
+
+  const username = firstString(delivery.username)
+  if (!username) return existing
+
+  const users = await callProvider(settings, '/sub-users?service_type=residential_proxies')
+  if (users.configured === false || users.success === false) return existing
+
+  const matched = unwrapProviderRows(users.data).find((item) => firstString(asRecord(item)?.username) === username)
+  return getProviderSubUserId(matched) || existing
+}
+
+async function getProxyUsage(settings: ProviderSettings, delivery: Record<string, unknown>) {
+  const subUserId = await resolveProviderSubUserId(settings, delivery)
+  const fallbackLimit = toNumber(delivery.traffic_limit_gb) ?? 0
+
+  if (!subUserId || !settings.api_key?.trim()) {
+    return {
+      providerSubUserId: subUserId,
+      providerStatus: firstString(delivery.status, 'active'),
+      trafficLimitGb: fallbackLimit,
+      trafficUsedGb: null,
+      trafficRemainingGb: null,
+      providerError: settings.api_key?.trim() ? null : 'API publica nao configurada.',
+    }
+  }
+
+  const [subUser, traffic] = await Promise.all([
+    callProvider(settings, `/sub-users/${subUserId}`),
+    callProvider(settings, `/sub-users/${subUserId}/traffic?type=custom&service_type=residential_proxies`),
+  ])
+
+  const subUserData = asRecord(subUser.success === false ? null : subUser.data)
+  const trafficData = asRecord(traffic.success === false ? null : traffic.data)
+  const limit = toNumber(subUserData?.traffic_limit) ?? fallbackLimit
+  const used = toNumber(trafficData?.traffic) ?? toNumber(subUserData?.traffic) ?? null
+  const remaining = used === null ? null : Math.max(limit - used, 0)
+
+  return {
+    providerSubUserId: subUserId,
+    providerStatus: firstString(subUserData?.status, delivery.status, 'active'),
+    trafficLimitGb: limit,
+    trafficUsedGb: used,
+    trafficRemainingGb: remaining,
+    providerError: subUser.success === false || traffic.success === false ? 'Nao foi possivel atualizar todos os dados agora.' : null,
+  }
+}
+
 async function getCapacity(settings: ProviderSettings) {
   const subscriptions = await callProvider(settings, settings.products_path || '/subscriptions')
   if (subscriptions.configured === false || subscriptions.success === false) return subscriptions
@@ -261,6 +340,40 @@ async function getCapacity(settings: ProviderSettings) {
   }
 }
 
+async function loadBuyerProxyDeliveries(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  settings: ProviderSettings,
+  user: RequestUser,
+) {
+  const { data, error } = await supabaseAdmin
+    .from('proxy_deliveries')
+    .select('id, sale_id, buyer_id, proxy_offer_id, provider_sub_user_id, username, password, host, port, service_type, traffic_limit_gb, status, created_at, proxy_offers(name, traffic, protocol)')
+    .eq('buyer_id', user.id)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+
+  const rows = (data ?? []) as Array<Record<string, unknown>>
+  return Promise.all(rows.map(async (delivery) => {
+    const usage = await getProxyUsage(settings, delivery)
+    return {
+      id: String(delivery.id),
+      saleId: String(delivery.sale_id ?? ''),
+      proxyOfferId: delivery.proxy_offer_id ? String(delivery.proxy_offer_id) : null,
+      providerSubUserId: usage.providerSubUserId,
+      username: firstString(delivery.username),
+      password: firstString(delivery.password),
+      host: firstString(delivery.host, 'gate.decodo.com'),
+      port: firstString(delivery.port, '7000'),
+      serviceType: firstString(delivery.service_type, 'residential_proxies'),
+      status: firstString(delivery.status, usage.providerStatus, 'active'),
+      createdAt: firstString(delivery.created_at),
+      offer: asRecord(delivery.proxy_offers),
+      ...usage,
+    }
+  }))
+}
+
 function mapOffer(row: ProxyOfferRow, availableLimit: number | null): ProxyOffer | null {
   const priceAmount = Number(row.price_amount ?? 0)
   const trafficLimitGb = Number(row.traffic_limit_gb ?? 0)
@@ -292,13 +405,57 @@ function hasProxyPoolAccess(settings: ProviderSettings) {
 async function provisionProxySale(supabaseAdmin: ReturnType<typeof createClient>, settings: ProviderSettings, saleId: string) {
   const { data: sale, error: saleError } = await supabaseAdmin
     .from('sales')
-    .select('id, buyer_id, proxy_offer_id, proxy_endpoint, proxy_port, status, proxy_offers(id, name, traffic_limit_gb, service_type, auto_disable)')
+    .select('id, buyer_id, proxy_offer_id, proxy_delivery_id, proxy_topup_gb, proxy_endpoint, proxy_port, status, proxy_offers(id, name, traffic_limit_gb, service_type, auto_disable)')
     .eq('id', saleId)
     .maybeSingle()
 
   if (saleError) throw saleError
   const saleRecord = asRecord(sale)
   if (!saleRecord?.proxy_offer_id || saleRecord.status !== 'paid') return { skipped: true }
+
+  if (saleRecord.proxy_delivery_id) {
+    const { data: delivery, error: deliveryError } = await supabaseAdmin
+      .from('proxy_deliveries')
+      .select('id, sale_id, buyer_id, proxy_offer_id, provider_sub_user_id, username, password, host, port, service_type, traffic_limit_gb, status')
+      .eq('id', saleRecord.proxy_delivery_id)
+      .eq('buyer_id', saleRecord.buyer_id)
+      .maybeSingle()
+
+    if (deliveryError) throw deliveryError
+    const deliveryRecord = asRecord(delivery)
+    if (!deliveryRecord) return { success: false, error: 'Proxy para recarga nao encontrada.' }
+
+    const subUserId = await resolveProviderSubUserId(settings, deliveryRecord)
+    const usage = await getProxyUsage(settings, deliveryRecord)
+    const addedGb = Number(saleRecord.proxy_topup_gb ?? asRecord(saleRecord.proxy_offers)?.traffic_limit_gb ?? 0)
+    const currentLimit = Number(usage.trafficLimitGb || deliveryRecord.traffic_limit_gb || 0)
+    const nextLimit = currentLimit + addedGb
+
+    const providerResult = subUserId
+      ? await callProvider(settings, `/sub-users/${subUserId}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          traffic_limit: nextLimit,
+          auto_disable: asRecord(saleRecord.proxy_offers)?.auto_disable ?? true,
+          status: 'active',
+        }),
+      })
+      : { success: false as const, configured: true as const, data: { message: 'Subusuario do fornecedor nao encontrado.' } }
+
+    await supabaseAdmin
+      .from('proxy_deliveries')
+      .update({
+        provider_sub_user_id: subUserId || deliveryRecord.provider_sub_user_id,
+        traffic_limit_gb: providerResult.success === false ? deliveryRecord.traffic_limit_gb : nextLimit,
+        status: providerResult.success === false ? 'failed' : 'active',
+        provider_payload: providerResult,
+      })
+      .eq('id', deliveryRecord.id)
+
+    return providerResult.success === false
+      ? providerResult
+      : { success: true, topup: true, trafficLimitGb: nextLimit }
+  }
 
   const existing = await supabaseAdmin
     .from('proxy_deliveries')
@@ -428,6 +585,71 @@ Deno.serve(async (req) => {
       capacityWarning: capacity.success === false ? capacity.data : null,
       items,
     })
+  }
+
+  if (action === 'my_deliveries') {
+    const user = await getRequestUser(req, supabaseAdmin)
+    if (!user) return json({ success: false, configured: true, error: 'Login necessario.' }, 401)
+
+    const items = await loadBuyerProxyDeliveries(supabaseAdmin, settings, user)
+    return json({ success: true, configured: true, items })
+  }
+
+  if (action === 'create_topup_sale') {
+    const user = await getRequestUser(req, supabaseAdmin)
+    if (!user) return json({ success: false, configured: true, error: 'Login necessario.' }, 401)
+
+    const deliveryId = firstString(body.deliveryId, url.searchParams.get('deliveryId'))
+    const offerId = firstString(body.offerId, url.searchParams.get('offerId'))
+    if (!deliveryId || !offerId) return json({ success: false, configured: true, error: 'Proxy ou pacote nao informado.' }, 400)
+
+    const { data: delivery, error: deliveryError } = await supabaseAdmin
+      .from('proxy_deliveries')
+      .select('id, buyer_id, proxy_offer_id, provider_sub_user_id, username, host, port, service_type, traffic_limit_gb, status')
+      .eq('id', deliveryId)
+      .eq('buyer_id', user.id)
+      .maybeSingle()
+
+    if (deliveryError) throw deliveryError
+    const deliveryRecord = asRecord(delivery)
+    if (!deliveryRecord || firstString(deliveryRecord.status) !== 'active') {
+      return json({ success: false, configured: true, error: 'Proxy ativa nao encontrada.' }, 404)
+    }
+
+    const { data: offer, error: offerError } = await supabaseAdmin
+      .from('proxy_offers')
+      .select('id, price_amount, traffic_limit_gb, is_active')
+      .eq('id', offerId)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    if (offerError) throw offerError
+    const offerRecord = asRecord(offer)
+    const amount = Number(offerRecord?.price_amount ?? 0)
+    const topupGb = Number(offerRecord?.traffic_limit_gb ?? 0)
+    if (!offerRecord || !amount || !topupGb) {
+      return json({ success: false, configured: true, error: 'Pacote de recarga indisponivel.' }, 400)
+    }
+
+    const { data: sale, error: saleError } = await supabaseAdmin
+      .from('sales')
+      .insert({
+        product_id: null,
+        proxy_offer_id: Number(offerId),
+        proxy_delivery_id: Number(deliveryId),
+        proxy_topup_gb: topupGb,
+        buyer_id: user.id,
+        seller_id: null,
+        amount,
+        status: 'pending',
+        proxy_endpoint: firstString(deliveryRecord.host, 'gate.decodo.com'),
+        proxy_port: firstString(deliveryRecord.port, '7000'),
+      })
+      .select('id, amount')
+      .single()
+
+    if (saleError) throw saleError
+    return json({ success: true, configured: true, sale })
   }
 
   if (action === 'provision_sale') {

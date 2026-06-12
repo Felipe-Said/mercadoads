@@ -17,6 +17,30 @@ export type DecodoProxyOffer = {
   status: string
 }
 
+export type DecodoProxyDelivery = {
+  id: string
+  saleId: string
+  proxyOfferId: string | null
+  providerSubUserId: string | null
+  username: string
+  password: string
+  host: string
+  port: string
+  serviceType: string
+  status: string
+  createdAt: string
+  trafficLimitGb: number
+  trafficUsedGb: number | null
+  trafficRemainingGb: number | null
+  providerStatus: string
+  providerError: string | null
+  offer?: {
+    name?: string | null
+    traffic?: string | null
+    protocol?: string | null
+  } | null
+}
+
 type DecodoInvokeResult = {
   configured?: boolean
   success?: boolean
@@ -99,7 +123,7 @@ async function invokeDecodoDirect(action: string, payload?: Record<string, unkno
   return data as DecodoInvokeResult
 }
 
-export async function invokeDecodo(action: 'catalog' | 'status' | 'provision_sale', payload?: Record<string, unknown>) {
+export async function invokeDecodo(action: 'catalog' | 'status' | 'provision_sale' | 'my_deliveries' | 'create_topup_sale', payload?: Record<string, unknown>) {
   try {
     const { data, error } = await supabase.functions.invoke('decodo', {
       body: { action, ...(payload ?? {}) },
@@ -130,4 +154,23 @@ export async function decodoStatus() {
     throw new Error(friendlyProviderMessage(extractMessage(result.data) || result.error || null, result.status))
   }
   return result
+}
+
+export async function getMyProxyDeliveries() {
+  const result = await invokeDecodo('my_deliveries')
+  if (result.success === false) {
+    throw new Error(friendlyProviderMessage(extractMessage(result.data) || result.error || null, result.status))
+  }
+  return {
+    configured: Boolean(result.configured),
+    items: (result.items ?? []) as unknown as DecodoProxyDelivery[],
+  }
+}
+
+export async function createProxyTopupSale(deliveryId: string, offerId: string) {
+  const result = await invokeDecodo('create_topup_sale', { deliveryId, offerId })
+  if (result.success === false) {
+    throw new Error(friendlyProviderMessage(extractMessage(result.data) || result.error || null, result.status))
+  }
+  return result as DecodoInvokeResult & { sale?: { id: string; amount: number } }
 }
