@@ -87,6 +87,10 @@ export interface Sale {
   payment_qrcode?: string | null
   payment_qrcode_text?: string | null
   payment_qrcode_expires_at?: string | null
+  proxy_country_code?: string | null
+  proxy_country_name?: string | null
+  proxy_endpoint?: string | null
+  proxy_port?: string | null
   gateway_payload?: Record<string, unknown> | null
   products?: { title: string | null; image_url: string | null; file_url?: string | null; seller_note?: string | null } | null
   proxy_offers?: { name: string | null; traffic: string | null; protocol: string | null } | null

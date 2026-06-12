@@ -11,7 +11,55 @@ function displayValue(value: string, fallback = 'Consultar') {
   return value?.trim() || fallback
 }
 
-function ProxyCard({ proxy, onBuy, buying }: { proxy: DecodoProxyOffer; onBuy: (proxy: DecodoProxyOffer) => void; buying: boolean }) {
+type ProxyCountry = {
+  code: string
+  name: string
+  endpoint: string
+  port: string
+}
+
+const proxyCountries: ProxyCountry[] = [
+  { code: 'global', name: 'Global / aleatorio', endpoint: 'gate.decodo.com', port: '7000' },
+  { code: 'br', name: 'Brasil', endpoint: 'br.decodo.com', port: '10000' },
+  { code: 'us', name: 'Estados Unidos', endpoint: 'us.decodo.com', port: '10000' },
+  { code: 'pt', name: 'Portugal', endpoint: 'pt.decodo.com', port: '20000' },
+  { code: 'es', name: 'Espanha', endpoint: 'es.decodo.com', port: '10000' },
+  { code: 'gb', name: 'Reino Unido', endpoint: 'gb.decodo.com', port: '30000' },
+  { code: 'ca', name: 'Canada', endpoint: 'ca.decodo.com', port: '20000' },
+  { code: 'mx', name: 'Mexico', endpoint: 'mx.decodo.com', port: '20000' },
+  { code: 'ar', name: 'Argentina', endpoint: 'ar.decodo.com', port: '10000' },
+  { code: 'cl', name: 'Chile', endpoint: 'cl.decodo.com', port: '30000' },
+  { code: 'co', name: 'Colombia', endpoint: 'co.decodo.com', port: '30000' },
+  { code: 'pe', name: 'Peru', endpoint: 'pe.decodo.com', port: '40000' },
+  { code: 'fr', name: 'Franca', endpoint: 'fr.decodo.com', port: '40000' },
+  { code: 'de', name: 'Alemanha', endpoint: 'de.decodo.com', port: '20000' },
+  { code: 'it', name: 'Italia', endpoint: 'it.decodo.com', port: '20000' },
+  { code: 'nl', name: 'Holanda', endpoint: 'nl.decodo.com', port: '10000' },
+  { code: 'pl', name: 'Polonia', endpoint: 'pl.decodo.com', port: '20000' },
+  { code: 'se', name: 'Suecia', endpoint: 'se.decodo.com', port: '20000' },
+  { code: 'au', name: 'Australia', endpoint: 'au.decodo.com', port: '30000' },
+  { code: 'jp', name: 'Japao', endpoint: 'jp.decodo.com', port: '30000' },
+  { code: 'in', name: 'India', endpoint: 'in.decodo.com', port: '10000' },
+  { code: 'sg', name: 'Singapura', endpoint: 'sg.decodo.com', port: '10000' },
+]
+
+function getProxyCountry(code?: string) {
+  return proxyCountries.find((country) => country.code === code) ?? proxyCountries[0]
+}
+
+function ProxyCard({
+  proxy,
+  onBuy,
+  buying,
+  selectedCountry,
+  onCountryChange,
+}: {
+  proxy: DecodoProxyOffer
+  onBuy: (proxy: DecodoProxyOffer, country: ProxyCountry) => void
+  buying: boolean
+  selectedCountry: ProxyCountry
+  onCountryChange: (country: ProxyCountry) => void
+}) {
   return (
     <article className="layout-surface flex h-full flex-col rounded-sm p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <div className="mb-4 flex items-start justify-between gap-3">
@@ -35,9 +83,22 @@ function ProxyCard({ proxy, onBuy, buying }: { proxy: DecodoProxyOffer; onBuy: (
         </div>
         <div className="flex items-center gap-2">
           <Server className="h-4 w-4 text-[var(--layout-link-color)]" />
-          <span>{proxy.endpoint ? `${proxy.endpoint}${proxy.port ? `:${proxy.port}` : ''}` : 'Endpoint liberado apos compra'}</span>
+          <span>{selectedCountry.endpoint}:{selectedCountry.port}</span>
         </div>
       </div>
+
+      <label className="mt-4 block">
+        <span className="mb-1 block text-xs font-bold uppercase tracking-[0.08em] text-[var(--layout-text-muted)]">Pais da proxy</span>
+        <select
+          value={selectedCountry.code}
+          onChange={(event) => onCountryChange(getProxyCountry(event.target.value))}
+          className="h-11 w-full rounded-sm border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] px-3 text-sm text-[var(--layout-text-primary)] outline-none focus:border-[var(--layout-accent-color)]"
+        >
+          {proxyCountries.map((country) => (
+            <option key={country.code} value={country.code}>{country.name}</option>
+          ))}
+        </select>
+      </label>
 
       <div className="mt-5 grid grid-cols-3 gap-2 border-t border-[var(--layout-border-color)] pt-4 text-xs">
         <div>
@@ -56,7 +117,7 @@ function ProxyCard({ proxy, onBuy, buying }: { proxy: DecodoProxyOffer; onBuy: (
 
       <button
         type="button"
-        onClick={() => onBuy(proxy)}
+        onClick={() => onBuy(proxy, selectedCountry)}
         disabled={buying || !proxy.priceAmount}
         className="layout-primary-button mt-5 h-11 rounded-sm text-sm font-bold disabled:cursor-not-allowed disabled:opacity-60"
       >
@@ -79,6 +140,8 @@ export function Proxy() {
   const [buyerPhone, setBuyerPhone] = useState('')
   const [buyerDocument, setBuyerDocument] = useState('')
   const [buyingId, setBuyingId] = useState<string | null>(null)
+  const [selectedCountries, setSelectedCountries] = useState<Record<string, string>>({})
+  const [selectedCountry, setSelectedCountry] = useState<ProxyCountry>(proxyCountries[0])
 
   useEffect(() => {
     setBuyerName(profile?.full_name ?? user?.user_metadata?.full_name ?? '')
@@ -117,7 +180,7 @@ export function Proxy() {
     ].some((value) => value.toLowerCase().includes(term)))
   }, [items, query])
 
-  const handleBuy = async (proxy: DecodoProxyOffer) => {
+  const handleBuy = async (proxy: DecodoProxyOffer, country = getProxyCountry(selectedCountries[proxy.id])) => {
     if (authLoading) return
     if (!user) {
       setError('Entre na sua conta para comprar proxy.')
@@ -126,6 +189,7 @@ export function Proxy() {
 
     setError(null)
     setSelectedProxy(proxy)
+    setSelectedCountry(country)
 
     if (!buyerName.trim() || !buyerPhone.trim() || !buyerDocument.trim()) return
 
@@ -147,6 +211,10 @@ export function Proxy() {
         seller_id: null,
         amount: proxy.priceAmount,
         status: 'pending',
+        proxy_country_code: country.code,
+        proxy_country_name: country.name,
+        proxy_endpoint: country.endpoint,
+        proxy_port: country.port,
       }).select('id').single()
 
       if (saleError) throw saleError
@@ -238,7 +306,7 @@ export function Proxy() {
                 <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--layout-link-color)]">Dados para pagamento</p>
                 <h2 className="mt-1 text-lg font-bold text-[var(--layout-text-primary)]">{selectedProxy.name}</h2>
                 <p className="mt-1 text-sm text-[var(--layout-text-muted)]">
-                  {selectedProxy.traffic} de trafego. A credencial exclusiva e liberada depois da confirmacao do pagamento.
+                {selectedProxy.traffic} de trafego em {selectedCountry.name}. A credencial exclusiva e liberada depois da confirmacao do pagamento.
                 </p>
                 <div className="mt-4 grid gap-3 md:grid-cols-3">
                   <label className="block">
@@ -257,7 +325,7 @@ export function Proxy() {
               </div>
               <button
                 type="button"
-                onClick={() => handleBuy(selectedProxy)}
+                onClick={() => handleBuy(selectedProxy, selectedCountry)}
                 disabled={Boolean(buyingId)}
                 className="layout-primary-button h-12 rounded-sm px-5 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-60"
               >
@@ -284,7 +352,14 @@ export function Proxy() {
         {!loading && filteredItems.length > 0 && (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {filteredItems.map((item, index) => (
-              <ProxyCard key={`${item.id}-${index}`} proxy={item} onBuy={handleBuy} buying={buyingId === item.id} />
+              <ProxyCard
+                key={`${item.id}-${index}`}
+                proxy={item}
+                onBuy={handleBuy}
+                buying={buyingId === item.id}
+                selectedCountry={getProxyCountry(selectedCountries[item.id])}
+                onCountryChange={(country) => setSelectedCountries((current) => ({ ...current, [item.id]: country.code }))}
+              />
             ))}
           </div>
         )}

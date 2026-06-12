@@ -244,7 +244,7 @@ async function callProxyProvider(settings: ProxyProviderSettings, path: string, 
 async function provisionProxySale(supabaseAdmin: ReturnType<typeof createClient>, saleId: string) {
   const { data: sale, error: saleError } = await supabaseAdmin
     .from('sales')
-    .select('id, buyer_id, proxy_offer_id, status, proxy_offers(id, traffic_limit_gb, service_type, auto_disable)')
+    .select('id, buyer_id, proxy_offer_id, proxy_endpoint, proxy_port, status, proxy_offers(id, traffic_limit_gb, service_type, auto_disable)')
     .eq('id', saleId)
     .maybeSingle()
 
@@ -266,6 +266,8 @@ async function provisionProxySale(supabaseAdmin: ReturnType<typeof createClient>
   const password = makeProxyPassword()
   const trafficLimitGb = Number(offer?.traffic_limit_gb ?? 1)
   const serviceType = firstString(offer?.service_type, 'residential_proxies') ?? 'residential_proxies'
+  const host = firstString(saleRecord.proxy_endpoint, 'gate.decodo.com') ?? 'gate.decodo.com'
+  const port = firstString(saleRecord.proxy_port, '7000') ?? '7000'
   const providerResult = settings
     ? await callProxyProvider(settings, '/sub-users', {
       username,
@@ -283,8 +285,8 @@ async function provisionProxySale(supabaseAdmin: ReturnType<typeof createClient>
     provider_sub_user_id: providerResult.success ? firstString(asRecord(providerResult.data)?.id, username) : null,
     username,
     password,
-    host: 'gate.decodo.com',
-    port: '7000',
+    host,
+    port,
     service_type: serviceType,
     traffic_limit_gb: trafficLimitGb,
     status: providerResult.success ? 'active' : 'failed',
