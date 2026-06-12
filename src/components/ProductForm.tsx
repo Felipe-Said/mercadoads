@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Button } from './ui/button'
 import { supabase } from '../lib/supabase'
+import { productCategoryOptions } from '../lib/productTaxonomy'
 
 export type ProductStatus = 'draft' | 'active' | 'paused' | 'rejected'
 
@@ -11,14 +12,12 @@ type ProductFormProps = {
   onCreated: () => Promise<void> | void
 }
 
-const categories = ['Meta Ads', 'Google Ads', 'TikTok Ads', 'Proxy', 'Contingencia', 'Outros']
-
 export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCreated }: ProductFormProps) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [price, setPrice] = useState('')
   const [originalPrice, setOriginalPrice] = useState('')
-  const [category, setCategory] = useState(categories[0])
+  const [category, setCategory] = useState(productCategoryOptions[0]?.value ?? '')
   const [imageUrl, setImageUrl] = useState('')
   const [stock, setStock] = useState('')
   const [allowAffiliates, setAllowAffiliates] = useState(false)
@@ -32,7 +31,7 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
     setDescription('')
     setPrice('')
     setOriginalPrice('')
-    setCategory(categories[0])
+    setCategory(productCategoryOptions[0]?.value ?? '')
     setImageUrl('')
     setStock('')
     setAllowAffiliates(false)
@@ -97,7 +96,7 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
         <select value={category} onChange={(event) => setCategory(event.target.value)} className="w-full h-10 px-3 border border-gray-300 rounded-sm bg-white focus:outline-none focus:border-ml-blue">
-          {categories.map((item) => <option key={item} value={item}>{item}</option>)}
+          {productCategoryOptions.map((item) => <option key={item.value} value={item.value}>{item.value}</option>)}
         </select>
       </div>
 

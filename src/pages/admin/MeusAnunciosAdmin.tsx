@@ -6,6 +6,7 @@ import { Search, Plus, Filter, Edit, Trash2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { formatCurrency } from '../../lib/data'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../../components/ui/dialog'
+import { productCategoryOptions } from '../../lib/productTaxonomy'
 
 type AdminProduct = {
   id: string
@@ -72,7 +73,7 @@ export function MeusAnunciosAdmin() {
     setDescription('')
     setPrice(0)
     setImageUrl('')
-    setCategory('')
+    setCategory(productCategoryOptions[0]?.value ?? '')
     setDeliveryMode('bms')
     setStockInput(0)
     setCredentialsText('')
@@ -278,7 +279,14 @@ export function MeusAnunciosAdmin() {
               </div>
               <div className="col-span-1">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
-                <input value={category} onChange={e => setCategory(e.target.value)} type="text" className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
+                <select value={category} onChange={e => setCategory(e.target.value)} className="w-full h-10 px-3 border border-gray-300 rounded-sm bg-white focus:outline-none focus:border-ml-blue">
+                  {category && !productCategoryOptions.some((item) => item.value === category) && (
+                    <option value={category}>{category}</option>
+                  )}
+                  {productCategoryOptions.map((item) => (
+                    <option key={item.value} value={item.value}>{item.value}</option>
+                  ))}
+                </select>
               </div>
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">URL da Imagem</label>

@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react"
-import { Search, Menu, ChevronDown, LogOut, ShieldCheck, Store, UserRound } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { Search, Menu, ChevronDown, ChevronRight, LogOut, ShieldCheck, Store, UserRound } from "lucide-react"
 import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
 import { useCart } from "../contexts/CartContext"
 import { supabase } from "../lib/supabase"
 import { PlatformLogo } from "./PlatformLogo"
 import { formatCurrency } from "../lib/data"
+import { productTaxonomy, type ProductTaxonomyGroup } from "../lib/productTaxonomy"
 
 type HeaderSettings = {
   headerPromo: {
@@ -37,12 +38,40 @@ const defaultSettings: HeaderSettings = {
   navTextColor: '#333333',
 }
 
+function BrandMark({ brand }: { brand: ProductTaxonomyGroup['brand'] }) {
+  if (brand === 'meta') {
+    return (
+      <span className="inline-flex h-9 w-9 items-center justify-center rounded-sm bg-[#0866ff] text-[13px] font-black text-white shadow-sm">
+        M
+      </span>
+    )
+  }
+
+  if (brand === 'google') {
+    return (
+      <span className="inline-grid h-9 w-9 place-items-center rounded-sm bg-white text-[18px] font-black shadow-sm ring-1 ring-black/10">
+        <span>
+          <span className="text-[#4285f4]">G</span>
+        </span>
+      </span>
+    )
+  }
+
+  return (
+    <span className="inline-flex h-9 w-9 items-center justify-center rounded-sm bg-black text-[13px] font-black text-white shadow-sm">
+      TK
+    </span>
+  )
+}
+
 export function Header() {
   const { user, profile, role, logout } = useAuth()
   const { totalItems } = useCart()
   const navigate = useNavigate()
   const [settings, setSettings] = useState<HeaderSettings>(defaultSettings)
   const [walletBalance, setWalletBalance] = useState(0)
+  const [categoryMenuOpen, setCategoryMenuOpen] = useState(false)
+  const categoryMenuRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -129,6 +158,22 @@ export function Header() {
     }
   }, [role, user])
 
+  useEffect(() => {
+    if (!categoryMenuOpen) return
+
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (!categoryMenuRef.current?.contains(event.target as Node)) {
+        setCategoryMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', closeOnOutsideClick)
+
+    return () => {
+      document.removeEventListener('mousedown', closeOnOutsideClick)
+    }
+  }, [categoryMenuOpen])
+
   const handleLogout = async () => {
     await logout()
     navigate('/', { replace: true })
@@ -205,21 +250,76 @@ export function Header() {
         </div>
 
         <div className="flex items-center justify-between gap-4 text-sm">
-          <div className="flex min-w-0 items-center gap-5 overflow-x-auto font-medium text-current/80 [&::-webkit-scrollbar]:hidden">
-            <div className="group relative">
-              <button className="flex items-center gap-1 whitespace-nowrap py-2 transition-opacity hover:opacity-75">
-                <Menu className="h-4 w-4" /> Categorias <ChevronDown className="ml-0.5 h-3 w-3" />
+          <div className="flex min-w-0 items-center gap-5 overflow-visible font-medium text-current/80">
+            <div ref={categoryMenuRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setCategoryMenuOpen((current) => !current)}
+                aria-expanded={categoryMenuOpen}
+                className="flex items-center gap-1 whitespace-nowrap py-2 transition-opacity hover:opacity-75"
+              >
+                <Menu className="h-4 w-4" /> Categorias <ChevronDown className={`ml-0.5 h-3 w-3 transition-transform ${categoryMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 
-              <div className="invisible absolute left-0 top-full z-50 mt-0 w-52 overflow-hidden rounded-sm border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] text-[var(--layout-text-muted)] opacity-0 shadow-lg transition-all duration-200 group-hover:visible group-hover:opacity-100">
-                <div className="py-2">
-                  <Link to="/category/google" className="block px-4 py-2 text-sm transition-colors hover:bg-[var(--layout-subtle-background)] hover:text-[var(--layout-link-color)]">Google Ads</Link>
-                  <Link to="/category/meta" className="block px-4 py-2 text-sm transition-colors hover:bg-[var(--layout-subtle-background)] hover:text-[var(--layout-link-color)]">Meta Ads</Link>
-                  <Link to="/category/tiktok" className="block px-4 py-2 text-sm transition-colors hover:bg-[var(--layout-subtle-background)] hover:text-[var(--layout-link-color)]">TikTok Ads</Link>
-                  <div className="my-1 border-t border-[var(--layout-border-color)]" />
-                  <Link to="/category/all" className="block px-4 py-2 text-sm font-medium text-[var(--layout-text-primary)] transition-colors hover:bg-[var(--layout-subtle-background)] hover:text-[var(--layout-link-color)]">Ver todas</Link>
+              {categoryMenuOpen && (
+                <div className="absolute left-0 top-full z-50 mt-1 w-[min(92vw,820px)] overflow-hidden rounded-sm border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] text-[var(--layout-text-primary)] shadow-2xl">
+                  <div className="border-b border-[var(--layout-border-color)] bg-[var(--layout-subtle-background)] px-4 py-3">
+                    <p className="text-sm font-bold">Categorias de ativos</p>
+                    <p className="text-xs text-[var(--layout-text-muted)]">Escolha a rede, o tipo e o nivel do produto.</p>
+                  </div>
+                  <div className="grid gap-0 md:grid-cols-3">
+                    {productTaxonomy.map((group) => (
+                      <div key={group.brand} className="border-b border-[var(--layout-border-color)] p-4 last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0">
+                        <div className="mb-4 flex items-center gap-3">
+                          <BrandMark brand={group.brand} />
+                          <div>
+                            <p className="text-base font-black leading-tight">{group.label}</p>
+                            <Link
+                              to={`/category/${encodeURIComponent(group.label.toLowerCase())}`}
+                              onClick={() => setCategoryMenuOpen(false)}
+                              className="text-xs font-semibold text-[var(--layout-link-color)] hover:text-[var(--layout-link-hover-color)]"
+                            >
+                              Ver tudo de {group.label}
+                            </Link>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          {group.items.map((section) => (
+                            <div key={section.label}>
+                              <div className="mb-1 flex items-center justify-between text-[12px] font-black uppercase tracking-[0.12em] text-[var(--layout-text-muted)]">
+                                <span>{section.label}</span>
+                                <ChevronRight className="h-3.5 w-3.5" />
+                              </div>
+                              <div className="space-y-1">
+                                {section.children.map((item) => (
+                                  <Link
+                                    key={item.value}
+                                    to={`/category/${encodeURIComponent(item.value.toLowerCase())}`}
+                                    onClick={() => setCategoryMenuOpen(false)}
+                                    className="block rounded-sm px-3 py-2 text-sm font-semibold text-[var(--layout-text-primary)] transition hover:bg-[var(--layout-subtle-background)] hover:text-[var(--layout-link-color)]"
+                                  >
+                                    {item.label}
+                                  </Link>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="border-t border-[var(--layout-border-color)] bg-[var(--layout-subtle-background)] px-4 py-3">
+                    <Link
+                      to="/category/all"
+                      onClick={() => setCategoryMenuOpen(false)}
+                      className="text-sm font-black text-[var(--layout-link-color)] hover:text-[var(--layout-link-hover-color)]"
+                    >
+                      Ver todas as categorias
+                    </Link>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             <Link to="/ofertas" className="whitespace-nowrap py-2 transition-opacity hover:opacity-75">Ofertas do dia</Link>
