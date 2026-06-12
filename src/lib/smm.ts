@@ -42,7 +42,7 @@ function friendlySmmMessage(message: string | null, status?: number) {
   if (status === 401 || status === 403 || normalized.includes('invalid api key') || normalized.includes('incorrect key')) {
     return 'Chave da API SMM invalida. Confira a chave configurada no painel admin.'
   }
-  if (normalized.includes('supabase') || normalized.includes('edge function') || normalized.includes('baratosociais')) {
+  if (normalized.includes('supabase') || normalized.includes('edge function') || normalized.includes('baratosociais') || normalized.includes('mitik')) {
     return 'Nao foi possivel consultar os servicos SMM agora.'
   }
   return message || 'Nao foi possivel consultar os servicos SMM agora.'

@@ -89,7 +89,7 @@ async function callProvider(settings: SmmSettings, payload: Record<string, unkno
     if (value !== undefined && value !== null && String(value).trim()) body.set(key, String(value))
   }
 
-  const response = await fetch(settings.api_base_url || 'https://baratosociais.com/api/v2', {
+  const response = await fetch(settings.api_base_url || 'https://mitikboost.com/api/v2', {
     method: 'POST',
     headers: {
       Accept: 'application/json',

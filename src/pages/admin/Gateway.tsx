@@ -120,7 +120,7 @@ export function Gateway() {
   const [proxyOfferForm, setProxyOfferForm] = useState<ProxyOfferSettings>(emptyProxyOffer)
   const [proxyOfferMessage, setProxyOfferMessage] = useState<string | null>(null)
   const [smmActive, setSmmActive] = useState(false)
-  const [smmBaseUrl, setSmmBaseUrl] = useState('https://baratosociais.com/api/v2')
+  const [smmBaseUrl, setSmmBaseUrl] = useState('https://mitikboost.com/api/v2')
   const [smmApiKey, setSmmApiKey] = useState('')
   const [smmMarkup, setSmmMarkup] = useState(50)
   const [smmMessage, setSmmMessage] = useState<string | null>(null)
@@ -195,7 +195,7 @@ export function Gateway() {
 
         const smmSettings = smmResult.data as SmmSettings | null
         setSmmActive(smmSettings?.active ?? false)
-        setSmmBaseUrl(smmSettings?.api_base_url ?? 'https://baratosociais.com/api/v2')
+        setSmmBaseUrl(smmSettings?.api_base_url ?? 'https://mitikboost.com/api/v2')
         setSmmApiKey(smmSettings?.api_key ?? '')
         setSmmMarkup(Number(smmSettings?.default_markup_percent ?? 50))
         setSmmOverrides(((smmOverridesResult.data ?? []) as Array<Record<string, unknown>>).map((item) => ({
@@ -281,7 +281,7 @@ export function Gateway() {
     const { error } = await supabase.from('smm_settings').upsert({
       id: 1,
       active: smmActive,
-      api_base_url: smmBaseUrl.trim() || 'https://baratosociais.com/api/v2',
+      api_base_url: smmBaseUrl.trim() || 'https://mitikboost.com/api/v2',
       api_key: smmApiKey.trim() || null,
       default_markup_percent: Number(smmMarkup) || 0,
       updated_at: new Date().toISOString(),
@@ -679,7 +679,7 @@ export function Gateway() {
                   type="url"
                   value={smmBaseUrl}
                   onChange={(event) => setSmmBaseUrl(event.target.value)}
-                  placeholder="https://baratosociais.com/api/v2"
+                  placeholder="https://mitikboost.com/api/v2"
                   className="w-full h-12 px-4 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-ml-blue focus:border-transparent transition-all"
                 />
               </GatewayField>
