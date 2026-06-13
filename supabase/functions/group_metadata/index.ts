@@ -24,14 +24,29 @@ function firstMatch(html: string, patterns: RegExp[]) {
   for (const pattern of patterns) {
     const match = html.match(pattern)
     if (match?.[1]) {
-      return match[1]
-        .replace(/&amp;/g, '&')
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'")
-        .trim()
+      return decodeHtmlEntities(match[1]).trim()
     }
   }
   return ''
+}
+
+function decodeHtmlEntities(value: string) {
+  return value
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&#039;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&#(\d+);/g, (match, code) => {
+      const parsed = Number(code)
+      return Number.isFinite(parsed) ? String.fromCharCode(parsed) : match
+    })
+    .replace(/&#x([0-9a-f]+);/gi, (match, code) => {
+      const parsed = parseInt(code, 16)
+      return Number.isFinite(parsed) ? String.fromCharCode(parsed) : match
+    })
 }
 
 Deno.serve(async (req) => {

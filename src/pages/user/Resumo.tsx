@@ -5,7 +5,7 @@ import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
-import { formatCurrency } from '../../lib/data'
+import { decodeHtmlEntities, formatCurrency } from '../../lib/data'
 import { createWestPayGroupPromotionPixIn, createWestPayWalletDepositPixIn, validateWestPayCustomer } from '../../lib/westpay'
 import { PixQrCode } from '../../components/PixQrCode'
 import { getWalletBalances, type WalletBalances } from '../../lib/wallet'
@@ -119,6 +119,7 @@ export function Resumo() {
 
     if (!groupsError) setGroups((groupRows ?? []).map((item) => ({
       ...item,
+      name: decodeHtmlEntities(String(item.name ?? '')),
       promotion_amount: item.promotion_amount == null ? null : Number(item.promotion_amount),
     })) as NetworkGroup[])
     setGroupPrice(Number(settings?.ads_group_daily_price ?? 10))

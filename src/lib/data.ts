@@ -159,6 +159,25 @@ export function formatDate(value: string) {
   return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }).format(new Date(value))
 }
 
+export function decodeHtmlEntities(value: string) {
+  return value
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&#039;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&#(\d+);/g, (match, code) => {
+      const parsed = Number(code)
+      return Number.isFinite(parsed) ? String.fromCharCode(parsed) : match
+    })
+    .replace(/&#x([0-9a-f]+);/gi, (match, code) => {
+      const parsed = parseInt(code, 16)
+      return Number.isFinite(parsed) ? String.fromCharCode(parsed) : match
+    })
+}
+
 function mapProduct(row: Record<string, unknown>): Product {
   return {
     id: String(row.id),
@@ -223,11 +242,11 @@ export async function getGroups(limit?: number) {
   if (error) throw error
   return (data ?? []).map((row) => ({
     id: String(row.id),
-    name: row.name,
+    name: decodeHtmlEntities(String(row.name ?? '')),
     members: Number(row.members ?? 0),
-    category: row.category,
-    link: row.link,
-    image: row.image_url,
+    category: String(row.category ?? ''),
+    link: String(row.link ?? ''),
+    image: String(row.image_url ?? ''),
     sponsored: Boolean(row.sponsored),
   })) as Group[]
 }

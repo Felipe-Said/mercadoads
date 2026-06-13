@@ -34,8 +34,7 @@ export function Groups() {
                 </div>
                 <CardContent className="p-5">
                   <div className="text-[12px] font-semibold text-ml-blue mb-2 uppercase tracking-wide">{group.category}</div>
-                  <p className="text-[16px] text-ml-dark font-medium leading-snug mb-3">{group.name}</p>
-                  <p className="text-[13px] text-gray-500 mb-2">{group.members.toLocaleString('pt-BR')} membros</p>
+                  <p className="text-[16px] text-ml-dark font-medium leading-snug">{group.name}</p>
                 </CardContent>
               </div>
 
