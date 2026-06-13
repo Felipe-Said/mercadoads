@@ -20,6 +20,14 @@ type ProxyProviderSettings = {
   api_key: string | null
 }
 
+type VirtualNumberSettings = {
+  active: boolean
+  api_base_url: string
+  api_key: string | null
+  auth_mode: 'bearer' | 'x-api-key' | 'query_key' | 'form_key'
+  order_path: string
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -210,6 +218,17 @@ async function loadProxyProviderSettings(supabaseAdmin: ReturnType<typeof create
   return data as ProxyProviderSettings | null
 }
 
+async function loadVirtualNumberSettings(supabaseAdmin: ReturnType<typeof createClient>) {
+  const { data, error } = await supabaseAdmin
+    .from('virtual_number_settings')
+    .select('active, api_base_url, api_key, auth_mode, order_path')
+    .eq('id', 1)
+    .maybeSingle()
+
+  if (error) throw error
+  return data as VirtualNumberSettings | null
+}
+
 async function callProxyProvider(settings: ProxyProviderSettings, path: string, body?: Record<string, unknown>, method: 'GET' | 'POST' | 'PUT' = 'POST') {
   if (!settings.active || !settings.api_key?.trim()) {
     return { success: false as const, configured: false as const, data: null }
@@ -238,6 +257,44 @@ async function callProxyProvider(settings: ProxyProviderSettings, path: string, 
     return { success: false as const, configured: true as const, status: response.status, data }
   }
 
+  return { success: true as const, configured: true as const, status: response.status, data }
+}
+
+async function callVirtualNumberProvider(settings: VirtualNumberSettings, body: Record<string, unknown>) {
+  if (!settings.active || !settings.api_key?.trim()) {
+    return { success: false as const, configured: false as const, data: null }
+  }
+
+  const base = (settings.api_base_url || 'https://app.numero-virtual.com').replace(/\/+$/, '')
+  const path = settings.order_path || '/api/v1/activations'
+  const target = /^https?:\/\//i.test(path) ? path : `${base}${path.startsWith('/') ? path : `/${path}`}`
+  const url = new URL(target)
+  const headers = new Headers({ Accept: 'application/json', 'Content-Type': 'application/json' })
+
+  if (settings.auth_mode === 'bearer') headers.set('Authorization', `Bearer ${settings.api_key.trim()}`)
+  if (settings.auth_mode === 'x-api-key') {
+    headers.set('X-API-Key', settings.api_key.trim())
+    headers.set('apikey', settings.api_key.trim())
+  }
+  if (settings.auth_mode === 'query_key') {
+    url.searchParams.set('key', settings.api_key.trim())
+    url.searchParams.set('api_key', settings.api_key.trim())
+  }
+
+  const response = await fetch(url.toString(), {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  })
+  const text = await response.text()
+  let data: unknown = text
+  try {
+    data = text ? JSON.parse(text) : null
+  } catch {
+    data = text
+  }
+
+  if (!response.ok) return { success: false as const, configured: true as const, status: response.status, data }
   return { success: true as const, configured: true as const, status: response.status, data }
 }
 
@@ -358,6 +415,62 @@ async function provisionProxySale(supabaseAdmin: ReturnType<typeof createClient>
   return providerResult
 }
 
+async function provisionVirtualNumberSale(supabaseAdmin: ReturnType<typeof createClient>, saleId: string) {
+  const { data: sale, error: saleError } = await supabaseAdmin
+    .from('sales')
+    .select('id, buyer_id, status, virtual_number_service_id, virtual_number_service_name, virtual_number_service_code, virtual_number_country_code, virtual_number_country_name, virtual_number_ddd')
+    .eq('id', saleId)
+    .maybeSingle()
+
+  if (saleError) throw saleError
+  const saleRecord = asRecord(sale)
+  if (!saleRecord?.virtual_number_service_id || saleRecord.status !== 'paid') return { skipped: true }
+
+  const existing = await supabaseAdmin
+    .from('virtual_number_deliveries')
+    .select('id')
+    .eq('sale_id', saleId)
+    .maybeSingle()
+
+  if (existing.data) return { skipped: true, existing: true }
+
+  const settings = await loadVirtualNumberSettings(supabaseAdmin)
+  const providerResult = settings
+    ? await callVirtualNumberProvider(settings, {
+      serviceId: firstString(saleRecord.virtual_number_service_id),
+      service_id: firstString(saleRecord.virtual_number_service_id),
+      service: firstString(saleRecord.virtual_number_service_id),
+      country: firstString(saleRecord.virtual_number_country_code, 'BR'),
+      ddd: firstString(saleRecord.virtual_number_ddd),
+    })
+    : { success: false as const, configured: false as const, data: null }
+
+  const providerData = asRecord(asRecord(providerResult.data)?.data) ?? asRecord(providerResult.data) ?? {}
+  const activationId = firstString(providerData.activationId, providerData.activation_id, providerData.id)
+  const phoneNumber = firstString(providerData.phoneNumber, providerData.phone_number, providerData.number, providerData.phone)
+  const status = firstString(providerData.status, providerResult.success === false ? 'failed' : 'waiting_sms') ?? 'waiting_sms'
+  const expiresAt = firstString(providerData.expiresAt, providerData.expires_at)
+
+  await supabaseAdmin.from('virtual_number_deliveries').insert({
+    sale_id: saleId,
+    buyer_id: saleRecord.buyer_id,
+    provider_activation_id: activationId || null,
+    service_id: firstString(saleRecord.virtual_number_service_id) ?? '',
+    service_name: firstString(saleRecord.virtual_number_service_name, 'Numero virtual') ?? 'Numero virtual',
+    service_code: firstString(saleRecord.virtual_number_service_code),
+    country_code: firstString(saleRecord.virtual_number_country_code),
+    country_name: firstString(saleRecord.virtual_number_country_name),
+    ddd: firstString(saleRecord.virtual_number_ddd),
+    phone_number: phoneNumber,
+    sms_code: firstString(providerData.smsCode, providerData.sms_code, providerData.code),
+    status,
+    expires_at: expiresAt,
+    provider_payload: providerResult,
+  })
+
+  return providerResult
+}
+
 async function callWestPay(settings: GatewaySettings, path: string, method: 'GET' | 'POST', body?: Record<string, unknown>) {
   if (!settings.westpay_api_key || !settings.westpay_public_key) {
     return { configured: false as const }
@@ -436,7 +549,10 @@ async function updateSaleFromWebhook(supabaseAdmin: ReturnType<typeof createClie
   const proxyDelivery = mappedStatus === 'paid'
     ? await provisionProxySale(supabaseAdmin, saleId)
     : { skipped: true }
-  return { updated: true, proxyDelivery }
+  const virtualNumberDelivery = mappedStatus === 'paid'
+    ? await provisionVirtualNumberSale(supabaseAdmin, saleId)
+    : { skipped: true }
+  return { updated: true, proxyDelivery, virtualNumberDelivery }
 }
 
 async function updateWalletDepositFromWebhook(supabaseAdmin: ReturnType<typeof createClient>, payload: Record<string, unknown>) {

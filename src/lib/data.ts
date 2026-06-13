@@ -92,6 +92,13 @@ export interface Sale {
   proxy_country_name?: string | null
   proxy_endpoint?: string | null
   proxy_port?: string | null
+  virtual_number_service_id?: string | null
+  virtual_number_service_name?: string | null
+  virtual_number_service_code?: string | null
+  virtual_number_country_code?: string | null
+  virtual_number_country_name?: string | null
+  virtual_number_ddd?: string | null
+  virtual_number_operator?: string | null
   gateway_payload?: Record<string, unknown> | null
   products?: { title: string | null; image_url: string | null; file_url?: string | null; seller_note?: string | null } | null
   product_reviews?: Array<{ id: string; rating: number; title: string | null; body: string | null }> | null
@@ -103,6 +110,13 @@ export interface Sale {
     port: string
     traffic_limit_gb: number
     status: string
+  }> | null
+  virtual_number_deliveries?: Array<{
+    service_name: string
+    phone_number: string | null
+    sms_code: string | null
+    status: string
+    expires_at: string | null
   }> | null
   buyer?: { full_name: string | null } | null
   seller?: { full_name: string | null } | null
@@ -218,7 +232,7 @@ export async function getBanners(position?: Banner['position']) {
 export async function getSales(options: { buyerId?: string; sellerId?: string } = {}) {
   let query = supabase
     .from('sales')
-    .select('*, products(title, image_url, file_url, seller_note), product_reviews(id, rating, title, body), proxy_offers(name, traffic, protocol), proxy_deliveries(username, password, host, port, traffic_limit_gb, status), buyer:buyer_id(full_name), seller:seller_id(full_name)')
+    .select('*, products(title, image_url, file_url, seller_note), product_reviews(id, rating, title, body), proxy_offers(name, traffic, protocol), proxy_deliveries(username, password, host, port, traffic_limit_gb, status), virtual_number_deliveries(service_name, phone_number, sms_code, status, expires_at), buyer:buyer_id(full_name), seller:seller_id(full_name)')
     .order('created_at', { ascending: false })
 
   if (options.buyerId) query = query.eq('buyer_id', options.buyerId)

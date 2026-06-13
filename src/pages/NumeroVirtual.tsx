@@ -1,20 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { BarChart3, ChevronDown, RefreshCw, Search, ShieldCheck, Smartphone, Star } from 'lucide-react'
-import { getVirtualNumberServices, type VirtualNumberService } from '../lib/numeroVirtual'
-
-type ServiceGroup = {
-  key: string
-  title: string
-  initial: string
-  totalStock: number
-  minPrice: number
-  services: VirtualNumberService[]
-}
-
-function parseStock(value: string) {
-  const parsed = Number(String(value ?? '').replace(/[^\d.-]/g, ''))
-  return Number.isFinite(parsed) ? parsed : 0
-}
+import { useNavigate } from 'react-router-dom'
+import { BarChart3, Globe2, LockKeyhole, RefreshCw, Search, ShieldCheck, Smartphone } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
+import { formatCurrency } from '../lib/data'
+import { getVirtualNumberServices, provisionVirtualNumberSale, type VirtualNumberService } from '../lib/numeroVirtual'
+import { supabase } from '../lib/supabase'
+import { getWalletBalances } from '../lib/wallet'
+import { createWestPayPixInOrThrow, validateWestPayCustomer } from '../lib/westpay'
 
 const countryOptions = [
   { code: 'BR', name: 'Brasil' },
@@ -52,122 +44,88 @@ const brazilDddOptions = [
   { code: '92', name: 'DDD 92 - Manaus' },
 ]
 
+function parseStock(value: string) {
+  const parsed = Number(String(value ?? '').replace(/[^\d.-]/g, ''))
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+function countryLabel(code: string) {
+  return countryOptions.find((country) => country.code === code)?.name ?? code
+}
+
 function dddLabel(code: string) {
   return brazilDddOptions.find((item) => item.code === code)?.name || (code ? `DDD ${code}` : 'Qualquer DDD')
 }
 
-function serviceTitle(service: VirtualNumberService) {
-  const title = (service.name || service.providerName || '').trim()
-  if (title && !/^funcao #?\d+$/i.test(title)) return title
-  if (service.code && !/^\d+$/.test(service.code)) return service.code.toUpperCase()
-  return 'Plataforma'
+function platformName(service: VirtualNumberService) {
+  return (service.name || service.providerName || service.functionName || 'Numero virtual').trim()
 }
 
-function buildServiceGroups(items: VirtualNumberService[]) {
-  const groups = new Map<string, VirtualNumberService[]>()
-
-  items.forEach((service) => {
-    const title = serviceTitle(service)
-    const key = title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    groups.set(key, [...(groups.get(key) ?? []), service])
-  })
-
-  return Array.from(groups.entries())
-    .map(([key, services]) => {
-      const title = serviceTitle(services[0])
-      const stocks = services.map((service) => parseStock(service.stock))
-      const prices = services.map((service) => Number(service.priceAmount || 0)).filter(Boolean)
-      return {
-        key,
-        title,
-        initial: title.slice(0, 1).toUpperCase(),
-        totalStock: stocks.reduce((sum, stock) => sum + stock, 0),
-        minPrice: prices.length ? Math.min(...prices) : 0,
-        services: services.sort((left, right) => {
-          return left.priceAmount - right.priceAmount || left.country.localeCompare(right.country)
-        }),
-      } as ServiceGroup
-    })
-    .sort((left, right) => left.title.localeCompare(right.title))
-}
-
-function ServiceOption({ service, selectedDdd }: { service: VirtualNumberService; selectedDdd: string }) {
-  const platformName = serviceTitle(service)
-  const ddd = service.ddd || selectedDdd
-  const operatorName = service.operatorName || (ddd ? dddLabel(ddd) : 'Qualquer DDD')
-  const descriptors = [
-    `Plataforma: ${platformName}`,
-    operatorName,
-    `Pais: ${service.country || 'BR'}`,
-    service.option || 'Recebimento de SMS',
-  ].filter(Boolean)
+function VirtualNumberCard({
+  service,
+  selectedCountry,
+  selectedDdd,
+  buying,
+  onBuy,
+}: {
+  service: VirtualNumberService
+  selectedCountry: string
+  selectedDdd: string
+  buying: boolean
+  onBuy: (service: VirtualNumberService) => void
+}) {
+  const name = platformName(service)
+  const stock = parseStock(service.stock)
 
   return (
-    <div className="rounded-sm border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] p-4">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <article className="layout-surface flex h-full flex-col rounded-sm p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+      <div className="mb-4 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-black text-[var(--layout-text-primary)]">Numero virtual para {platformName}</p>
-          <p className="mt-1 text-xs text-[var(--layout-text-muted)]">{descriptors.join(' / ')}</p>
-          <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--layout-link-color)]">
-            {service.code && !/^\d+$/.test(service.code) ? `Codigo do servico: ${service.code}` : operatorName}
-          </p>
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--layout-link-color)]">Numero virtual</p>
+          <h3 className="mt-1 line-clamp-2 text-lg font-bold text-[var(--layout-text-primary)]">{name}</h3>
         </div>
-        <div className="grid grid-cols-2 gap-3 text-xs md:min-w-[240px]">
-          <div>
-            <p className="font-bold uppercase text-[var(--layout-text-muted)]">Disponiveis</p>
-            <p className="mt-1 font-semibold text-[var(--layout-success-color)]">{service.stock || 'Disponivel'}</p>
-          </div>
-          <div>
-            <p className="font-bold uppercase text-[var(--layout-text-muted)]">Preco</p>
-            <p className="mt-1 font-black text-[var(--layout-price-color)]">{service.priceLabel}</p>
-          </div>
+        <span className="rounded-sm bg-[var(--layout-subtle-background)] px-2 py-1 text-xs font-bold text-[var(--layout-success-color)]">
+          Disponivel
+        </span>
+      </div>
+
+      <div className="grid gap-3 text-sm text-[var(--layout-text-muted)]">
+        <div className="flex items-center gap-2">
+          <Globe2 className="h-4 w-4 text-[var(--layout-link-color)]" />
+          <span>{countryLabel(selectedCountry)}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Smartphone className="h-4 w-4 text-[var(--layout-link-color)]" />
+          <span>{selectedCountry === 'BR' ? dddLabel(selectedDdd) : 'Numero internacional'}</span>
         </div>
       </div>
-      <button type="button" className="layout-primary-button mt-4 h-10 w-full rounded-sm text-sm font-bold md:w-auto md:px-5">
-        Comprar numero para {platformName}
-      </button>
-    </div>
-  )
-}
 
-function ServiceGroupRow({ group, open, selectedDdd, onToggle }: { group: ServiceGroup; open: boolean; selectedDdd: string; onToggle: () => void }) {
-  return (
-    <article className="overflow-hidden rounded-md border border-emerald-100 bg-[var(--layout-surface-background)] shadow-sm">
+      <div className="mt-5 grid grid-cols-2 gap-2 border-t border-[var(--layout-border-color)] pt-4 text-xs">
+        <div>
+          <p className="font-bold text-[var(--layout-text-primary)]">Preco</p>
+          <p className="mt-1 font-bold text-[var(--layout-price-color)]">{formatCurrency(service.priceAmount)}</p>
+        </div>
+        <div>
+          <p className="font-bold text-[var(--layout-text-primary)]">Disponiveis</p>
+          <p className="mt-1 text-[var(--layout-text-muted)]">{stock > 0 ? stock.toLocaleString('pt-BR') : 'Disponivel'}</p>
+        </div>
+      </div>
+
       <button
         type="button"
-        onClick={onToggle}
-        className="flex min-h-[70px] w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-[var(--layout-subtle-background)]"
+        onClick={() => onBuy(service)}
+        disabled={buying || !service.priceAmount}
+        className="layout-primary-button mt-5 h-11 rounded-sm text-sm font-bold disabled:cursor-not-allowed disabled:opacity-60"
       >
-        <Star className="h-5 w-5 flex-none text-emerald-600" />
-        <span className="grid h-10 w-10 flex-none place-items-center rounded-sm bg-emerald-500 text-sm font-black text-white">
-          {group.initial}
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-base font-black text-[var(--layout-text-primary)]">{group.title}</span>
-          <span className="mt-0.5 block text-xs text-[var(--layout-text-muted)]">
-            Plataforma para receber SMS
-            {group.services.length > 1 ? ` / ${group.services.length} opcoes` : ''}
-            {group.totalStock ? ` / ${group.totalStock} disponiveis` : ''}
-            {group.minPrice > 0 ? ` / a partir de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(group.minPrice)}` : ''}
-          </span>
-        </span>
-        <ChevronDown className={`h-5 w-5 flex-none text-[var(--layout-text-muted)] transition-transform ${open ? 'rotate-180' : ''}`} />
+        {buying ? 'Processando...' : `Comprar ${name}`}
       </button>
-
-      {open && (
-        <div className="border-t border-[var(--layout-border-color)] bg-[var(--layout-subtle-background)] p-4">
-          <div className="grid gap-3">
-            {group.services.map((service) => (
-              <ServiceOption key={service.id} service={service} selectedDdd={selectedDdd} />
-            ))}
-          </div>
-        </div>
-      )}
     </article>
   )
 }
 
 export function NumeroVirtual() {
+  const navigate = useNavigate()
+  const { user, profile, loading: authLoading } = useAuth()
   const [items, setItems] = useState<VirtualNumberService[]>([])
   const [configured, setConfigured] = useState(true)
   const [loading, setLoading] = useState(true)
@@ -176,7 +134,32 @@ export function NumeroVirtual() {
   const [selectedCountry, setSelectedCountry] = useState('BR')
   const [selectedDdd, setSelectedDdd] = useState('')
   const [selectedPlatform, setSelectedPlatform] = useState('all')
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
+  const [selectedService, setSelectedService] = useState<VirtualNumberService | null>(null)
+  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'wallet'>('pix')
+  const [walletBalance, setWalletBalance] = useState(0)
+  const [buyerName, setBuyerName] = useState('')
+  const [buyerPhone, setBuyerPhone] = useState('')
+  const [buyerDocument, setBuyerDocument] = useState('')
+  const [buyingId, setBuyingId] = useState<string | null>(null)
+
+  useEffect(() => {
+    setBuyerName(profile?.full_name ?? user?.user_metadata?.full_name ?? '')
+    setBuyerPhone(profile?.phone ?? '')
+  }, [profile?.full_name, profile?.phone, user?.user_metadata?.full_name])
+
+  const loadWalletBalance = async () => {
+    if (!user) {
+      setWalletBalance(0)
+      return 0
+    }
+    const balances = await getWalletBalances(user.id)
+    setWalletBalance(balances.purchaseBalance)
+    return balances.purchaseBalance
+  }
+
+  useEffect(() => {
+    loadWalletBalance().catch(console.error)
+  }, [user?.id])
 
   const load = async () => {
     setLoading(true)
@@ -197,81 +180,130 @@ export function NumeroVirtual() {
   }, [selectedCountry])
 
   const platformOptions = useMemo(() => {
-    return ['all', ...Array.from(new Set(items.map((item) => serviceTitle(item)).filter(Boolean))).sort((left, right) => left.localeCompare(right))]
+    return ['all', ...Array.from(new Set(items.map((item) => platformName(item)).filter(Boolean))).sort((left, right) => left.localeCompare(right))]
   }, [items])
 
   const filteredItems = useMemo(() => {
     const term = query.trim().toLowerCase()
     return items.filter((item) => {
-      const platformName = serviceTitle(item)
-      const matchesPlatform = selectedPlatform === 'all' || platformName === selectedPlatform
+      const name = platformName(item)
+      const matchesPlatform = selectedPlatform === 'all' || name === selectedPlatform
       const matchesQuery = !term || [
-        item.name,
-        item.providerName,
-        item.category,
+        name,
+        item.code,
         item.country,
         item.stock,
-        item.functionName,
-        item.operatorName,
-        item.ddd,
-        item.option,
-        item.code,
       ].some((value) => String(value ?? '').toLowerCase().includes(term))
       return matchesPlatform && matchesQuery
     })
   }, [items, query, selectedPlatform])
 
-  const groups = useMemo(() => buildServiceGroups(filteredItems), [filteredItems])
+  const handleBuy = async (service: VirtualNumberService) => {
+    if (authLoading) return
+    if (!user) {
+      setError('Entre na sua conta para comprar numero virtual.')
+      return
+    }
 
-  useEffect(() => {
-    if (!query.trim() && selectedPlatform === 'all') return
-    setOpenGroups(Object.fromEntries(groups.slice(0, 12).map((group) => [group.key, true])))
-  }, [query, selectedPlatform, groups])
+    setError(null)
+    setSelectedService(service)
+
+    if (paymentMethod === 'pix' && (!buyerName.trim() || !buyerPhone.trim() || !buyerDocument.trim())) return
+
+    setBuyingId(service.id)
+    let saleId: string | null = null
+
+    try {
+      const customer = paymentMethod === 'pix'
+        ? validateWestPayCustomer({
+          name: buyerName,
+          email: user.email ?? '',
+          phone: buyerPhone,
+          documentNumber: buyerDocument,
+        })
+        : null
+
+      if (paymentMethod === 'wallet') {
+        const balance = await loadWalletBalance()
+        if (balance < service.priceAmount) throw new Error('Voce nao possui fundos suficiente')
+      }
+
+      const { data: saleData, error: saleError } = await supabase.from('sales').insert({
+        product_id: null,
+        buyer_id: user.id,
+        seller_id: null,
+        amount: service.priceAmount,
+        status: 'pending',
+        virtual_number_service_id: service.id,
+        virtual_number_service_name: platformName(service),
+        virtual_number_service_code: service.code,
+        virtual_number_country_code: selectedCountry,
+        virtual_number_country_name: countryLabel(selectedCountry),
+        virtual_number_ddd: selectedCountry === 'BR' ? selectedDdd || null : null,
+        virtual_number_operator: selectedCountry === 'BR' ? dddLabel(selectedDdd) : null,
+      }).select('id').single()
+
+      if (saleError) throw saleError
+      saleId = saleData?.id ? String(saleData.id) : null
+      if (!saleId) throw new Error('Nao foi possivel gerar o pedido.')
+
+      if (paymentMethod === 'wallet') {
+        const { error: spendError } = await supabase.from('wallet_spends').insert({
+          user_id: user.id,
+          sale_id: saleId,
+          amount: service.priceAmount,
+        })
+        if (spendError) throw spendError
+        await provisionVirtualNumberSale(saleId)
+        await loadWalletBalance()
+      } else if (customer) {
+        await createWestPayPixInOrThrow({
+          saleId,
+          amount: service.priceAmount,
+          customer,
+          itemTitle: `Numero virtual - ${platformName(service)}`,
+        })
+      }
+
+      navigate('/painel/usuario/compras', { state: { checkoutSaleIds: [saleId] } })
+    } catch (buyError) {
+      if (saleId && paymentMethod === 'pix') await supabase.from('sales').delete().eq('id', saleId)
+      setError(buyError instanceof Error ? buyError.message : 'Nao foi possivel concluir a compra.')
+    } finally {
+      setBuyingId(null)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[var(--layout-page-background)] pb-12 text-[var(--layout-text-primary)]">
       <section className="bg-[var(--layout-dashboard-sidebar-header-bg)] text-[var(--layout-dashboard-sidebar-text)]">
-        <div className="mx-auto max-w-[1440px] px-4 py-6">
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_330px] lg:items-end">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--layout-dashboard-sidebar-kicker-text)]">Cookie Numero</p>
-              <h1 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">Numeros virtuais</h1>
-              <p className="mt-3 max-w-2xl text-sm text-[var(--layout-dashboard-sidebar-muted-text)]">
-                Escolha a plataforma que vai receber o SMS, filtre por pais e DDD, e compre apenas servicos disponiveis no catalogo.
-              </p>
-            </div>
-            <div className="layout-surface rounded-sm p-4 text-[var(--layout-text-primary)] shadow-sm">
-              <div className="flex gap-3">
-                <ShieldCheck className="h-9 w-9 text-[var(--layout-success-color)]" />
-                <div>
-                  <p className="font-bold">Entrega protegida</p>
-                  <p className="mt-1 text-sm text-[var(--layout-text-muted)]">Numero e SMS ficam vinculados ao pedido.</p>
-                </div>
-              </div>
-            </div>
+        <div className="mx-auto max-w-[1440px] px-4 py-5">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--layout-dashboard-sidebar-kicker-text)]">Cookie Numero</p>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">Numeros virtuais</h1>
+            <p className="mt-2 max-w-2xl text-sm text-[var(--layout-dashboard-sidebar-muted-text)]">
+              Escolha a plataforma, o pais e o DDD para receber o codigo SMS.
+            </p>
           </div>
         </div>
       </section>
 
-      <main className="mx-auto max-w-[980px] px-4 py-6">
-        <div className="mb-5 grid gap-3 md:grid-cols-[minmax(0,1fr)_190px_170px_220px_auto] md:items-center">
+      <main className="mx-auto max-w-[1440px] px-4 py-6">
+        <div className="mb-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_170px_220px_auto] lg:items-center">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--layout-text-muted)]" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              className="h-12 w-full rounded-md border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] pl-10 pr-3 text-sm outline-none focus:border-[var(--layout-accent-color)]"
-              placeholder="Pesquisar plataforma"
+              className="h-11 w-full rounded-sm border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] pl-9 pr-3 text-sm outline-none focus:border-[var(--layout-accent-color)]"
+              placeholder="Buscar plataforma"
             />
           </div>
 
           <select
             value={selectedPlatform}
-            onChange={(event) => {
-              setSelectedPlatform(event.target.value)
-              setOpenGroups({})
-            }}
-            className="h-12 w-full rounded-md border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)]"
+            onChange={(event) => setSelectedPlatform(event.target.value)}
+            className="h-11 w-full rounded-sm border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)]"
           >
             {platformOptions.map((item) => (
               <option key={item} value={item}>{item === 'all' ? 'Todas as plataformas' : item}</option>
@@ -283,9 +315,9 @@ export function NumeroVirtual() {
             onChange={(event) => {
               setSelectedCountry(event.target.value)
               setSelectedDdd('')
-              setOpenGroups({})
+              setSelectedService(null)
             }}
-            className="h-12 w-full rounded-md border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)]"
+            className="h-11 w-full rounded-sm border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)]"
           >
             {countryOptions.map((item) => (
               <option key={item.code} value={item.code}>{item.name}</option>
@@ -296,14 +328,14 @@ export function NumeroVirtual() {
             value={selectedDdd}
             onChange={(event) => setSelectedDdd(event.target.value)}
             disabled={selectedCountry !== 'BR'}
-            className="h-12 w-full rounded-md border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)] disabled:opacity-60"
+            className="h-11 w-full rounded-sm border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)] disabled:opacity-60"
           >
             {brazilDddOptions.map((item) => (
               <option key={item.code || 'any'} value={item.code}>{item.name}</option>
             ))}
           </select>
 
-          <button onClick={load} className="layout-secondary-button inline-flex h-12 items-center justify-center gap-2 rounded-md px-4 text-sm font-bold" disabled={loading}>
+          <button onClick={load} className="layout-secondary-button inline-flex h-11 items-center justify-center gap-2 rounded-sm px-4 text-sm font-bold" disabled={loading}>
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             Atualizar
           </button>
@@ -312,7 +344,7 @@ export function NumeroVirtual() {
         {!configured && (
           <div className="layout-surface rounded-sm p-6 shadow-sm">
             <div className="flex gap-3">
-              <Smartphone className="h-6 w-6 text-[var(--layout-link-color)]" />
+              <LockKeyhole className="h-6 w-6 text-[var(--layout-link-color)]" />
               <div>
                 <h2 className="font-bold">Numeros virtuais ainda nao configurados</h2>
                 <p className="mt-1 text-sm text-[var(--layout-text-muted)]">
@@ -323,32 +355,84 @@ export function NumeroVirtual() {
           </div>
         )}
 
-        {error && <div className="rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-600">{error}</div>}
+        {error && <div className="mb-5 rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-600">{error}</div>}
+
+        {selectedService && user && (
+          <div className="layout-surface mb-5 rounded-sm p-5 shadow-sm">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-end">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--layout-link-color)]">Dados para pagamento</p>
+                <h2 className="mt-1 text-lg font-bold text-[var(--layout-text-primary)]">{platformName(selectedService)}</h2>
+                <p className="mt-1 text-sm text-[var(--layout-text-muted)]">
+                  {countryLabel(selectedCountry)} {selectedCountry === 'BR' ? `- ${dddLabel(selectedDdd)}` : ''}. O numero fica liberado apos a confirmacao.
+                </p>
+                <div className="mt-4 grid gap-2 md:grid-cols-2">
+                  <label className={`flex cursor-pointer items-center justify-between rounded-sm border p-3 text-sm ${paymentMethod === 'pix' ? 'border-[var(--layout-accent-color)] bg-[var(--layout-subtle-background)]' : 'border-[var(--layout-border-color)]'}`}>
+                    <span className="font-semibold text-[var(--layout-text-primary)]">Gerar Pix agora</span>
+                    <input type="radio" checked={paymentMethod === 'pix'} onChange={() => setPaymentMethod('pix')} />
+                  </label>
+                  <label className={`flex cursor-pointer items-center justify-between rounded-sm border p-3 text-sm ${paymentMethod === 'wallet' ? 'border-[var(--layout-accent-color)] bg-[var(--layout-subtle-background)]' : 'border-[var(--layout-border-color)]'}`}>
+                    <span>
+                      <span className="block font-semibold text-[var(--layout-text-primary)]">Fundos da carteira</span>
+                      <span className="text-xs text-[var(--layout-text-muted)]">Saldo: {formatCurrency(walletBalance)}</span>
+                    </span>
+                    <input type="radio" checked={paymentMethod === 'wallet'} onChange={() => setPaymentMethod('wallet')} />
+                  </label>
+                </div>
+                {paymentMethod === 'pix' && (
+                  <div className="mt-4 grid gap-3 md:grid-cols-3">
+                    <label className="block">
+                      <span className="mb-1 block text-sm font-bold text-[var(--layout-text-primary)]">Nome completo</span>
+                      <input value={buyerName} onChange={(event) => setBuyerName(event.target.value)} className="h-11 w-full rounded-sm border border-[var(--layout-border-color)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)]" />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-sm font-bold text-[var(--layout-text-primary)]">WhatsApp</span>
+                      <input value={buyerPhone} onChange={(event) => setBuyerPhone(event.target.value)} className="h-11 w-full rounded-sm border border-[var(--layout-border-color)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)]" placeholder="DDD + numero" />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-sm font-bold text-[var(--layout-text-primary)]">CPF ou CNPJ</span>
+                      <input value={buyerDocument} onChange={(event) => setBuyerDocument(event.target.value)} className="h-11 w-full rounded-sm border border-[var(--layout-border-color)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)]" placeholder="Somente numeros" />
+                    </label>
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => handleBuy(selectedService)}
+                disabled={Boolean(buyingId)}
+                className="layout-primary-button h-12 rounded-sm px-5 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {buyingId ? 'Processando...' : `Pagar ${formatCurrency(selectedService.priceAmount)}`}
+              </button>
+            </div>
+          </div>
+        )}
 
         {loading && (
-          <div className="grid gap-3">
-            {[1, 2, 3, 4, 5, 6, 7].map((item) => (
-              <div key={item} className="h-[72px] animate-pulse rounded-md bg-[var(--layout-surface-background)]" />
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {[1, 2, 3, 4, 5, 6].map((item) => (
+              <div key={item} className="h-56 animate-pulse rounded-sm bg-[var(--layout-surface-background)]" />
             ))}
           </div>
         )}
 
-        {!loading && configured && !error && groups.length === 0 && (
+        {!loading && configured && !error && filteredItems.length === 0 && (
           <div className="layout-surface rounded-sm p-8 text-center text-sm text-[var(--layout-text-muted)] shadow-sm">
             <BarChart3 className="mx-auto mb-3 h-8 w-8" />
             Nenhum numero virtual disponivel no momento.
           </div>
         )}
 
-        {!loading && groups.length > 0 && (
-          <div className="grid gap-3">
-            {groups.map((group) => (
-              <ServiceGroupRow
-                key={group.key}
-                group={group}
-                open={Boolean(openGroups[group.key])}
+        {!loading && filteredItems.length > 0 && (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {filteredItems.map((item) => (
+              <VirtualNumberCard
+                key={item.id}
+                service={item}
+                selectedCountry={selectedCountry}
                 selectedDdd={selectedDdd}
-                onToggle={() => setOpenGroups((current) => ({ ...current, [group.key]: !current[group.key] }))}
+                buying={buyingId === item.id}
+                onBuy={handleBuy}
               />
             ))}
           </div>

@@ -80,7 +80,7 @@ async function invokeVirtualNumberDirect(action: string, payload?: Record<string
   return data as VirtualNumberInvokeResult
 }
 
-export async function invokeVirtualNumber(action: 'services' | 'status' | 'balance' | 'countries' | 'order', payload?: Record<string, unknown>) {
+export async function invokeVirtualNumber(action: 'services' | 'status' | 'balance' | 'countries' | 'order' | 'provision_sale', payload?: Record<string, unknown>) {
   try {
     const { data, error } = await supabase.functions.invoke('numero_virtual', {
       body: { action, ...(payload ?? {}) },
@@ -105,6 +105,14 @@ export async function getVirtualNumberServices(country = 'BR') {
 
 export async function getVirtualNumberBalance() {
   const result = await invokeVirtualNumber('balance')
+  if (result.success === false) {
+    throw new Error(friendlyVirtualNumberMessage(extractMessage(result.data) || result.error || null, result.status))
+  }
+  return result
+}
+
+export async function provisionVirtualNumberSale(saleId: string) {
+  const result = await invokeVirtualNumber('provision_sale', { saleId })
   if (result.success === false) {
     throw new Error(friendlyVirtualNumberMessage(extractMessage(result.data) || result.error || null, result.status))
   }

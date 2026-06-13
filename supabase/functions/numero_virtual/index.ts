@@ -311,6 +311,62 @@ async function mapStoreCatalog(settings: VirtualNumberSettings, countryCode: str
     })
 }
 
+async function provisionVirtualNumberSale(supabaseAdmin: ReturnType<typeof createClient>, saleId: string) {
+  const { data: sale, error: saleError } = await supabaseAdmin
+    .from('sales')
+    .select('id, buyer_id, status, virtual_number_service_id, virtual_number_service_name, virtual_number_service_code, virtual_number_country_code, virtual_number_country_name, virtual_number_ddd')
+    .eq('id', saleId)
+    .maybeSingle()
+
+  if (saleError) throw saleError
+  const saleRecord = asRecord(sale)
+  if (!saleRecord?.virtual_number_service_id || saleRecord.status !== 'paid') return { skipped: true }
+
+  const existing = await supabaseAdmin
+    .from('virtual_number_deliveries')
+    .select('id')
+    .eq('sale_id', saleId)
+    .maybeSingle()
+
+  if (existing.data) return { skipped: true, existing: true }
+
+  const settings = await loadSettings(supabaseAdmin)
+  if (!settings || !settings.active) return { success: false, configured: false, error: 'Numero virtual indisponivel.' }
+
+  const providerResult = await callProvider(settings, settings.order_path, {
+    serviceId: firstString(saleRecord.virtual_number_service_id),
+    service_id: firstString(saleRecord.virtual_number_service_id),
+    service: firstString(saleRecord.virtual_number_service_id),
+    country: firstString(saleRecord.virtual_number_country_code, 'BR'),
+    ddd: firstString(saleRecord.virtual_number_ddd),
+  }, 'POST')
+
+  const providerData = asRecord(asRecord(providerResult.data)?.data) ?? asRecord(providerResult.data) ?? {}
+  const activationId = firstString(providerData.activationId, providerData.activation_id, providerData.id)
+  const phoneNumber = firstString(providerData.phoneNumber, providerData.phone_number, providerData.number, providerData.phone)
+  const status = firstString(providerData.status, providerResult.success === false ? 'failed' : 'waiting_sms')
+  const expiresAt = firstString(providerData.expiresAt, providerData.expires_at)
+
+  await supabaseAdmin.from('virtual_number_deliveries').insert({
+    sale_id: saleId,
+    buyer_id: saleRecord.buyer_id,
+    provider_activation_id: activationId || null,
+    service_id: firstString(saleRecord.virtual_number_service_id),
+    service_name: firstString(saleRecord.virtual_number_service_name, 'Numero virtual'),
+    service_code: firstString(saleRecord.virtual_number_service_code) || null,
+    country_code: firstString(saleRecord.virtual_number_country_code) || null,
+    country_name: firstString(saleRecord.virtual_number_country_name) || null,
+    ddd: firstString(saleRecord.virtual_number_ddd) || null,
+    phone_number: phoneNumber || null,
+    sms_code: firstString(providerData.smsCode, providerData.sms_code, providerData.code) || null,
+    status,
+    expires_at: expiresAt || null,
+    provider_payload: providerResult,
+  })
+
+  return providerResult
+}
+
 function mapServices(data: unknown, overrides: VirtualNumberOverride[], defaultMarkup: number) {
   const overrideById = new Map(overrides.map((item) => [String(item.service_id), item]))
   const root = asRecord(data)
@@ -420,6 +476,13 @@ Deno.serve(async (req) => {
       max_price: body.maxPrice,
     }, 'POST')
     return json(result, result.success === false ? 400 : 200)
+  }
+
+  if (action === 'provision_sale') {
+    const saleId = firstString(body.saleId, body.sale_id)
+    if (!saleId) return json({ success: false, configured: true, error: 'Pedido invalido.' }, 400)
+    const result = await provisionVirtualNumberSale(supabaseAdmin, saleId)
+    return json(result, asRecord(result)?.success === false ? 400 : 200)
   }
 
   return json({ success: false, configured: true, error: 'Action not supported.' }, 400)

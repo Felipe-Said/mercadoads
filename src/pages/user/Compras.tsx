@@ -216,7 +216,9 @@ export function Compras() {
                     {sale.products?.image_url ? <img src={sale.products.image_url} alt="" className="w-full h-full object-cover" /> : <Package className="w-8 h-8 text-gray-400" />}
                   </div>
                   <div className="space-y-2">
-                    <p className="text-ml-dark font-medium group-hover:text-ml-blue transition-colors">{sale.products?.title ?? sale.proxy_offers?.name ?? 'Pedido de proxy'}</p>
+                    <p className="text-ml-dark font-medium group-hover:text-ml-blue transition-colors">
+                      {sale.products?.title ?? sale.proxy_offers?.name ?? (sale.virtual_number_service_name ? `Numero virtual - ${sale.virtual_number_service_name}` : 'Pedido')}
+                    </p>
                     <p className="text-sm text-gray-500 mt-1">{formatCurrency(sale.amount)}</p>
                     {sale.status === 'pending' && !(sale.payment_qrcode_text || sale.payment_qrcode) && (
                       <div className="rounded-md border border-yellow-100 bg-yellow-50 p-3 max-w-2xl">
@@ -329,6 +331,51 @@ export function Compras() {
                                 <p><span className="font-semibold text-blue-900">Senha:</span> {delivery.password}</p>
                               </div>
                               <textarea readOnly value={proxyLine} rows={2} className="mt-3 w-full resize-none rounded-sm border border-blue-100 bg-white p-2 font-mono text-xs text-gray-700 outline-none" />
+                            </div>
+                          )
+                        })}
+
+                        {sale.virtual_number_service_id && (!sale.virtual_number_deliveries || sale.virtual_number_deliveries.length === 0) && (
+                          <div className="rounded-md border border-yellow-100 bg-yellow-50 p-4 max-w-3xl">
+                            <p className="text-sm font-semibold text-yellow-800">Numero em processamento</p>
+                            <p className="mt-1 text-xs text-gray-600">O pagamento foi confirmado e a plataforma esta solicitando o numero para {sale.virtual_number_service_name}.</p>
+                          </div>
+                        )}
+
+                        {sale.virtual_number_deliveries?.map((delivery) => {
+                          if (delivery.status === 'failed') {
+                            return (
+                              <div key={`${delivery.service_name}-${sale.id}`} className="rounded-md border border-yellow-100 bg-yellow-50 p-4 max-w-3xl">
+                                <p className="text-sm font-semibold text-yellow-800">Entrega em analise</p>
+                                <p className="mt-1 text-xs text-gray-600">O pagamento foi confirmado, mas o numero ainda nao foi liberado automaticamente. O suporte deve revisar este pedido.</p>
+                              </div>
+                            )
+                          }
+
+                          return (
+                            <div key={`${delivery.service_name}-${sale.id}`} className="rounded-md border border-blue-100 bg-blue-50 p-4 max-w-3xl">
+                              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                                <div>
+                                  <p className="text-sm font-semibold text-blue-800">Numero virtual liberado</p>
+                                  <p className="mt-1 text-xs text-blue-700">Use este numero para receber o SMS em {delivery.service_name}.</p>
+                                </div>
+                                {delivery.phone_number && (
+                                  <Button
+                                    type="button"
+                                    onClick={() => handleCopyText(delivery.phone_number || '', sale.id)}
+                                    className="h-9 rounded-sm bg-white border border-blue-200 text-blue-800 hover:bg-blue-100 text-xs font-semibold"
+                                  >
+                                    {copiedSaleId === sale.id ? 'Copiado' : 'Copiar numero'}
+                                  </Button>
+                                )}
+                              </div>
+                              <div className="mt-3 grid gap-2 text-xs md:grid-cols-2">
+                                <p><span className="font-semibold text-blue-900">Plataforma:</span> {delivery.service_name}</p>
+                                <p><span className="font-semibold text-blue-900">Status:</span> {delivery.status}</p>
+                                <p><span className="font-semibold text-blue-900">Numero:</span> {delivery.phone_number || 'Aguardando liberacao'}</p>
+                                <p><span className="font-semibold text-blue-900">Codigo SMS:</span> {delivery.sms_code || 'Aguardando SMS'}</p>
+                              </div>
+                              {delivery.expires_at && <p className="mt-2 text-xs text-blue-700">Expira em {new Date(delivery.expires_at).toLocaleString('pt-BR')}</p>}
                             </div>
                           )
                         })}
