@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/button'
 import { supabase } from '../../lib/supabase'
 import { getDecodoProxyCatalog } from '../../lib/decodo'
 import { getSmmBalance, getSmmServices } from '../../lib/smm'
+import { getVirtualNumberBalance, getVirtualNumberServices } from '../../lib/numeroVirtual'
 import { westPayStatus } from '../../lib/westpay'
 
 type GatewaySettings = {
@@ -66,6 +67,30 @@ type SmmServiceOverride = {
   sort_order: number
 }
 
+type VirtualNumberSettings = {
+  id: number
+  active: boolean
+  api_base_url: string | null
+  api_key: string | null
+  auth_mode: 'bearer' | 'x-api-key' | 'query_key' | 'form_key' | null
+  balance_path: string | null
+  services_path: string | null
+  countries_path: string | null
+  order_path: string | null
+  default_markup_percent: number | null
+}
+
+type VirtualNumberServiceOverride = {
+  id?: number
+  service_id: string
+  custom_name: string
+  custom_category: string
+  price_amount: number | null
+  markup_percent: number | null
+  is_active: boolean
+  sort_order: number
+}
+
 const emptyProxyOffer: ProxyOfferSettings = {
   name: '',
   type: 'Pool premium',
@@ -93,6 +118,16 @@ const emptySmmOverride: SmmServiceOverride = {
   custom_name: '',
   custom_category: '',
   price_per_1000: null,
+  markup_percent: null,
+  is_active: true,
+  sort_order: 10,
+}
+
+const emptyVirtualNumberOverride: VirtualNumberServiceOverride = {
+  service_id: '',
+  custom_name: '',
+  custom_category: '',
+  price_amount: null,
   markup_percent: null,
   is_active: true,
   sort_order: 10,
@@ -127,6 +162,19 @@ export function Gateway() {
   const [smmTestMessage, setSmmTestMessage] = useState<string | null>(null)
   const [smmOverrides, setSmmOverrides] = useState<SmmServiceOverride[]>([])
   const [smmOverrideForm, setSmmOverrideForm] = useState<SmmServiceOverride>(emptySmmOverride)
+  const [virtualNumberActive, setVirtualNumberActive] = useState(false)
+  const [virtualNumberBaseUrl, setVirtualNumberBaseUrl] = useState('https://app.numero-virtual.com')
+  const [virtualNumberApiKey, setVirtualNumberApiKey] = useState('')
+  const [virtualNumberAuthMode, setVirtualNumberAuthMode] = useState<'bearer' | 'x-api-key' | 'query_key' | 'form_key'>('bearer')
+  const [virtualNumberBalancePath, setVirtualNumberBalancePath] = useState('/api/balance')
+  const [virtualNumberServicesPath, setVirtualNumberServicesPath] = useState('/api/services')
+  const [virtualNumberCountriesPath, setVirtualNumberCountriesPath] = useState('/api/countries')
+  const [virtualNumberOrderPath, setVirtualNumberOrderPath] = useState('/api/order')
+  const [virtualNumberMarkup, setVirtualNumberMarkup] = useState(50)
+  const [virtualNumberMessage, setVirtualNumberMessage] = useState<string | null>(null)
+  const [virtualNumberTestMessage, setVirtualNumberTestMessage] = useState<string | null>(null)
+  const [virtualNumberOverrides, setVirtualNumberOverrides] = useState<VirtualNumberServiceOverride[]>([])
+  const [virtualNumberOverrideForm, setVirtualNumberOverrideForm] = useState<VirtualNumberServiceOverride>(emptyVirtualNumberOverride)
 
   const functionBaseUrl = useMemo(() => {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
@@ -168,14 +216,26 @@ export function Gateway() {
         .select('id, service_id, custom_name, custom_category, price_per_1000, markup_percent, is_active, sort_order')
         .order('sort_order', { ascending: true })
         .order('id', { ascending: true }),
+      supabase
+        .from('virtual_number_settings')
+        .select('id, active, api_base_url, api_key, auth_mode, balance_path, services_path, countries_path, order_path, default_markup_percent')
+        .eq('id', 1)
+        .maybeSingle(),
+      supabase
+        .from('virtual_number_service_overrides')
+        .select('id, service_id, custom_name, custom_category, price_amount, markup_percent, is_active, sort_order')
+        .order('sort_order', { ascending: true })
+        .order('id', { ascending: true }),
     ])
-      .then(([gatewayResult, decodoResult, proxyOffersResult, smmResult, smmOverridesResult]) => {
+      .then(([gatewayResult, decodoResult, proxyOffersResult, smmResult, smmOverridesResult, virtualNumberResult, virtualNumberOverridesResult]) => {
         if (!mounted) return
         if (gatewayResult.error) throw gatewayResult.error
         if (decodoResult.error) throw decodoResult.error
         if (proxyOffersResult.error) throw proxyOffersResult.error
         if (smmResult.error) throw smmResult.error
         if (smmOverridesResult.error) throw smmOverridesResult.error
+        if (virtualNumberResult.error) throw virtualNumberResult.error
+        if (virtualNumberOverridesResult.error) throw virtualNumberOverridesResult.error
 
         const settings = gatewayResult.data as GatewaySettings | null
         setActive(settings?.active ?? true)
@@ -204,6 +264,27 @@ export function Gateway() {
           custom_name: String(item.custom_name ?? ''),
           custom_category: String(item.custom_category ?? ''),
           price_per_1000: item.price_per_1000 == null ? null : Number(item.price_per_1000),
+          markup_percent: item.markup_percent == null ? null : Number(item.markup_percent),
+          is_active: Boolean(item.is_active ?? true),
+          sort_order: Number(item.sort_order ?? 0),
+        })))
+
+        const virtualNumberSettings = virtualNumberResult.data as VirtualNumberSettings | null
+        setVirtualNumberActive(virtualNumberSettings?.active ?? false)
+        setVirtualNumberBaseUrl(virtualNumberSettings?.api_base_url ?? 'https://app.numero-virtual.com')
+        setVirtualNumberApiKey(virtualNumberSettings?.api_key ?? '')
+        setVirtualNumberAuthMode(virtualNumberSettings?.auth_mode ?? 'bearer')
+        setVirtualNumberBalancePath(virtualNumberSettings?.balance_path ?? '/api/balance')
+        setVirtualNumberServicesPath(virtualNumberSettings?.services_path ?? '/api/services')
+        setVirtualNumberCountriesPath(virtualNumberSettings?.countries_path ?? '/api/countries')
+        setVirtualNumberOrderPath(virtualNumberSettings?.order_path ?? '/api/order')
+        setVirtualNumberMarkup(Number(virtualNumberSettings?.default_markup_percent ?? 50))
+        setVirtualNumberOverrides(((virtualNumberOverridesResult.data ?? []) as Array<Record<string, unknown>>).map((item) => ({
+          id: item.id as number | undefined,
+          service_id: String(item.service_id ?? ''),
+          custom_name: String(item.custom_name ?? ''),
+          custom_category: String(item.custom_category ?? ''),
+          price_amount: item.price_amount == null ? null : Number(item.price_amount),
           markup_percent: item.markup_percent == null ? null : Number(item.markup_percent),
           is_active: Boolean(item.is_active ?? true),
           sort_order: Number(item.sort_order ?? 0),
@@ -388,6 +469,128 @@ export function Gateway() {
 
   const updateSmmOverrideForm = <K extends keyof SmmServiceOverride>(key: K, value: SmmServiceOverride[K]) => {
     setSmmOverrideForm((current) => ({ ...current, [key]: value }))
+  }
+
+  const saveVirtualNumber = async () => {
+    setSaving(true)
+    setVirtualNumberMessage(null)
+
+    const { error } = await supabase.from('virtual_number_settings').upsert({
+      id: 1,
+      active: virtualNumberActive,
+      api_base_url: virtualNumberBaseUrl.trim() || 'https://app.numero-virtual.com',
+      api_key: virtualNumberApiKey.trim() || null,
+      auth_mode: virtualNumberAuthMode,
+      balance_path: virtualNumberBalancePath.trim() || '/api/balance',
+      services_path: virtualNumberServicesPath.trim() || '/api/services',
+      countries_path: virtualNumberCountriesPath.trim() || '/api/countries',
+      order_path: virtualNumberOrderPath.trim() || '/api/order',
+      default_markup_percent: Number(virtualNumberMarkup) || 0,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'id' })
+
+    if (error) {
+      setVirtualNumberMessage(error.message)
+      setSaving(false)
+      return
+    }
+
+    setVirtualNumberMessage(virtualNumberApiKey.trim() ? 'Numero virtual salvo e chave registrada.' : 'Numero virtual salvo, mas sem chave configurada.')
+    setSaving(false)
+  }
+
+  const testVirtualNumberConnection = async () => {
+    setVirtualNumberTestMessage('Testando servicos...')
+    try {
+      const [services, balance] = await Promise.all([
+        getVirtualNumberServices(),
+        getVirtualNumberBalance().catch(() => null),
+      ])
+      const balanceData = balance?.data as { balance?: string; currency?: string; saldo?: string } | undefined
+      const balanceValue = balanceData?.balance ?? balanceData?.saldo
+      setVirtualNumberTestMessage(services.configured
+        ? `Servicos validados: ${services.items.length}.${balanceValue ? ` Saldo: ${balanceValue} ${balanceData?.currency ?? ''}` : ''}`
+        : 'Numero virtual ativo, mas sem chave salva.')
+    } catch (error) {
+      setVirtualNumberTestMessage(error instanceof Error ? error.message : 'Nao foi possivel validar os servicos.')
+    }
+  }
+
+  const resetVirtualNumberOverrideForm = () => {
+    setVirtualNumberOverrideForm({ ...emptyVirtualNumberOverride, sort_order: (virtualNumberOverrides.length + 1) * 10 })
+  }
+
+  const saveVirtualNumberOverride = async () => {
+    setVirtualNumberMessage(null)
+    const payload = {
+      service_id: virtualNumberOverrideForm.service_id.trim(),
+      custom_name: virtualNumberOverrideForm.custom_name.trim() || null,
+      custom_category: virtualNumberOverrideForm.custom_category.trim() || null,
+      price_amount: virtualNumberOverrideForm.price_amount,
+      markup_percent: virtualNumberOverrideForm.markup_percent,
+      is_active: virtualNumberOverrideForm.is_active,
+      sort_order: Number(virtualNumberOverrideForm.sort_order) || 0,
+      updated_at: new Date().toISOString(),
+    }
+
+    if (!payload.service_id) {
+      setVirtualNumberMessage('Informe o ID do servico.')
+      return
+    }
+
+    const request = virtualNumberOverrideForm.id
+      ? supabase.from('virtual_number_service_overrides').update(payload).eq('id', virtualNumberOverrideForm.id)
+      : supabase.from('virtual_number_service_overrides').insert(payload)
+
+    const { error } = await request
+    if (error) {
+      setVirtualNumberMessage(error.message)
+      return
+    }
+
+    const { data, error: reloadError } = await supabase
+      .from('virtual_number_service_overrides')
+      .select('id, service_id, custom_name, custom_category, price_amount, markup_percent, is_active, sort_order')
+      .order('sort_order', { ascending: true })
+      .order('id', { ascending: true })
+
+    if (reloadError) {
+      setVirtualNumberMessage(reloadError.message)
+      return
+    }
+
+    setVirtualNumberOverrides(((data ?? []) as Array<Record<string, unknown>>).map((item) => ({
+      id: item.id as number | undefined,
+      service_id: String(item.service_id ?? ''),
+      custom_name: String(item.custom_name ?? ''),
+      custom_category: String(item.custom_category ?? ''),
+      price_amount: item.price_amount == null ? null : Number(item.price_amount),
+      markup_percent: item.markup_percent == null ? null : Number(item.markup_percent),
+      is_active: Boolean(item.is_active ?? true),
+      sort_order: Number(item.sort_order ?? 0),
+    })))
+    setVirtualNumberMessage('Servico de numero virtual salvo.')
+    resetVirtualNumberOverrideForm()
+  }
+
+  const editVirtualNumberOverride = (override: VirtualNumberServiceOverride) => {
+    setVirtualNumberOverrideForm({ ...override })
+  }
+
+  const deleteVirtualNumberOverride = async (id?: number) => {
+    if (!id) return
+    const { error } = await supabase.from('virtual_number_service_overrides').delete().eq('id', id)
+    if (error) {
+      setVirtualNumberMessage(error.message)
+      return
+    }
+    setVirtualNumberOverrides((current) => current.filter((item) => item.id !== id))
+    setVirtualNumberMessage('Servico de numero virtual removido.')
+    if (virtualNumberOverrideForm.id === id) resetVirtualNumberOverrideForm()
+  }
+
+  const updateVirtualNumberOverrideForm = <K extends keyof VirtualNumberServiceOverride>(key: K, value: VirtualNumberServiceOverride[K]) => {
+    setVirtualNumberOverrideForm((current) => ({ ...current, [key]: value }))
   }
 
   const saveDecodo = async () => {
@@ -652,6 +855,181 @@ export function Gateway() {
 
             {message && <p className={`text-sm ${message.includes('confirmadas') ? 'text-green-600' : 'text-red-600'}`}>{message}</p>}
             {testMessage && <p className={`text-sm ${testMessage.includes('ativa') ? 'text-green-600' : 'text-red-600'}`}>{testMessage}</p>}
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-none shadow-sm rounded-md">
+          <CardContent className="p-6 space-y-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-medium text-ml-dark">Numero virtual</h3>
+                <p className="text-sm text-gray-500">Catalogo de numeros, saldo e precos exibidos na pagina /numero-virtual.</p>
+              </div>
+              <label className="flex items-center gap-2 text-sm text-gray-600">
+                <input
+                  type="checkbox"
+                  checked={virtualNumberActive}
+                  onChange={(event) => setVirtualNumberActive(event.target.checked)}
+                  className="h-4 w-4 accent-ml-blue"
+                />
+                Ativo
+              </label>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              <GatewayField label="Base URL">
+                <input
+                  type="url"
+                  value={virtualNumberBaseUrl}
+                  onChange={(event) => setVirtualNumberBaseUrl(event.target.value)}
+                  placeholder="https://app.numero-virtual.com"
+                  className="w-full h-12 px-4 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-ml-blue focus:border-transparent transition-all"
+                />
+              </GatewayField>
+              <GatewayField label="API Key">
+                <input
+                  type="password"
+                  value={virtualNumberApiKey}
+                  onChange={(event) => setVirtualNumberApiKey(event.target.value)}
+                  placeholder="Chave da API"
+                  className="w-full h-12 px-4 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-ml-blue focus:border-transparent transition-all"
+                />
+              </GatewayField>
+              <GatewayField label="Modo de autenticacao">
+                <select
+                  value={virtualNumberAuthMode}
+                  onChange={(event) => setVirtualNumberAuthMode(event.target.value as 'bearer' | 'x-api-key' | 'query_key' | 'form_key')}
+                  className="w-full h-12 px-4 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-ml-blue focus:border-transparent transition-all"
+                >
+                  <option value="bearer">Bearer token</option>
+                  <option value="x-api-key">X-API-Key</option>
+                  <option value="query_key">Query key/api_key</option>
+                  <option value="form_key">Form key/api_key</option>
+                </select>
+              </GatewayField>
+              <div className="grid gap-4 md:grid-cols-2">
+                <GatewayField label="Endpoint de servicos">
+                  <input value={virtualNumberServicesPath} onChange={(event) => setVirtualNumberServicesPath(event.target.value)} placeholder="/api/services" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+                </GatewayField>
+                <GatewayField label="Endpoint de paises">
+                  <input value={virtualNumberCountriesPath} onChange={(event) => setVirtualNumberCountriesPath(event.target.value)} placeholder="/api/countries" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+                </GatewayField>
+                <GatewayField label="Endpoint de saldo">
+                  <input value={virtualNumberBalancePath} onChange={(event) => setVirtualNumberBalancePath(event.target.value)} placeholder="/api/balance" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+                </GatewayField>
+                <GatewayField label="Endpoint de pedido">
+                  <input value={virtualNumberOrderPath} onChange={(event) => setVirtualNumberOrderPath(event.target.value)} placeholder="/api/order" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+                </GatewayField>
+              </div>
+              <GatewayField label="Margem global (%)">
+                <input
+                  type="number"
+                  step="0.01"
+                  value={virtualNumberMarkup}
+                  onChange={(event) => setVirtualNumberMarkup(Number(event.target.value))}
+                  className="w-full h-12 px-4 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-ml-blue focus:border-transparent transition-all"
+                />
+              </GatewayField>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <Button
+                type="button"
+                onClick={saveVirtualNumber}
+                disabled={saving || loading}
+                className="bg-ml-blue text-white hover:bg-ml-hover font-semibold py-3 px-6 rounded-sm shadow-sm"
+              >
+                {saving ? 'Salvando...' : 'Salvar numero virtual'}
+              </Button>
+              <Button
+                type="button"
+                onClick={testVirtualNumberConnection}
+                disabled={loading}
+                className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold py-3 px-6 rounded-sm shadow-sm"
+              >
+                Testar servicos
+              </Button>
+            </div>
+
+            {virtualNumberMessage && <p className={`text-sm ${virtualNumberMessage.includes('salvo') || virtualNumberMessage.includes('registrada') || virtualNumberMessage.includes('removido') ? 'text-green-600' : 'text-red-600'}`}>{virtualNumberMessage}</p>}
+            {virtualNumberTestMessage && <p className={`text-sm ${virtualNumberTestMessage.includes('validados') ? 'text-green-600' : 'text-red-600'}`}>{virtualNumberTestMessage}</p>}
+
+            <div className="rounded-md border border-gray-100 bg-gray-50 p-4">
+              <div className="mb-4">
+                <h4 className="font-semibold text-gray-900">Precos por servico</h4>
+                <p className="text-sm text-gray-500">Use o ID retornado pela API. Se nao houver override, vale a margem global.</p>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <GatewayField label="ID do servico">
+                  <input value={virtualNumberOverrideForm.service_id} onChange={(event) => updateVirtualNumberOverrideForm('service_id', event.target.value)} placeholder="Ex: whatsapp_br" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+                </GatewayField>
+                <GatewayField label="Nome exibido">
+                  <input value={virtualNumberOverrideForm.custom_name} onChange={(event) => updateVirtualNumberOverrideForm('custom_name', event.target.value)} placeholder="Opcional" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+                </GatewayField>
+                <GatewayField label="Categoria exibida">
+                  <input value={virtualNumberOverrideForm.custom_category} onChange={(event) => updateVirtualNumberOverrideForm('custom_category', event.target.value)} placeholder="Opcional" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+                </GatewayField>
+                <GatewayField label="Preco final (R$)">
+                  <input type="number" step="0.0001" value={virtualNumberOverrideForm.price_amount ?? ''} onChange={(event) => updateVirtualNumberOverrideForm('price_amount', event.target.value ? Number(event.target.value) : null)} placeholder="Opcional" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+                </GatewayField>
+                <GatewayField label="Margem especifica (%)">
+                  <input type="number" step="0.01" value={virtualNumberOverrideForm.markup_percent ?? ''} onChange={(event) => updateVirtualNumberOverrideForm('markup_percent', event.target.value ? Number(event.target.value) : null)} placeholder="Opcional" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+                </GatewayField>
+                <GatewayField label="Ordem">
+                  <input type="number" value={virtualNumberOverrideForm.sort_order} onChange={(event) => updateVirtualNumberOverrideForm('sort_order', Number(event.target.value))} className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+                </GatewayField>
+              </div>
+              <label className="mt-4 flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" checked={virtualNumberOverrideForm.is_active} onChange={(event) => updateVirtualNumberOverrideForm('is_active', event.target.checked)} className="h-4 w-4 accent-ml-blue" />
+                Mostrar este servico na pagina Numero virtual
+              </label>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Button type="button" onClick={saveVirtualNumberOverride} className="bg-ml-blue text-white hover:bg-ml-hover font-semibold py-3 px-6 rounded-sm shadow-sm">
+                  {virtualNumberOverrideForm.id ? 'Salvar servico' : 'Adicionar override'}
+                </Button>
+                <Button type="button" onClick={resetVirtualNumberOverrideForm} className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold py-3 px-6 rounded-sm shadow-sm">
+                  Novo override
+                </Button>
+              </div>
+            </div>
+
+            <div className="overflow-hidden rounded-sm border border-gray-100">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-gray-50 text-gray-500">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Servico</th>
+                    <th className="px-4 py-3 font-medium">Preco final</th>
+                    <th className="px-4 py-3 font-medium">Margem</th>
+                    <th className="px-4 py-3 font-medium">Ativo</th>
+                    <th className="px-4 py-3 font-medium text-right">Acoes</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {virtualNumberOverrides.map((override) => (
+                    <tr key={override.id}>
+                      <td className="px-4 py-3">
+                        <p className="font-semibold text-gray-900">#{override.service_id}</p>
+                        <p className="text-xs text-gray-500">{override.custom_name || 'Nome original da API'}</p>
+                      </td>
+                      <td className="px-4 py-3 text-gray-700">{override.price_amount ?? '-'}</td>
+                      <td className="px-4 py-3 text-gray-700">{override.markup_percent ?? '-'}</td>
+                      <td className="px-4 py-3 text-gray-700">{override.is_active ? 'Sim' : 'Nao'}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-2">
+                          <button type="button" onClick={() => editVirtualNumberOverride(override)} className="text-ml-blue hover:underline">Editar</button>
+                          <button type="button" onClick={() => deleteVirtualNumberOverride(override.id)} className="text-red-500 hover:underline">Remover</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {virtualNumberOverrides.length === 0 && (
+                    <tr>
+                      <td className="px-4 py-6 text-center text-gray-500" colSpan={5}>Nenhum override cadastrado.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </CardContent>
         </Card>
 
