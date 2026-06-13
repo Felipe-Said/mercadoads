@@ -306,6 +306,28 @@ export async function createWestPayWalletDepositPixIn(payload: {
   })
 }
 
+export async function createWestPayGroupPromotionPixIn(payload: {
+  groupId: string | number
+  amount: number
+  customer: WestPayCustomer
+}) {
+  const customer = {
+    name: payload.customer.name,
+    email: payload.customer.email,
+    phone: payload.customer.phone,
+    document: {
+      number: payload.customer.documentNumber,
+      type: payload.customer.documentType,
+    },
+  }
+
+  return invokeWestPayStrict('create_group_promotion_pix_in', {
+    groupId: String(payload.groupId),
+    amount: payload.amount,
+    customer,
+  })
+}
+
 export async function westPayBalance() {
   return invokeWestPay('balance')
 }

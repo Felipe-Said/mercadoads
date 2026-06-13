@@ -51,13 +51,12 @@ export function DashboardLayout({ children, navItems, title }: DashboardLayoutPr
         </aside>
 
         <main className="min-w-0 flex-1">
-          <div className="mb-4 rounded-sm border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] px-5 py-4 shadow-sm">
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div className="mb-4 rounded-sm border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] px-5 py-3 shadow-sm">
+            <div className="flex flex-col gap-1">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--layout-link-color)]">Painel</p>
                 <h1 className="text-2xl font-bold tracking-tight text-[var(--layout-text-primary)]">{title}</h1>
               </div>
-              <p className="text-sm text-[var(--layout-text-muted)]">Dados em tempo real conectados a plataforma.</p>
             </div>
           </div>
           <div className="dashboard-surface">

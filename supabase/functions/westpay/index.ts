@@ -803,6 +803,42 @@ async function updateWalletDepositFromWebhook(supabaseAdmin: ReturnType<typeof c
   return { updated: true }
 }
 
+async function updateGroupPromotionFromWebhook(supabaseAdmin: ReturnType<typeof createClient>, payload: Record<string, unknown>) {
+  const externalRef = parseExternalRef(payload)
+  if (!externalRef?.startsWith('group-')) {
+    return { skipped: true }
+  }
+
+  const groupId = externalRef.replace('group-', '')
+  const statusText = parseStatus(payload)
+  const mappedStatus = mapSaleStatus(statusText)
+  const transaction = (payload.data as Record<string, unknown> | undefined) ?? (payload.transaction as Record<string, unknown> | undefined) ?? payload
+  const { qrcode, expiresAt } = extractPixInfo(transaction)
+
+  const updates: Record<string, unknown> = {
+    payment_gateway: 'westpay',
+    payment_external_ref: externalRef,
+    payment_transaction_id: firstString(transaction.id, transaction.transactionId, transaction.secureId),
+    payment_qrcode: qrcode,
+    payment_qrcode_text: qrcode,
+    payment_qrcode_expires_at: expiresAt,
+    gateway_payload: payload,
+  }
+
+  if (mappedStatus === 'paid') {
+    updates.promotion_status = 'paid'
+    updates.sponsored = true
+    updates.promoted_until = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+  } else if (mappedStatus === 'cancelled') {
+    updates.promotion_status = 'cancelled'
+    updates.sponsored = false
+  }
+
+  const { error } = await supabaseAdmin.from('network_groups').update(updates).eq('id', groupId)
+  if (error) throw error
+  return { updated: true }
+}
+
 async function updateWithdrawalFromWebhook(supabaseAdmin: ReturnType<typeof createClient>, payload: Record<string, unknown>) {
   const externalRef = parseExternalRef(payload)
   if (!externalRef?.startsWith('withdrawal-')) {
@@ -885,7 +921,8 @@ Deno.serve(async (req) => {
     const updatedSale = await updateSaleFromWebhook(supabaseAdmin, body)
     const updatedWithdrawal = await updateWithdrawalFromWebhook(supabaseAdmin, body)
     const updatedDeposit = await updateWalletDepositFromWebhook(supabaseAdmin, body)
-    return json({ success: true, configured: true, sale: updatedSale, withdrawal: updatedWithdrawal, deposit: updatedDeposit })
+    const updatedGroup = await updateGroupPromotionFromWebhook(supabaseAdmin, body)
+    return json({ success: true, configured: true, sale: updatedSale, withdrawal: updatedWithdrawal, deposit: updatedDeposit, group: updatedGroup })
   }
 
   if (action === 'balance') {
@@ -1015,6 +1052,70 @@ Deno.serve(async (req) => {
       payment_qrcode_expires_at: expiresAt,
       gateway_payload: transaction,
     }).eq('id', depositId)
+
+    return json({ success: true, configured: true, data: westpayResult.data })
+  }
+
+  if (action === 'create_group_promotion_pix_in') {
+    const groupId = String(body.groupId || '')
+    const amount = Number(body.amount ?? 0)
+    const customer = (body.customer as Record<string, unknown> | undefined) ?? {}
+    const normalizedCustomer = normalizeCustomer(customer)
+
+    if (!groupId || !amount) {
+      return json({ success: false, configured: true, error: 'Invalid group promotion data.' }, 400)
+    }
+
+    if (!normalizedCustomer.phone || !normalizedCustomer.document.number || !normalizedCustomer.document.type) {
+      return json({ success: false, configured: true, error: 'Informe nome, WhatsApp e CPF/CNPJ para gerar o Pix.' }, 400)
+    }
+
+    const { data: group, error: groupError } = await supabaseAdmin
+      .from('network_groups')
+      .select('id, name, promotion_status')
+      .eq('id', groupId)
+      .maybeSingle()
+
+    if (groupError || !group) {
+      return json({ success: false, configured: true, error: 'Grupo nao encontrado.' }, 404)
+    }
+
+    const westpayResult = await callWestPay(settings, '/api/v1/transactions', 'POST', {
+      amount: toCents(amount),
+      paymentMethod: 'pix',
+      description: `Destacar grupo ${firstString(group.name, groupId)}`,
+      customer: normalizedCustomer,
+      items: [{
+        title: 'Destacar grupo de WhatsApp',
+        unitPrice: toCents(amount),
+        quantity: 1,
+        tangible: false,
+      }],
+      externalRef: `group-${groupId}`,
+      postbackUrl: settings.westpay_webhook_secret
+        ? `${getFunctionBaseUrl(supabaseUrl)}/westpay?action=webhook&token=${encodeURIComponent(settings.westpay_webhook_secret)}`
+        : `${getFunctionBaseUrl(supabaseUrl)}/westpay?action=webhook`,
+      pix: { expiresInDays: 2 },
+    })
+
+    if (westpayResult.success === false) {
+      return json(westpayResult, westpayResult.status ?? 400)
+    }
+
+    const transaction = unwrapPayload(westpayResult.data)
+    const { qrcode, expiresAt } = extractPixInfo(transaction)
+
+    await supabaseAdmin.from('network_groups').update({
+      promotion_status: 'pending',
+      promotion_amount: amount,
+      payment_gateway: 'westpay',
+      payment_external_ref: `group-${groupId}`,
+      payment_transaction_id: firstString(transaction.id, transaction.transactionId, transaction.secureId),
+      payment_qrcode: qrcode,
+      payment_qrcode_text: qrcode,
+      payment_qrcode_expires_at: expiresAt,
+      gateway_payload: transaction,
+    }).eq('id', groupId)
 
     return json({ success: true, configured: true, data: westpayResult.data })
   }
