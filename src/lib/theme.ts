@@ -54,6 +54,9 @@ export type LayoutTheme = {
   whatsappGroupsMutedText: string
   whatsappGroupsBorder: string
   whatsappGroupsLink: string
+  whatsappGroupsEmptyBg: string
+  whatsappGroupsEmptyText: string
+  whatsappGroupsEmptyIcon: string
   whatsappGroupsStoryRingStart: string
   whatsappGroupsStoryRingMiddle: string
   whatsappGroupsStoryRingEnd: string
@@ -112,6 +115,9 @@ export const DEFAULT_LAYOUT_THEME: LayoutTheme = {
   whatsappGroupsMutedText: '#6b7280',
   whatsappGroupsBorder: '#e5e7eb',
   whatsappGroupsLink: '#007185',
+  whatsappGroupsEmptyBg: '#f8fafc',
+  whatsappGroupsEmptyText: '#6b7280',
+  whatsappGroupsEmptyIcon: '#007600',
   whatsappGroupsStoryRingStart: '#007600',
   whatsappGroupsStoryRingMiddle: '#ff9900',
   whatsappGroupsStoryRingEnd: '#c7511f',

@@ -61,8 +61,8 @@ export function Stories() {
             </a>
           ))
         ) : (
-          <div className="flex items-center gap-3 rounded-sm border border-dashed bg-[var(--layout-subtle-background)] px-4 py-3 text-sm text-[var(--layout-whatsapp-groups-muted-text)]" style={{ borderColor: 'var(--layout-whatsapp-groups-border)' }}>
-            <MessageCircle className="h-5 w-5 text-[var(--layout-success-color)]" />
+          <div className="flex items-center gap-3 rounded-sm border border-dashed bg-[var(--layout-whatsapp-groups-empty-bg)] px-4 py-3 text-sm text-[var(--layout-whatsapp-groups-empty-text)]" style={{ borderColor: 'var(--layout-whatsapp-groups-border)' }}>
+            <MessageCircle className="h-5 w-5 text-[var(--layout-whatsapp-groups-empty-icon)]" />
             Nenhum grupo disponivel no momento.
           </div>
         )}

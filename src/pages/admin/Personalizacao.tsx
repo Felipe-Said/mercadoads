@@ -542,6 +542,9 @@ export function Personalizacao() {
                   <ColorControl label="Texto secundario" value={layoutTheme.whatsappGroupsMutedText} onChange={(value) => updateLayoutTheme('whatsappGroupsMutedText', value)} />
                   <ColorControl label="Borda do bloco" value={layoutTheme.whatsappGroupsBorder} onChange={(value) => updateLayoutTheme('whatsappGroupsBorder', value)} />
                   <ColorControl label="Link Ver todos" value={layoutTheme.whatsappGroupsLink} onChange={(value) => updateLayoutTheme('whatsappGroupsLink', value)} />
+                  <ColorControl label="Card vazio - fundo" value={layoutTheme.whatsappGroupsEmptyBg} onChange={(value) => updateLayoutTheme('whatsappGroupsEmptyBg', value)} />
+                  <ColorControl label="Card vazio - texto" value={layoutTheme.whatsappGroupsEmptyText} onChange={(value) => updateLayoutTheme('whatsappGroupsEmptyText', value)} />
+                  <ColorControl label="Card vazio - icone" value={layoutTheme.whatsappGroupsEmptyIcon} onChange={(value) => updateLayoutTheme('whatsappGroupsEmptyIcon', value)} />
                   <ColorControl label="Aro stories - inicio" value={layoutTheme.whatsappGroupsStoryRingStart} onChange={(value) => updateLayoutTheme('whatsappGroupsStoryRingStart', value)} />
                   <ColorControl label="Aro stories - meio" value={layoutTheme.whatsappGroupsStoryRingMiddle} onChange={(value) => updateLayoutTheme('whatsappGroupsStoryRingMiddle', value)} />
                   <ColorControl label="Aro stories - fim" value={layoutTheme.whatsappGroupsStoryRingEnd} onChange={(value) => updateLayoutTheme('whatsappGroupsStoryRingEnd', value)} />

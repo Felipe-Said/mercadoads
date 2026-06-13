@@ -71,6 +71,9 @@
   --layout-dashboard-sidebar-active-text: #131921;
   --layout-header-account-link-color: #007185;
   --layout-header-logout-color: #ef4444;
+  --layout-whatsapp-groups-empty-bg: #f8fafc;
+  --layout-whatsapp-groups-empty-text: #6b7280;
+  --layout-whatsapp-groups-empty-icon: #007600;
 
   --radius-lg: 0.5rem;
   --radius-md: calc(0.5rem - 2px);
