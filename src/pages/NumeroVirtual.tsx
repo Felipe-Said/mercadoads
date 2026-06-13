@@ -1,43 +1,124 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { BarChart3, CheckCircle2, RefreshCw, Search, ShieldCheck, Smartphone, Sparkles } from 'lucide-react'
+import { BarChart3, ChevronDown, Info, RefreshCw, Search, ShieldCheck, Smartphone, Star } from 'lucide-react'
 import { getVirtualNumberServices, type VirtualNumberService } from '../lib/numeroVirtual'
 
-function ServiceCard({ service }: { service: VirtualNumberService }) {
+type ServiceGroup = {
+  key: string
+  title: string
+  initial: string
+  totalStock: number
+  minPrice: number
+  services: VirtualNumberService[]
+}
+
+function parseStock(value: string) {
+  const parsed = Number(String(value ?? '').replace(/[^\d.-]/g, ''))
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+function normalizeGroupTitle(service: VirtualNumberService) {
+  const name = service.name || service.providerName || service.category || 'Numero virtual'
+  return name
+    .replace(/\s+\|\s+.+$/g, '')
+    .replace(/\s+-\s+(opcao|opção|sms24h|vivo|claro|tim|oi).+$/i, '')
+    .replace(/\s+\((opcao|opção|sms24h|vivo|claro|tim|oi).+\)$/i, '')
+    .trim()
+}
+
+function buildServiceGroups(items: VirtualNumberService[]) {
+  const groups = new Map<string, VirtualNumberService[]>()
+
+  items.forEach((service) => {
+    const title = normalizeGroupTitle(service)
+    const key = title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    groups.set(key, [...(groups.get(key) ?? []), service])
+  })
+
+  return Array.from(groups.entries())
+    .map(([key, services]) => {
+      const title = normalizeGroupTitle(services[0])
+      const stocks = services.map((service) => parseStock(service.stock))
+      return {
+        key,
+        title,
+        initial: title.slice(0, 1).toUpperCase(),
+        totalStock: stocks.reduce((sum, stock) => sum + stock, 0),
+        minPrice: Math.min(...services.map((service) => Number(service.priceAmount || 0)).filter(Boolean)),
+        services: services.sort((left, right) => {
+          return left.priceAmount - right.priceAmount
+            || left.country.localeCompare(right.country)
+            || left.category.localeCompare(right.category)
+        }),
+      } as ServiceGroup
+    })
+    .sort((left, right) => left.title.localeCompare(right.title))
+}
+
+function ServiceOption({ service }: { service: VirtualNumberService }) {
+  const descriptors = [
+    service.operator,
+    service.option,
+    service.category,
+    service.country,
+  ].filter(Boolean)
+
   return (
-    <article className="layout-surface flex h-full flex-col rounded-sm p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-      <div className="mb-4 flex items-start justify-between gap-3">
+    <div className="rounded-sm border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] p-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--layout-link-color)]">{service.category}</p>
-          <h3 className="mt-1 line-clamp-3 text-lg font-bold text-[var(--layout-text-primary)]">{service.name}</h3>
+          <p className="text-sm font-black text-[var(--layout-text-primary)]">{service.providerName || service.name}</p>
+          <p className="mt-1 text-xs text-[var(--layout-text-muted)]">{descriptors.join(' / ') || 'Opcao padrao'}</p>
         </div>
-        <span className="rounded-sm bg-[var(--layout-subtle-background)] px-2 py-1 text-xs font-bold text-[var(--layout-success-color)]">
-          Ativo
-        </span>
-      </div>
-
-      <div className="grid gap-3 text-sm text-[var(--layout-text-muted)]">
-        <div className="flex items-center gap-2">
-          <Smartphone className="h-4 w-4 text-[var(--layout-link-color)]" />
-          <span>{service.country || 'Global'}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <CheckCircle2 className="h-4 w-4 text-[var(--layout-link-color)]" />
-          <span>{service.stock || 'Disponivel'}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-[var(--layout-link-color)]" />
-          <span>Codigo recebido dentro da plataforma</span>
+        <div className="grid grid-cols-2 gap-3 text-xs md:min-w-[240px]">
+          <div>
+            <p className="font-bold uppercase text-[var(--layout-text-muted)]">Estoque</p>
+            <p className="mt-1 font-semibold text-[var(--layout-success-color)]">{service.stock || 'Disponivel'}</p>
+          </div>
+          <div>
+            <p className="font-bold uppercase text-[var(--layout-text-muted)]">Preco</p>
+            <p className="mt-1 font-black text-[var(--layout-price-color)]">{service.priceLabel}</p>
+          </div>
         </div>
       </div>
-
-      <div className="mt-5 border-t border-[var(--layout-border-color)] pt-4">
-        <p className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--layout-text-muted)]">Preco</p>
-        <p className="mt-1 text-2xl font-bold text-[var(--layout-price-color)]">{service.priceLabel}</p>
-      </div>
-
-      <button className="layout-primary-button mt-5 h-11 rounded-sm text-sm font-bold">
+      <button type="button" className="layout-primary-button mt-4 h-10 w-full rounded-sm text-sm font-bold md:w-auto md:px-5">
         Solicitar numero
       </button>
+    </div>
+  )
+}
+
+function ServiceGroupRow({ group, open, onToggle }: { group: ServiceGroup; open: boolean; onToggle: () => void }) {
+  return (
+    <article className="overflow-hidden rounded-md border border-emerald-100 bg-[var(--layout-surface-background)] shadow-sm">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex min-h-[70px] w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-[var(--layout-subtle-background)]"
+      >
+        <Star className="h-5 w-5 flex-none text-emerald-600" />
+        <span className="grid h-10 w-10 flex-none place-items-center rounded-sm bg-emerald-500 text-sm font-black text-white">
+          {group.initial}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-base font-black text-[var(--layout-text-primary)]">{group.title}</span>
+          <span className="mt-0.5 block text-xs text-[var(--layout-text-muted)]">
+            {group.services.length} opcao{group.services.length === 1 ? '' : 'es'}
+            {group.totalStock ? ` / ${group.totalStock} disponiveis` : ''}
+            {Number.isFinite(group.minPrice) && group.minPrice > 0 ? ` / a partir de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(group.minPrice)}` : ''}
+          </span>
+        </span>
+        <ChevronDown className={`h-5 w-5 flex-none text-[var(--layout-text-muted)] transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="border-t border-[var(--layout-border-color)] bg-[var(--layout-subtle-background)] p-4">
+          <div className="grid gap-3">
+            {group.services.map((service) => (
+              <ServiceOption key={service.id} service={service} />
+            ))}
+          </div>
+        </div>
+      )}
     </article>
   )
 }
@@ -49,6 +130,7 @@ export function NumeroVirtual() {
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('all')
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
 
   const load = async () => {
     setLoading(true)
@@ -76,21 +158,37 @@ export function NumeroVirtual() {
     const term = query.trim().toLowerCase()
     return items.filter((item) => {
       const matchesCategory = category === 'all' || item.category === category
-      const matchesQuery = !term || [item.name, item.category, item.country, item.stock].some((value) => value.toLowerCase().includes(term))
+      const matchesQuery = !term || [
+        item.name,
+        item.providerName,
+        item.category,
+        item.country,
+        item.stock,
+        item.operator,
+        item.option,
+        item.code,
+      ].some((value) => String(value ?? '').toLowerCase().includes(term))
       return matchesCategory && matchesQuery
     })
   }, [items, query, category])
 
+  const groups = useMemo(() => buildServiceGroups(filteredItems), [filteredItems])
+
+  useEffect(() => {
+    if (!query.trim() && category === 'all') return
+    setOpenGroups(Object.fromEntries(groups.slice(0, 12).map((group) => [group.key, true])))
+  }, [query, category])
+
   return (
     <div className="min-h-screen bg-[var(--layout-page-background)] pb-12 text-[var(--layout-text-primary)]">
       <section className="bg-[var(--layout-dashboard-sidebar-header-bg)] text-[var(--layout-dashboard-sidebar-text)]">
-        <div className="mx-auto max-w-[1440px] px-4 py-8">
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
+        <div className="mx-auto max-w-[1440px] px-4 py-6">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_330px] lg:items-end">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--layout-dashboard-sidebar-kicker-text)]">Cookie Numero</p>
               <h1 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">Numeros virtuais</h1>
               <p className="mt-3 max-w-2xl text-sm text-[var(--layout-dashboard-sidebar-muted-text)]">
-                Numeros temporarios para verificacoes, com disponibilidade atualizada pela plataforma.
+                Escolha o app, abra as opcoes disponiveis e selecione a melhor disponibilidade para receber SMS.
               </p>
             </div>
             <div className="layout-surface rounded-sm p-4 text-[var(--layout-text-primary)] shadow-sm">
@@ -98,7 +196,7 @@ export function NumeroVirtual() {
                 <ShieldCheck className="h-9 w-9 text-[var(--layout-success-color)]" />
                 <div>
                   <p className="font-bold">Entrega protegida</p>
-                  <p className="mt-1 text-sm text-[var(--layout-text-muted)]">O numero e os codigos ficam vinculados ao seu pedido.</p>
+                  <p className="mt-1 text-sm text-[var(--layout-text-muted)]">Numero e SMS ficam vinculados ao pedido.</p>
                 </div>
               </div>
             </div>
@@ -106,29 +204,33 @@ export function NumeroVirtual() {
         </div>
       </section>
 
-      <main className="mx-auto max-w-[1440px] px-4 py-6">
-        <div className="mb-5 grid gap-3 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)_auto] lg:items-center">
+      <main className="mx-auto max-w-[980px] px-4 py-6">
+        <div className="mb-5 grid gap-3 md:grid-cols-[minmax(0,1fr)_220px_auto_auto] md:items-center">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--layout-text-muted)]" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              className="h-11 w-full rounded-sm border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] pl-9 pr-3 text-sm outline-none focus:border-[var(--layout-accent-color)]"
-              placeholder="Buscar por app, pais ou status"
+              className="h-12 w-full rounded-md border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] pl-10 pr-3 text-sm outline-none focus:border-[var(--layout-accent-color)]"
+              placeholder="Pesquisar"
             />
           </div>
 
           <select
             value={category}
             onChange={(event) => setCategory(event.target.value)}
-            className="h-11 w-full rounded-sm border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)]"
+            className="h-12 w-full rounded-md border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)]"
           >
             {categories.map((item) => (
-              <option key={item} value={item}>{item === 'all' ? 'Todas as categorias' : item}</option>
+              <option key={item} value={item}>{item === 'all' ? 'Todas as funcoes' : item}</option>
             ))}
           </select>
 
-          <button onClick={load} className="layout-secondary-button inline-flex h-11 items-center justify-center gap-2 rounded-sm px-4 text-sm font-bold" disabled={loading}>
+          <button type="button" className="layout-secondary-button inline-flex h-12 w-12 items-center justify-center rounded-md" aria-label="Informacoes">
+            <Info className="h-5 w-5" />
+          </button>
+
+          <button onClick={load} className="layout-secondary-button inline-flex h-12 items-center justify-center gap-2 rounded-md px-4 text-sm font-bold" disabled={loading}>
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             Atualizar
           </button>
@@ -151,23 +253,30 @@ export function NumeroVirtual() {
         {error && <div className="rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-600">{error}</div>}
 
         {loading && (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {[1, 2, 3, 4, 5, 6].map((item) => (
-              <div key={item} className="h-72 animate-pulse rounded-sm bg-[var(--layout-surface-background)]" />
+          <div className="grid gap-3">
+            {[1, 2, 3, 4, 5, 6, 7].map((item) => (
+              <div key={item} className="h-[72px] animate-pulse rounded-md bg-[var(--layout-surface-background)]" />
             ))}
           </div>
         )}
 
-        {!loading && configured && !error && filteredItems.length === 0 && (
+        {!loading && configured && !error && groups.length === 0 && (
           <div className="layout-surface rounded-sm p-8 text-center text-sm text-[var(--layout-text-muted)] shadow-sm">
             <BarChart3 className="mx-auto mb-3 h-8 w-8" />
             Nenhum numero virtual disponivel no momento.
           </div>
         )}
 
-        {!loading && filteredItems.length > 0 && (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {filteredItems.map((item) => <ServiceCard key={item.id} service={item} />)}
+        {!loading && groups.length > 0 && (
+          <div className="grid gap-3">
+            {groups.map((group) => (
+              <ServiceGroupRow
+                key={group.key}
+                group={group}
+                open={Boolean(openGroups[group.key])}
+                onToggle={() => setOpenGroups((current) => ({ ...current, [group.key]: !current[group.key] }))}
+              />
+            ))}
           </div>
         )}
       </main>

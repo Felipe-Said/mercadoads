@@ -186,9 +186,12 @@ function mapServices(data: unknown, overrides: VirtualNumberOverride[], defaultM
 
       return {
         id,
+        code: firstString(record.code, record.slug, record.short_name, id),
         name: override?.custom_name?.trim() || firstString(record.name, record.title, record.service_name, record.label, `Servico ${id}`),
         providerName: firstString(record.name, record.title, record.service_name, record.label, `Servico ${id}`),
         category: override?.custom_category?.trim() || firstString(record.category, record.type, record.network, 'Numero virtual'),
+        operator: firstString(record.operator, record.carrier, record.provider, record.gateway, record.source, record.option_name),
+        option: firstString(record.option, record.option_name, record.type, record.provider_type, record.function, record.function_name),
         country: firstString(record.country, record.country_name, record.location, record.iso, 'Global'),
         stock: firstString(record.stock, record.quantity, record.available, record.count, 'Disponivel'),
         providerPrice,

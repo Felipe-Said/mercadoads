@@ -2,9 +2,12 @@ import { supabase } from './supabase'
 
 export type VirtualNumberService = {
   id: string
+  code: string
   name: string
   providerName: string
   category: string
+  operator: string
+  option: string
   country: string
   stock: string
   providerPrice: number
