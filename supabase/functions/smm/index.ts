@@ -50,6 +50,28 @@ function formatPrice(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
 }
 
+function normalizeCatalogText(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+}
+
+function isSellableProviderService(service: ProviderService) {
+  const text = normalizeCatalogText(`${service.category ?? ''} ${service.name ?? ''}`)
+  const internalMarkers = [
+    'nao use',
+    'nao usar',
+    'nao venda',
+    'servico interno',
+    'servicos interno',
+    'internal',
+    'do not use',
+  ]
+
+  return !internalMarkers.some((marker) => text.includes(marker))
+}
+
 async function parseRequestBody(req: Request) {
   const raw = await req.text()
   if (!raw) return {}
@@ -177,6 +199,7 @@ function mapServices(services: ProviderService[], overrides: SmmOverride[], defa
   const overrideById = new Map(overrides.map((item) => [String(item.service_id), item]))
 
   return services
+    .filter(isSellableProviderService)
     .map((service) => {
       const serviceId = String(service.service)
       const override = overrideById.get(serviceId)
