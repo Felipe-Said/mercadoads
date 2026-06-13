@@ -64,6 +64,15 @@ function normalizeCountry(value: unknown) {
   return country.length === 2 ? country : 'BR'
 }
 
+const countryCodeMap: Record<string, string> = {
+  BR: 'brazil',
+  US: 'usa',
+  CA: 'canada',
+  GB: 'england',
+  PT: 'portugal',
+  MX: 'mexico',
+}
+
 const commonServiceNames: Record<string, string> = {
   '1': 'WhatsApp',
   '2': 'Telegram',
@@ -203,6 +212,105 @@ async function callProvider(settings: VirtualNumberSettings, path: string, paylo
   return { configured: true as const, success: true as const, status: response.status, data }
 }
 
+async function callStoreProcedure(settings: VirtualNumberSettings, procedure: string, input: unknown = null) {
+  const base = (settings.api_base_url || 'https://app.numero-virtual.com').replace(/\/+$/, '')
+  const url = new URL(`${base}/api/trpc/${procedure}`)
+  url.searchParams.set('batch', '1')
+  url.searchParams.set('input', JSON.stringify({ 0: { json: input } }))
+
+  const response = await fetch(url.toString(), { headers: { Accept: 'application/json' } })
+  const text = await response.text()
+  let data: unknown = text
+  try {
+    data = text ? JSON.parse(text) : null
+  } catch {
+    data = text
+  }
+  if (!response.ok) throw new Error(typeof data === 'string' ? data : JSON.stringify(data))
+
+  const batch = Array.isArray(data) ? asRecord(data[0]) : null
+  const result = asRecord(batch?.result)
+  const payload = asRecord(result?.data)
+  return payload?.json ?? data
+}
+
+async function mapStoreCatalog(settings: VirtualNumberSettings, countryCode: string, overrides: VirtualNumberOverride[], defaultMarkup: number) {
+  const [countriesData, servicesData] = await Promise.all([
+    callStoreProcedure(settings, 'store.getCountries'),
+    callStoreProcedure(settings, 'store.getServices'),
+  ])
+
+  const countries = unwrapRows(countriesData).map((row) => asRecord(row) ?? {})
+  const targetCountryCode = countryCodeMap[countryCode] || countryCode.toLowerCase()
+  const country = countries.find((item) => firstString(item.code).toLowerCase() === targetCountryCode)
+    || countries.find((item) => firstString(item.name).toLowerCase().includes(targetCountryCode))
+    || countries.find((item) => firstString(item.code).toLowerCase() === 'brazil')
+    || countries[0]
+  const countryId = Number(country?.id ?? 24)
+  const countryName = firstString(country?.name, countryCode)
+
+  const [pricesData, operatorsData] = await Promise.all([
+    callStoreProcedure(settings, 'store.getPrices', { countryId }),
+    callStoreProcedure(settings, 'store.getOperators', { countryId }).catch(() => []),
+  ])
+
+  const overrideById = new Map(overrides.map((item) => [String(item.service_id), item]))
+  const servicesById = new Map(unwrapRows(servicesData).map((row) => {
+    const record = asRecord(row) ?? {}
+    return [firstString(record.id), record] as const
+  }))
+  const operatorNames = unwrapRows(operatorsData)
+    .map((row) => firstString(asRecord(row)?.name))
+    .filter(Boolean)
+
+  return unwrapRows(pricesData)
+    .map((row) => {
+      const record = asRecord(row) ?? {}
+      const id = firstString(record.serviceId, record.id)
+      if (!id) return null
+      const override = overrideById.get(id)
+      if (override && !override.is_active) return null
+
+      const service = servicesById.get(id) ?? {}
+      const apiOptions = unwrapRows(record.apiOptions)
+        .map((option) => asRecord(option) ?? {})
+        .filter((option) => Number(option.available ?? 0) > 0)
+      if (!apiOptions.length) return null
+
+      const minPriceCents = Math.min(...apiOptions.map((option) => Number(option.price ?? 0)).filter((price) => price > 0))
+      const providerPrice = Number.isFinite(minPriceCents) ? minPriceCents / 100 : 0
+      const markup = override?.markup_percent ?? defaultMarkup
+      const priceAmount = override?.price_amount ?? providerPrice * (1 + markup / 100)
+      const totalAvailable = apiOptions.reduce((sum, option) => sum + Number(option.available ?? 0), 0)
+      const serviceName = override?.custom_name?.trim()
+        || firstString(record.serviceName, service.name, `Servico ${id}`)
+
+      return {
+        id,
+        code: firstString(record.serviceCode, service.smshubCode, id),
+        name: serviceName,
+        providerName: serviceName,
+        category: override?.custom_category?.trim() || 'Plataformas',
+        functionName: serviceName,
+        operatorName: operatorNames.length ? operatorNames.join(', ') : 'Operadora aleatoria',
+        ddd: '',
+        option: apiOptions.map((option) => firstString(option.apiName)).filter(Boolean).join(' / ') || 'Opcao disponivel',
+        country: countryName,
+        stock: String(totalAvailable || 'Disponivel'),
+        providerPrice,
+        priceAmount,
+        priceLabel: formatPrice(priceAmount),
+        sortOrder: override?.sort_order ?? 999999,
+      }
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      const left = a as { sortOrder: number; name: string }
+      const right = b as { sortOrder: number; name: string }
+      return left.sortOrder - right.sortOrder || left.name.localeCompare(right.name)
+    })
+}
+
 function mapServices(data: unknown, overrides: VirtualNumberOverride[], defaultMarkup: number) {
   const overrideById = new Map(overrides.map((item) => [String(item.service_id), item]))
   const root = asRecord(data)
@@ -283,16 +391,21 @@ Deno.serve(async (req) => {
 
   if (action === 'services') {
     const country = normalizeCountry(body.country || url.searchParams.get('country'))
-    const result = await callProvider(settings, settings.services_path, { country })
-    if (result.configured === false || result.success === false) return json({ ...result, items: [] }, result.success === false ? 400 : 200)
-
     const overrides = await loadOverrides(supabaseAdmin)
-    return json({
-      success: true,
-      configured: true,
-      items: mapServices(result.data, overrides, Number(settings.default_markup_percent ?? 0)),
-      rawCount: unwrapRows(result.data).length,
-    })
+    try {
+      const items = await mapStoreCatalog(settings, country, overrides, Number(settings.default_markup_percent ?? 0))
+      return json({ success: true, configured: true, items, rawCount: items.length })
+    } catch (catalogError) {
+      const result = await callProvider(settings, settings.services_path, { country })
+      if (result.configured === false || result.success === false) return json({ ...result, items: [] }, result.success === false ? 400 : 200)
+      return json({
+        success: true,
+        configured: true,
+        items: mapServices(result.data, overrides, Number(settings.default_markup_percent ?? 0)),
+        rawCount: unwrapRows(result.data).length,
+        warning: catalogError instanceof Error ? catalogError.message : 'Catalogo completo indisponivel.',
+      })
+    }
   }
 
   if (action === 'order') {
