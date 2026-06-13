@@ -1,7 +1,7 @@
 const DEFAULT_PRIMARY = '#ffe600'
 const DEFAULT_SECONDARY = '#3483fa'
 
-type PlatformTheme = {
+export type PlatformTheme = {
   primaryColor?: string | null
   secondaryColor?: string | null
   faviconUrl?: string | null

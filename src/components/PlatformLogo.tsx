@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { DEFAULT_PLATFORM_SETTINGS, loadPlatformSettings, readCachedPlatformSettings } from '../lib/platformSettings'
 
 type PlatformLogoProps = {
   className?: string
@@ -14,30 +14,36 @@ type LogoSettings = {
 }
 
 const DEFAULT_LOGO_SETTINGS: LogoSettings = {
-  logoUrl: '',
-  logoDesktopSize: 130,
-  logoMobileSize: 80,
+  logoUrl: DEFAULT_PLATFORM_SETTINGS.logoUrl,
+  logoDesktopSize: DEFAULT_PLATFORM_SETTINGS.logoDesktopSize,
+  logoMobileSize: DEFAULT_PLATFORM_SETTINGS.logoMobileSize,
+}
+
+function getInitialLogoSettings(): LogoSettings {
+  const settings = readCachedPlatformSettings()
+  if (!settings) return DEFAULT_LOGO_SETTINGS
+
+  return {
+    logoUrl: settings.logoUrl,
+    logoDesktopSize: settings.logoDesktopSize,
+    logoMobileSize: settings.logoMobileSize,
+  }
 }
 
 export function PlatformLogo({ className = '', imageClassName = '', fallbackClassName = '' }: PlatformLogoProps) {
-  const [settings, setSettings] = useState<LogoSettings>(DEFAULT_LOGO_SETTINGS)
+  const [settings, setSettings] = useState<LogoSettings>(getInitialLogoSettings)
 
   useEffect(() => {
     let mounted = true
 
     const loadLogo = async () => {
-      const { data, error } = await supabase
-        .from('platform_settings')
-        .select('logo_url, logo_desktop_size, logo_mobile_size')
-        .eq('id', 1)
-        .maybeSingle()
-
-      if (error || !mounted) return
+      const data = await loadPlatformSettings({ force: true })
+      if (!mounted) return
 
       setSettings({
-        logoUrl: data?.logo_url ?? '',
-        logoDesktopSize: Number(data?.logo_desktop_size ?? DEFAULT_LOGO_SETTINGS.logoDesktopSize),
-        logoMobileSize: Number(data?.logo_mobile_size ?? DEFAULT_LOGO_SETTINGS.logoMobileSize),
+        logoUrl: data.logoUrl,
+        logoDesktopSize: data.logoDesktopSize,
+        logoMobileSize: data.logoMobileSize,
       })
     }
 

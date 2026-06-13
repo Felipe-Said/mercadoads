@@ -5,6 +5,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
 import { useCart } from "../contexts/CartContext"
 import { supabase } from "../lib/supabase"
+import { DEFAULT_PLATFORM_SETTINGS, loadPlatformSettings, readCachedPlatformSettings } from "../lib/platformSettings"
 import { PlatformLogo } from "./PlatformLogo"
 import { formatCurrency } from "../lib/data"
 import { productTaxonomy, type ProductTaxonomyGroup } from "../lib/productTaxonomy"
@@ -25,18 +26,24 @@ type HeaderSettings = {
 }
 
 const defaultSettings: HeaderSettings = {
-  headerPromo: {
-    enabled: true,
-    gifUrl: 'https://http2.mlstatic.com/frontend-assets/ml-web-navigation/ui-navigation/5.19.1/mercadolibre/mplus-icon.svg',
-    text: 'Ofertas e beneficios para compradores verificados',
-    link: '/',
-    backgroundColor: '#fff3c4',
-    textColor: '#1f2937',
-  },
-  topbarBackgroundColor: '#fff3c4',
-  topbarTextColor: '#1f2937',
-  navBackgroundColor: '#ffe600',
-  navTextColor: '#333333',
+  headerPromo: DEFAULT_PLATFORM_SETTINGS.headerPromo,
+  topbarBackgroundColor: DEFAULT_PLATFORM_SETTINGS.topbarBackgroundColor,
+  topbarTextColor: DEFAULT_PLATFORM_SETTINGS.topbarTextColor,
+  navBackgroundColor: DEFAULT_PLATFORM_SETTINGS.navBackgroundColor,
+  navTextColor: DEFAULT_PLATFORM_SETTINGS.navTextColor,
+}
+
+function getHeaderSettings(): HeaderSettings {
+  const settings = readCachedPlatformSettings()
+  if (!settings) return defaultSettings
+
+  return {
+    headerPromo: settings.headerPromo,
+    topbarBackgroundColor: settings.topbarBackgroundColor,
+    topbarTextColor: settings.topbarTextColor,
+    navBackgroundColor: settings.navBackgroundColor,
+    navTextColor: settings.navTextColor,
+  }
 }
 
 function BrandMark({ brand }: { brand: ProductTaxonomyGroup['brand'] }) {
@@ -72,7 +79,7 @@ export function Header() {
   const { totalItems } = useCart()
   const navigate = useNavigate()
   const location = useLocation()
-  const [settings, setSettings] = useState<HeaderSettings>(defaultSettings)
+  const [settings, setSettings] = useState<HeaderSettings>(getHeaderSettings)
   const [walletBalance, setWalletBalance] = useState(0)
   const [categoryMenuOpen, setCategoryMenuOpen] = useState(false)
   const categoryMenuRef = useRef<HTMLDivElement | null>(null)
@@ -81,27 +88,15 @@ export function Header() {
     let mounted = true
 
     const loadSettings = async () => {
-      const { data, error } = await supabase
-        .from('platform_settings')
-        .select('header_promo_json, header_topbar_bg_color, header_topbar_text_color, header_nav_bg_color, header_nav_text_color')
-        .eq('id', 1)
-        .maybeSingle()
-
-      if (error || !mounted || !data) return
+      const data = await loadPlatformSettings({ force: true })
+      if (!mounted) return
 
       setSettings({
-        headerPromo: {
-          enabled: data.header_promo_json?.enabled ?? true,
-          gifUrl: data.header_promo_json?.gifUrl ?? '',
-          text: data.header_promo_json?.text ?? '',
-          link: data.header_promo_json?.link ?? '',
-          backgroundColor: data.header_promo_json?.backgroundColor ?? defaultSettings.headerPromo.backgroundColor,
-          textColor: data.header_promo_json?.textColor ?? defaultSettings.headerPromo.textColor,
-        },
-        topbarBackgroundColor: data.header_topbar_bg_color ?? defaultSettings.topbarBackgroundColor,
-        topbarTextColor: data.header_topbar_text_color ?? defaultSettings.topbarTextColor,
-        navBackgroundColor: data.header_nav_bg_color ?? defaultSettings.navBackgroundColor,
-        navTextColor: data.header_nav_text_color ?? defaultSettings.navTextColor,
+        headerPromo: data.headerPromo,
+        topbarBackgroundColor: data.topbarBackgroundColor,
+        topbarTextColor: data.topbarTextColor,
+        navBackgroundColor: data.navBackgroundColor,
+        navTextColor: data.navTextColor,
       })
     }
 
