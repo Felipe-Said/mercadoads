@@ -217,7 +217,10 @@ export function Compras() {
                   </div>
                   <div className="space-y-2">
                     <p className="text-ml-dark font-medium group-hover:text-ml-blue transition-colors">
-                      {sale.products?.title ?? sale.proxy_offers?.name ?? (sale.virtual_number_service_name ? `Numero virtual - ${sale.virtual_number_service_name}` : 'Pedido')}
+                      {sale.products?.title
+                        ?? sale.proxy_offers?.name
+                        ?? (sale.virtual_number_service_name ? `Numero virtual - ${sale.virtual_number_service_name}` : null)
+                        ?? (sale.temp_email_service_name ? `Email temporario - ${sale.temp_email_service_name}` : 'Pedido')}
                     </p>
                     <p className="text-sm text-gray-500 mt-1">{formatCurrency(sale.amount)}</p>
                     {sale.status === 'pending' && !(sale.payment_qrcode_text || sale.payment_qrcode) && (
@@ -374,6 +377,51 @@ export function Compras() {
                                 <p><span className="font-semibold text-blue-900">Status:</span> {delivery.status}</p>
                                 <p><span className="font-semibold text-blue-900">Numero:</span> {delivery.phone_number || 'Aguardando liberacao'}</p>
                                 <p><span className="font-semibold text-blue-900">Codigo SMS:</span> {delivery.sms_code || 'Aguardando SMS'}</p>
+                              </div>
+                              {delivery.expires_at && <p className="mt-2 text-xs text-blue-700">Expira em {new Date(delivery.expires_at).toLocaleString('pt-BR')}</p>}
+                            </div>
+                          )
+                        })}
+
+                        {sale.temp_email_service_id && (!sale.temp_email_deliveries || sale.temp_email_deliveries.length === 0) && (
+                          <div className="rounded-md border border-yellow-100 bg-yellow-50 p-4 max-w-3xl">
+                            <p className="text-sm font-semibold text-yellow-800">Email em processamento</p>
+                            <p className="mt-1 text-xs text-gray-600">O pagamento foi confirmado e a plataforma esta solicitando o email para {sale.temp_email_service_name}.</p>
+                          </div>
+                        )}
+
+                        {sale.temp_email_deliveries?.map((delivery) => {
+                          if (delivery.status === 'failed') {
+                            return (
+                              <div key={`${delivery.service_name}-${sale.id}`} className="rounded-md border border-yellow-100 bg-yellow-50 p-4 max-w-3xl">
+                                <p className="text-sm font-semibold text-yellow-800">Entrega em analise</p>
+                                <p className="mt-1 text-xs text-gray-600">O pagamento foi confirmado, mas o email ainda nao foi liberado automaticamente. O suporte deve revisar este pedido.</p>
+                              </div>
+                            )
+                          }
+
+                          return (
+                            <div key={`${delivery.service_name}-${sale.id}`} className="rounded-md border border-blue-100 bg-blue-50 p-4 max-w-3xl">
+                              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                                <div>
+                                  <p className="text-sm font-semibold text-blue-800">Email temporario liberado</p>
+                                  <p className="mt-1 text-xs text-blue-700">Use este email para receber o codigo em {delivery.service_name}.</p>
+                                </div>
+                                {delivery.email && (
+                                  <Button
+                                    type="button"
+                                    onClick={() => handleCopyText(delivery.email || '', sale.id)}
+                                    className="h-9 rounded-sm bg-white border border-blue-200 text-blue-800 hover:bg-blue-100 text-xs font-semibold"
+                                  >
+                                    {copiedSaleId === sale.id ? 'Copiado' : 'Copiar email'}
+                                  </Button>
+                                )}
+                              </div>
+                              <div className="mt-3 grid gap-2 text-xs md:grid-cols-2">
+                                <p><span className="font-semibold text-blue-900">Servico:</span> {delivery.service_name}</p>
+                                <p><span className="font-semibold text-blue-900">Dominio:</span> {delivery.domain || sale.temp_email_domain || 'Informado na entrega'}</p>
+                                <p><span className="font-semibold text-blue-900">Email:</span> {delivery.email || 'Aguardando liberacao'}</p>
+                                <p><span className="font-semibold text-blue-900">Codigo:</span> {delivery.code || 'Aguardando codigo'}</p>
                               </div>
                               {delivery.expires_at && <p className="mt-2 text-xs text-blue-700">Expira em {new Date(delivery.expires_at).toLocaleString('pt-BR')}</p>}
                             </div>

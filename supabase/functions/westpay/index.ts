@@ -28,6 +28,12 @@ type VirtualNumberSettings = {
   order_path: string
 }
 
+type TempEmailSettings = {
+  active: boolean
+  api_base_url: string
+  api_key: string | null
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -229,6 +235,17 @@ async function loadVirtualNumberSettings(supabaseAdmin: ReturnType<typeof create
   return data as VirtualNumberSettings | null
 }
 
+async function loadTempEmailSettings(supabaseAdmin: ReturnType<typeof createClient>) {
+  const { data, error } = await supabaseAdmin
+    .from('temp_email_settings')
+    .select('active, api_base_url, api_key')
+    .eq('id', 1)
+    .maybeSingle()
+
+  if (error) throw error
+  return data as TempEmailSettings | null
+}
+
 async function callProxyProvider(settings: ProxyProviderSettings, path: string, body?: Record<string, unknown>, method: 'GET' | 'POST' | 'PUT' = 'POST') {
   if (!settings.active || !settings.api_key?.trim()) {
     return { success: false as const, configured: false as const, data: null }
@@ -296,6 +313,44 @@ async function callVirtualNumberProvider(settings: VirtualNumberSettings, body: 
 
   if (!response.ok) return { success: false as const, configured: true as const, status: response.status, data }
   return { success: true as const, configured: true as const, status: response.status, data }
+}
+
+async function callTempMailProcedure(settings: TempEmailSettings, procedure: string, input: unknown = null, method: 'GET' | 'POST' = 'GET') {
+  if (!settings.active) {
+    return { success: false as const, configured: false as const, data: null }
+  }
+
+  const base = (settings.api_base_url || 'https://app.numero-virtual.com').replace(/\/+$/, '')
+  const url = new URL(`${base}/api/trpc/${procedure}`)
+  url.searchParams.set('batch', '1')
+
+  const headers = new Headers({ Accept: 'application/json' })
+  if (settings.api_key?.trim()) headers.set('Authorization', `Bearer ${settings.api_key.trim()}`)
+
+  const init: RequestInit = { method, headers }
+  if (method === 'GET') {
+    url.searchParams.set('input', JSON.stringify({ 0: { json: input } }))
+  } else {
+    headers.set('Content-Type', 'application/json')
+    init.body = JSON.stringify({ 0: { json: input } })
+  }
+
+  const response = await fetch(url.toString(), init)
+  const text = await response.text()
+  let data: unknown = text
+  try {
+    data = text ? JSON.parse(text) : null
+  } catch {
+    data = text
+  }
+
+  if (!response.ok) return { success: false as const, configured: true as const, status: response.status, data }
+
+  const batch = Array.isArray(data) ? asRecord(data[0]) : null
+  if (asRecord(batch?.error)) return { success: false as const, configured: true as const, status: 400, data: batch?.error }
+  const result = asRecord(batch?.result)
+  const payload = asRecord(result?.data)
+  return { success: true as const, configured: true as const, status: response.status, data: payload?.json ?? data }
 }
 
 function unwrapProviderRows(data: unknown) {
@@ -471,6 +526,53 @@ async function provisionVirtualNumberSale(supabaseAdmin: ReturnType<typeof creat
   return providerResult
 }
 
+async function provisionTempEmailSale(supabaseAdmin: ReturnType<typeof createClient>, saleId: string) {
+  const { data: sale, error: saleError } = await supabaseAdmin
+    .from('sales')
+    .select('id, buyer_id, status, temp_email_service_id, temp_email_service_name, temp_email_service_code, temp_email_domain')
+    .eq('id', saleId)
+    .maybeSingle()
+
+  if (saleError) throw saleError
+  const saleRecord = asRecord(sale)
+  if (!saleRecord?.temp_email_service_id || saleRecord.status !== 'paid') return { skipped: true }
+
+  const existing = await supabaseAdmin
+    .from('temp_email_deliveries')
+    .select('id')
+    .eq('sale_id', saleId)
+    .maybeSingle()
+
+  if (existing.data) return { skipped: true, existing: true }
+
+  const settings = await loadTempEmailSettings(supabaseAdmin)
+  const providerResult = settings
+    ? await callTempMailProcedure(settings, 'tempmail.purchaseEmail', {
+      serviceId: Number(saleRecord.temp_email_service_id),
+    }, 'POST')
+    : { success: false as const, configured: false as const, data: null }
+
+  const providerData = asRecord(asRecord(providerResult.data)?.activation) ?? asRecord(providerResult.data) ?? {}
+  const status = firstString(providerData.status, providerResult.success === false ? 'failed' : 'active') ?? 'active'
+
+  await supabaseAdmin.from('temp_email_deliveries').insert({
+    sale_id: saleId,
+    buyer_id: saleRecord.buyer_id,
+    provider_activation_id: firstString(providerData.id),
+    service_id: firstString(saleRecord.temp_email_service_id) ?? '',
+    service_name: firstString(saleRecord.temp_email_service_name, 'Email temporario') ?? 'Email temporario',
+    service_code: firstString(saleRecord.temp_email_service_code),
+    domain: firstString(saleRecord.temp_email_domain, providerData.domain),
+    email: firstString(providerData.email),
+    code: firstString(providerData.code),
+    status,
+    expires_at: firstString(providerData.expiresAt, providerData.expires_at),
+    provider_payload: providerResult,
+  })
+
+  return providerResult
+}
+
 async function callWestPay(settings: GatewaySettings, path: string, method: 'GET' | 'POST', body?: Record<string, unknown>) {
   if (!settings.westpay_api_key || !settings.westpay_public_key) {
     return { configured: false as const }
@@ -552,7 +654,10 @@ async function updateSaleFromWebhook(supabaseAdmin: ReturnType<typeof createClie
   const virtualNumberDelivery = mappedStatus === 'paid'
     ? await provisionVirtualNumberSale(supabaseAdmin, saleId)
     : { skipped: true }
-  return { updated: true, proxyDelivery, virtualNumberDelivery }
+  const tempEmailDelivery = mappedStatus === 'paid'
+    ? await provisionTempEmailSale(supabaseAdmin, saleId)
+    : { skipped: true }
+  return { updated: true, proxyDelivery, virtualNumberDelivery, tempEmailDelivery }
 }
 
 async function updateWalletDepositFromWebhook(supabaseAdmin: ReturnType<typeof createClient>, payload: Record<string, unknown>) {

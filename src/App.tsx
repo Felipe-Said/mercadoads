@@ -12,6 +12,7 @@ import { Contact } from './pages/Contact'
 import { Proxy } from './pages/Proxy'
 import { SMM } from './pages/SMM'
 import { NumeroVirtual } from './pages/NumeroVirtual'
+import { EmailTemporario } from './pages/EmailTemporario'
 import { ProductPage } from './pages/ProductPage'
 import { Login } from './pages/Login'
 import { Register } from './pages/Register'
@@ -57,6 +58,7 @@ function App() {
           <Route path="/proxy" element={<Proxy />} />
           <Route path="/smm" element={<SMM />} />
           <Route path="/numero-virtual" element={<NumeroVirtual />} />
+          <Route path="/email-temporario" element={<EmailTemporario />} />
           <Route path="/category/:name" element={<Offers />} />
           <Route path="/produto/:id" element={<ProductPage />} />
           <Route path="/login" element={<Login />} />

@@ -99,6 +99,10 @@ export interface Sale {
   virtual_number_country_name?: string | null
   virtual_number_ddd?: string | null
   virtual_number_operator?: string | null
+  temp_email_service_id?: string | null
+  temp_email_service_name?: string | null
+  temp_email_service_code?: string | null
+  temp_email_domain?: string | null
   gateway_payload?: Record<string, unknown> | null
   products?: { title: string | null; image_url: string | null; file_url?: string | null; seller_note?: string | null } | null
   product_reviews?: Array<{ id: string; rating: number; title: string | null; body: string | null }> | null
@@ -115,6 +119,14 @@ export interface Sale {
     service_name: string
     phone_number: string | null
     sms_code: string | null
+    status: string
+    expires_at: string | null
+  }> | null
+  temp_email_deliveries?: Array<{
+    service_name: string
+    domain: string | null
+    email: string | null
+    code: string | null
     status: string
     expires_at: string | null
   }> | null
@@ -232,7 +244,7 @@ export async function getBanners(position?: Banner['position']) {
 export async function getSales(options: { buyerId?: string; sellerId?: string } = {}) {
   let query = supabase
     .from('sales')
-    .select('*, products(title, image_url, file_url, seller_note), product_reviews(id, rating, title, body), proxy_offers(name, traffic, protocol), proxy_deliveries(username, password, host, port, traffic_limit_gb, status), virtual_number_deliveries(service_name, phone_number, sms_code, status, expires_at), buyer:buyer_id(full_name), seller:seller_id(full_name)')
+    .select('*, products(title, image_url, file_url, seller_note), product_reviews(id, rating, title, body), proxy_offers(name, traffic, protocol), proxy_deliveries(username, password, host, port, traffic_limit_gb, status), virtual_number_deliveries(service_name, phone_number, sms_code, status, expires_at), temp_email_deliveries(service_name, domain, email, code, status, expires_at), buyer:buyer_id(full_name), seller:seller_id(full_name)')
     .order('created_at', { ascending: false })
 
   if (options.buyerId) query = query.eq('buyer_id', options.buyerId)

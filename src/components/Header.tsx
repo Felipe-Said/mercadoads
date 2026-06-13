@@ -336,6 +336,7 @@ export function Header() {
             <Link to="/proxy" className="hidden whitespace-nowrap py-2 transition-opacity hover:opacity-75 md:block">Proxy</Link>
             <Link to="/smm" className="hidden whitespace-nowrap py-2 transition-opacity hover:opacity-75 md:block">SMM</Link>
             <Link to="/numero-virtual" className="hidden whitespace-nowrap py-2 transition-opacity hover:opacity-75 md:block">Numero virtual</Link>
+            <Link to="/email-temporario" className="hidden whitespace-nowrap py-2 transition-opacity hover:opacity-75 md:block">Email temporario</Link>
           </div>
 
           <div className="hidden shrink-0 items-center gap-4 md:flex">
