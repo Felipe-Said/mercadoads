@@ -200,18 +200,18 @@ export function Header() {
         className="border-b px-4"
         style={{ backgroundColor: settings.topbarBackgroundColor, color: settings.topbarTextColor, borderColor: 'rgba(0,0,0,0.08)' }}
       >
-        <div className="mx-auto flex h-8 max-w-[1440px] items-center justify-between gap-4 text-[12px]">
-          <div className="hidden items-center gap-2 md:flex">
+        <div className="mx-auto flex min-h-8 max-w-[1440px] items-center justify-between gap-4 text-[12px]">
+          <div className={`${settings.headerPromo.enabled && settings.headerPromo.text ? 'hidden md:flex' : 'flex'} min-w-0 items-center gap-2 md:flex`}>
             <ShieldCheck className="h-4 w-4 text-current" />
-            <span>Compra segura com vendedores verificados</span>
+            <span className="truncate">Compra segura com vendedores verificados</span>
           </div>
           {settings.headerPromo.enabled && settings.headerPromo.text && (
             <Link
               to={settings.headerPromo.link || '/'}
-              className="ml-auto flex items-center gap-2 rounded-sm px-2 py-1 font-medium"
+              className="ml-auto flex min-w-0 items-center gap-2 rounded-sm px-2 py-1 font-medium"
               style={{ backgroundColor: settings.headerPromo.backgroundColor, color: settings.headerPromo.textColor }}
             >
-              {settings.headerPromo.gifUrl && <img src={settings.headerPromo.gifUrl} alt="" className="h-5 object-contain" />}
+              {settings.headerPromo.gifUrl && <img src={settings.headerPromo.gifUrl} alt="" className="h-5 flex-shrink-0 object-contain" />}
               <span className="truncate">{settings.headerPromo.text}</span>
             </Link>
           )}
