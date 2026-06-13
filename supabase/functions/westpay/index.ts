@@ -34,6 +34,12 @@ type TempEmailSettings = {
   api_key: string | null
 }
 
+type SmmSettings = {
+  active: boolean
+  api_base_url: string
+  api_key: string | null
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -246,6 +252,17 @@ async function loadTempEmailSettings(supabaseAdmin: ReturnType<typeof createClie
   return data as TempEmailSettings | null
 }
 
+async function loadSmmSettings(supabaseAdmin: ReturnType<typeof createClient>) {
+  const { data, error } = await supabaseAdmin
+    .from('smm_settings')
+    .select('active, api_base_url, api_key')
+    .eq('id', 1)
+    .maybeSingle()
+
+  if (error) throw error
+  return data as SmmSettings | null
+}
+
 async function callProxyProvider(settings: ProxyProviderSettings, path: string, body?: Record<string, unknown>, method: 'GET' | 'POST' | 'PUT' = 'POST') {
   if (!settings.active || !settings.api_key?.trim()) {
     return { success: false as const, configured: false as const, data: null }
@@ -351,6 +368,40 @@ async function callTempMailProcedure(settings: TempEmailSettings, procedure: str
   const result = asRecord(batch?.result)
   const payload = asRecord(result?.data)
   return { success: true as const, configured: true as const, status: response.status, data: payload?.json ?? data }
+}
+
+async function callSmmProvider(settings: SmmSettings, payload: Record<string, unknown>) {
+  if (!settings.active || !settings.api_key?.trim()) {
+    return { success: false as const, configured: false as const, data: null }
+  }
+
+  const body = new URLSearchParams()
+  body.set('key', settings.api_key.trim())
+  for (const [key, value] of Object.entries(payload)) {
+    if (value !== undefined && value !== null && String(value).trim()) body.set(key, String(value))
+  }
+
+  const response = await fetch(settings.api_base_url || 'https://baratosociais.com/api/v2', {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body,
+  })
+  const text = await response.text()
+  let data: unknown = text
+  try {
+    data = text ? JSON.parse(text) : null
+  } catch {
+    data = text
+  }
+
+  if (!response.ok) return { success: false as const, configured: true as const, status: response.status, data }
+  if (data && typeof data === 'object' && !Array.isArray(data) && 'error' in data) {
+    return { success: false as const, configured: true as const, status: 400, data }
+  }
+  return { success: true as const, configured: true as const, status: response.status, data }
 }
 
 function unwrapProviderRows(data: unknown) {
@@ -573,6 +624,59 @@ async function provisionTempEmailSale(supabaseAdmin: ReturnType<typeof createCli
   return providerResult
 }
 
+async function provisionSmmSale(supabaseAdmin: ReturnType<typeof createClient>, saleId: string) {
+  const { data: sale, error: saleError } = await supabaseAdmin
+    .from('sales')
+    .select('id, buyer_id, status, smm_service_id, smm_service_name, smm_service_type, smm_link, smm_quantity, smm_comments, smm_username, smm_answer_number')
+    .eq('id', saleId)
+    .maybeSingle()
+
+  if (saleError) throw saleError
+  const saleRecord = asRecord(sale)
+  if (!saleRecord?.smm_service_id || saleRecord.status !== 'paid') return { skipped: true }
+
+  const existing = await supabaseAdmin
+    .from('smm_deliveries')
+    .select('id')
+    .eq('sale_id', saleId)
+    .maybeSingle()
+
+  if (existing.data) return { skipped: true, existing: true }
+
+  const serviceType = firstString(saleRecord.smm_service_type)?.toLowerCase() ?? ''
+  const payload: Record<string, unknown> = {
+    action: 'add',
+    service: saleRecord.smm_service_id,
+    link: saleRecord.smm_link,
+    quantity: saleRecord.smm_quantity,
+  }
+
+  if (serviceType.includes('custom comment') || serviceType.includes('comments')) payload.comments = saleRecord.smm_comments
+  if (serviceType.includes('comment likes')) payload.username = saleRecord.smm_username
+  if (serviceType.includes('poll')) payload.answer_number = saleRecord.smm_answer_number
+
+  const settings = await loadSmmSettings(supabaseAdmin)
+  const providerResult = settings
+    ? await callSmmProvider(settings, payload)
+    : { success: false as const, configured: false as const, data: null }
+  const providerData = asRecord(providerResult.data) ?? {}
+  const providerOrderId = firstString(providerData.order)
+
+  await supabaseAdmin.from('smm_deliveries').insert({
+    sale_id: saleId,
+    buyer_id: saleRecord.buyer_id,
+    service_id: firstString(saleRecord.smm_service_id) ?? '',
+    service_name: firstString(saleRecord.smm_service_name, 'Servico SMM') ?? 'Servico SMM',
+    provider_order_id: providerOrderId,
+    link: firstString(saleRecord.smm_link) ?? '',
+    quantity: Number(saleRecord.smm_quantity ?? 0),
+    status: providerResult.success === false ? 'failed' : 'processing',
+    provider_payload: providerResult,
+  })
+
+  return providerResult
+}
+
 async function callWestPay(settings: GatewaySettings, path: string, method: 'GET' | 'POST', body?: Record<string, unknown>) {
   if (!settings.westpay_api_key || !settings.westpay_public_key) {
     return { configured: false as const }
@@ -657,7 +761,10 @@ async function updateSaleFromWebhook(supabaseAdmin: ReturnType<typeof createClie
   const tempEmailDelivery = mappedStatus === 'paid'
     ? await provisionTempEmailSale(supabaseAdmin, saleId)
     : { skipped: true }
-  return { updated: true, proxyDelivery, virtualNumberDelivery, tempEmailDelivery }
+  const smmDelivery = mappedStatus === 'paid'
+    ? await provisionSmmSale(supabaseAdmin, saleId)
+    : { skipped: true }
+  return { updated: true, proxyDelivery, virtualNumberDelivery, tempEmailDelivery, smmDelivery }
 }
 
 async function updateWalletDepositFromWebhook(supabaseAdmin: ReturnType<typeof createClient>, payload: Record<string, unknown>) {

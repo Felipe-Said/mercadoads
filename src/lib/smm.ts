@@ -79,7 +79,7 @@ async function invokeSmmDirect(action: string, payload?: Record<string, unknown>
   return data as SmmInvokeResult
 }
 
-export async function invokeSmm(action: 'services' | 'status' | 'balance' | 'add', payload?: Record<string, unknown>) {
+export async function invokeSmm(action: 'services' | 'status' | 'balance' | 'add' | 'provision_sale', payload?: Record<string, unknown>) {
   try {
     const { data, error } = await supabase.functions.invoke('smm', {
       body: { action, ...(payload ?? {}) },
@@ -104,6 +104,14 @@ export async function getSmmServices() {
 
 export async function getSmmBalance() {
   const result = await invokeSmm('balance')
+  if (result.success === false) {
+    throw new Error(friendlySmmMessage(extractMessage(result.data) || result.error || null, result.status))
+  }
+  return result
+}
+
+export async function provisionSmmSale(saleId: string) {
+  const result = await invokeSmm('provision_sale', { saleId })
   if (result.success === false) {
     throw new Error(friendlySmmMessage(extractMessage(result.data) || result.error || null, result.status))
   }

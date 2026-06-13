@@ -89,7 +89,7 @@ async function callProvider(settings: SmmSettings, payload: Record<string, unkno
     if (value !== undefined && value !== null && String(value).trim()) body.set(key, String(value))
   }
 
-  const response = await fetch(settings.api_base_url || 'https://mitikboost.com/api/v2', {
+  const response = await fetch(settings.api_base_url || 'https://baratosociais.com/api/v2', {
     method: 'POST',
     headers: {
       Accept: 'application/json',
@@ -110,6 +110,67 @@ async function callProvider(settings: SmmSettings, payload: Record<string, unkno
     return { configured: true as const, success: false as const, status: 400, data }
   }
   return { configured: true as const, success: true as const, status: response.status, data }
+}
+
+async function provisionSmmSale(supabaseAdmin: ReturnType<typeof createClient>, saleId: string) {
+  const { data: sale, error: saleError } = await supabaseAdmin
+    .from('sales')
+    .select('id, buyer_id, status, smm_service_id, smm_service_name, smm_service_type, smm_link, smm_quantity, smm_comments, smm_username, smm_answer_number')
+    .eq('id', saleId)
+    .maybeSingle()
+
+  if (saleError) throw saleError
+  const saleRecord = sale as Record<string, unknown> | null
+  if (!saleRecord?.smm_service_id || saleRecord.status !== 'paid') return { skipped: true }
+
+  const existing = await supabaseAdmin
+    .from('smm_deliveries')
+    .select('id')
+    .eq('sale_id', saleId)
+    .maybeSingle()
+
+  if (existing.data) return { skipped: true, existing: true }
+
+  const settings = await loadSettings(supabaseAdmin)
+  const serviceType = String(saleRecord.smm_service_type ?? '').toLowerCase()
+  const payload: Record<string, unknown> = {
+    action: 'add',
+    service: saleRecord.smm_service_id,
+    link: saleRecord.smm_link,
+    quantity: saleRecord.smm_quantity,
+  }
+
+  if (serviceType.includes('custom comment') || serviceType.includes('comments')) {
+    payload.comments = saleRecord.smm_comments
+  }
+  if (serviceType.includes('comment likes')) {
+    payload.username = saleRecord.smm_username
+  }
+  if (serviceType.includes('poll')) {
+    payload.answer_number = saleRecord.smm_answer_number
+  }
+
+  const providerResult = settings
+    ? await callProvider(settings, payload)
+    : { success: false as const, configured: false as const, data: null }
+  const providerData = providerResult.data && typeof providerResult.data === 'object' && !Array.isArray(providerResult.data)
+    ? providerResult.data as Record<string, unknown>
+    : {}
+  const providerOrderId = providerData.order == null ? null : String(providerData.order)
+
+  await supabaseAdmin.from('smm_deliveries').insert({
+    sale_id: saleId,
+    buyer_id: saleRecord.buyer_id,
+    service_id: String(saleRecord.smm_service_id),
+    service_name: String(saleRecord.smm_service_name ?? 'Servico SMM'),
+    provider_order_id: providerOrderId,
+    link: String(saleRecord.smm_link ?? ''),
+    quantity: Number(saleRecord.smm_quantity ?? 0),
+    status: providerResult.success === false ? 'failed' : 'processing',
+    provider_payload: providerResult,
+  })
+
+  return providerResult
 }
 
 function mapServices(services: ProviderService[], overrides: SmmOverride[], defaultMarkup: number) {
@@ -210,6 +271,13 @@ Deno.serve(async (req) => {
       answer_number: body.answer_number,
     })
     return json(result, result.success === false ? 400 : 200)
+  }
+
+  if (action === 'provision_sale') {
+    const saleId = String(body.saleId || body.sale_id || '')
+    if (!saleId) return json({ success: false, configured: true, error: 'Pedido invalido.' }, 400)
+    const result = await provisionSmmSale(supabaseAdmin, saleId)
+    return json(result, (result as Record<string, unknown>).success === false ? 400 : 200)
   }
 
   return json({ success: false, configured: true, error: 'Action not supported.' }, 400)
