@@ -240,7 +240,7 @@ Deno.serve(async (req) => {
   }
 
   if (action === 'services') {
-    const result = await callProvider(settings, settings.services_path)
+    const result = await callProvider(settings, settings.services_path, { country: 'BR' })
     if (result.configured === false || result.success === false) return json({ ...result, items: [] }, result.success === false ? 400 : 200)
 
     const overrides = await loadOverrides(supabaseAdmin)
@@ -256,8 +256,10 @@ Deno.serve(async (req) => {
     const result = await callProvider(settings, settings.order_path, {
       service: body.service,
       service_id: body.serviceId ?? body.service,
+      serviceId: body.serviceId ?? body.service,
       country: body.country,
       country_id: body.countryId ?? body.country,
+      ddd: body.ddd,
       operator: body.operator,
       max_price: body.maxPrice,
     }, 'POST')

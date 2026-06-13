@@ -166,10 +166,10 @@ export function Gateway() {
   const [virtualNumberBaseUrl, setVirtualNumberBaseUrl] = useState('https://app.numero-virtual.com')
   const [virtualNumberApiKey, setVirtualNumberApiKey] = useState('')
   const [virtualNumberAuthMode, setVirtualNumberAuthMode] = useState<'bearer' | 'x-api-key' | 'query_key' | 'form_key'>('bearer')
-  const [virtualNumberBalancePath, setVirtualNumberBalancePath] = useState('/api/balance')
-  const [virtualNumberServicesPath, setVirtualNumberServicesPath] = useState('/api/services')
+  const [virtualNumberBalancePath, setVirtualNumberBalancePath] = useState('/api/v1/balance')
+  const [virtualNumberServicesPath, setVirtualNumberServicesPath] = useState('/api/v1/services')
   const [virtualNumberCountriesPath, setVirtualNumberCountriesPath] = useState('/api/countries')
-  const [virtualNumberOrderPath, setVirtualNumberOrderPath] = useState('/api/order')
+  const [virtualNumberOrderPath, setVirtualNumberOrderPath] = useState('/api/v1/activations')
   const [virtualNumberMarkup, setVirtualNumberMarkup] = useState(50)
   const [virtualNumberMessage, setVirtualNumberMessage] = useState<string | null>(null)
   const [virtualNumberTestMessage, setVirtualNumberTestMessage] = useState<string | null>(null)
@@ -274,10 +274,10 @@ export function Gateway() {
         setVirtualNumberBaseUrl(virtualNumberSettings?.api_base_url ?? 'https://app.numero-virtual.com')
         setVirtualNumberApiKey(virtualNumberSettings?.api_key ?? '')
         setVirtualNumberAuthMode(virtualNumberSettings?.auth_mode ?? 'bearer')
-        setVirtualNumberBalancePath(virtualNumberSettings?.balance_path ?? '/api/balance')
-        setVirtualNumberServicesPath(virtualNumberSettings?.services_path ?? '/api/services')
+        setVirtualNumberBalancePath(virtualNumberSettings?.balance_path ?? '/api/v1/balance')
+        setVirtualNumberServicesPath(virtualNumberSettings?.services_path ?? '/api/v1/services')
         setVirtualNumberCountriesPath(virtualNumberSettings?.countries_path ?? '/api/countries')
-        setVirtualNumberOrderPath(virtualNumberSettings?.order_path ?? '/api/order')
+        setVirtualNumberOrderPath(virtualNumberSettings?.order_path ?? '/api/v1/activations')
         setVirtualNumberMarkup(Number(virtualNumberSettings?.default_markup_percent ?? 50))
         setVirtualNumberOverrides(((virtualNumberOverridesResult.data ?? []) as Array<Record<string, unknown>>).map((item) => ({
           id: item.id as number | undefined,
@@ -481,10 +481,10 @@ export function Gateway() {
       api_base_url: virtualNumberBaseUrl.trim() || 'https://app.numero-virtual.com',
       api_key: virtualNumberApiKey.trim() || null,
       auth_mode: virtualNumberAuthMode,
-      balance_path: virtualNumberBalancePath.trim() || '/api/balance',
-      services_path: virtualNumberServicesPath.trim() || '/api/services',
+      balance_path: virtualNumberBalancePath.trim() || '/api/v1/balance',
+      services_path: virtualNumberServicesPath.trim() || '/api/v1/services',
       countries_path: virtualNumberCountriesPath.trim() || '/api/countries',
-      order_path: virtualNumberOrderPath.trim() || '/api/order',
+      order_path: virtualNumberOrderPath.trim() || '/api/v1/activations',
       default_markup_percent: Number(virtualNumberMarkup) || 0,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'id' })
@@ -909,16 +909,16 @@ export function Gateway() {
               </GatewayField>
               <div className="grid gap-4 md:grid-cols-2">
                 <GatewayField label="Endpoint de servicos">
-                  <input value={virtualNumberServicesPath} onChange={(event) => setVirtualNumberServicesPath(event.target.value)} placeholder="/api/services" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+                  <input value={virtualNumberServicesPath} onChange={(event) => setVirtualNumberServicesPath(event.target.value)} placeholder="/api/v1/services" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
                 </GatewayField>
                 <GatewayField label="Endpoint de paises">
                   <input value={virtualNumberCountriesPath} onChange={(event) => setVirtualNumberCountriesPath(event.target.value)} placeholder="/api/countries" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
                 </GatewayField>
                 <GatewayField label="Endpoint de saldo">
-                  <input value={virtualNumberBalancePath} onChange={(event) => setVirtualNumberBalancePath(event.target.value)} placeholder="/api/balance" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+                  <input value={virtualNumberBalancePath} onChange={(event) => setVirtualNumberBalancePath(event.target.value)} placeholder="/api/v1/balance" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
                 </GatewayField>
                 <GatewayField label="Endpoint de pedido">
-                  <input value={virtualNumberOrderPath} onChange={(event) => setVirtualNumberOrderPath(event.target.value)} placeholder="/api/order" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
+                  <input value={virtualNumberOrderPath} onChange={(event) => setVirtualNumberOrderPath(event.target.value)} placeholder="/api/v1/activations" className="w-full h-11 px-3 border border-gray-300 rounded-sm" />
                 </GatewayField>
               </div>
               <GatewayField label="Margem global (%)">
