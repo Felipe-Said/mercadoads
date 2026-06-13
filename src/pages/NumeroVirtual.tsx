@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { BarChart3, ChevronDown, Info, RefreshCw, Search, ShieldCheck, Smartphone, Star } from 'lucide-react'
+import { BarChart3, ChevronDown, RefreshCw, Search, ShieldCheck, Smartphone, Star } from 'lucide-react'
 import { getVirtualNumberServices, type VirtualNumberService } from '../lib/numeroVirtual'
 
 type ServiceGroup = {
@@ -16,8 +16,51 @@ function parseStock(value: string) {
   return Number.isFinite(parsed) ? parsed : 0
 }
 
+const countryOptions = [
+  { code: 'BR', name: 'Brasil' },
+  { code: 'US', name: 'Estados Unidos' },
+  { code: 'CA', name: 'Canada' },
+  { code: 'GB', name: 'Reino Unido' },
+  { code: 'PT', name: 'Portugal' },
+  { code: 'MX', name: 'Mexico' },
+]
+
+const brazilDddOptions = [
+  { code: '', name: 'Qualquer DDD' },
+  { code: '11', name: 'DDD 11 - Sao Paulo' },
+  { code: '12', name: 'DDD 12 - Vale do Paraiba' },
+  { code: '13', name: 'DDD 13 - Baixada Santista' },
+  { code: '14', name: 'DDD 14 - Bauru / Marilia' },
+  { code: '15', name: 'DDD 15 - Sorocaba' },
+  { code: '16', name: 'DDD 16 - Ribeirao Preto' },
+  { code: '17', name: 'DDD 17 - Sao Jose do Rio Preto' },
+  { code: '18', name: 'DDD 18 - Presidente Prudente' },
+  { code: '19', name: 'DDD 19 - Campinas' },
+  { code: '21', name: 'DDD 21 - Rio de Janeiro' },
+  { code: '22', name: 'DDD 22 - Norte Fluminense' },
+  { code: '24', name: 'DDD 24 - Sul Fluminense' },
+  { code: '27', name: 'DDD 27 - Vitoria' },
+  { code: '31', name: 'DDD 31 - Belo Horizonte' },
+  { code: '41', name: 'DDD 41 - Curitiba' },
+  { code: '47', name: 'DDD 47 - Joinville' },
+  { code: '48', name: 'DDD 48 - Florianopolis' },
+  { code: '51', name: 'DDD 51 - Porto Alegre' },
+  { code: '61', name: 'DDD 61 - Brasilia' },
+  { code: '71', name: 'DDD 71 - Salvador' },
+  { code: '81', name: 'DDD 81 - Recife' },
+  { code: '85', name: 'DDD 85 - Fortaleza' },
+  { code: '92', name: 'DDD 92 - Manaus' },
+]
+
+function dddLabel(code: string) {
+  return brazilDddOptions.find((item) => item.code === code)?.name || (code ? `DDD ${code}` : 'Qualquer DDD')
+}
+
 function serviceTitle(service: VirtualNumberService) {
-  return (service.name || service.providerName || service.code || 'Numero virtual').trim()
+  const title = (service.name || service.providerName || '').trim()
+  if (title && !/^funcao #?\d+$/i.test(title)) return title
+  if (service.code && !/^\d+$/.test(service.code)) return service.code.toUpperCase()
+  return 'Funcao de SMS'
 }
 
 function buildServiceGroups(items: VirtualNumberService[]) {
@@ -48,10 +91,13 @@ function buildServiceGroups(items: VirtualNumberService[]) {
     .sort((left, right) => left.title.localeCompare(right.title))
 }
 
-function ServiceOption({ service }: { service: VirtualNumberService }) {
+function ServiceOption({ service, selectedDdd }: { service: VirtualNumberService; selectedDdd: string }) {
   const functionName = service.functionName || `Receber SMS para ${serviceTitle(service)}`
+  const ddd = service.ddd || selectedDdd
+  const operatorName = service.operatorName || (ddd ? dddLabel(ddd) : 'Qualquer DDD')
   const descriptors = [
     functionName,
+    operatorName,
     service.option || 'Ativacao por SMS',
     service.country || 'BR',
   ].filter(Boolean)
@@ -62,7 +108,9 @@ function ServiceOption({ service }: { service: VirtualNumberService }) {
         <div className="min-w-0">
           <p className="text-sm font-black text-[var(--layout-text-primary)]">{functionName}</p>
           <p className="mt-1 text-xs text-[var(--layout-text-muted)]">{descriptors.join(' / ')}</p>
-          {service.code && <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--layout-link-color)]">Codigo do servico: {service.code}</p>}
+          <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--layout-link-color)]">
+            {service.code && !/^\d+$/.test(service.code) ? `Codigo do servico: ${service.code}` : operatorName}
+          </p>
         </div>
         <div className="grid grid-cols-2 gap-3 text-xs md:min-w-[240px]">
           <div>
@@ -82,7 +130,7 @@ function ServiceOption({ service }: { service: VirtualNumberService }) {
   )
 }
 
-function ServiceGroupRow({ group, open, onToggle }: { group: ServiceGroup; open: boolean; onToggle: () => void }) {
+function ServiceGroupRow({ group, open, selectedDdd, onToggle }: { group: ServiceGroup; open: boolean; selectedDdd: string; onToggle: () => void }) {
   return (
     <article className="overflow-hidden rounded-md border border-emerald-100 bg-[var(--layout-surface-background)] shadow-sm">
       <button
@@ -110,7 +158,7 @@ function ServiceGroupRow({ group, open, onToggle }: { group: ServiceGroup; open:
         <div className="border-t border-[var(--layout-border-color)] bg-[var(--layout-subtle-background)] p-4">
           <div className="grid gap-3">
             {group.services.map((service) => (
-              <ServiceOption key={service.id} service={service} />
+              <ServiceOption key={service.id} service={service} selectedDdd={selectedDdd} />
             ))}
           </div>
         </div>
@@ -125,6 +173,8 @@ export function NumeroVirtual() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
+  const [selectedCountry, setSelectedCountry] = useState('BR')
+  const [selectedDdd, setSelectedDdd] = useState('')
   const [category, setCategory] = useState('all')
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
 
@@ -132,7 +182,7 @@ export function NumeroVirtual() {
     setLoading(true)
     setError(null)
     try {
-      const result = await getVirtualNumberServices()
+      const result = await getVirtualNumberServices(selectedCountry)
       setConfigured(result.configured)
       setItems(result.items)
     } catch (loadError) {
@@ -144,7 +194,7 @@ export function NumeroVirtual() {
 
   useEffect(() => {
     load().catch(console.error)
-  }, [])
+  }, [selectedCountry])
 
   const categories = useMemo(() => {
     return ['all', ...Array.from(new Set(items.map((item) => item.category).filter(Boolean))).slice(0, 40)]
@@ -161,6 +211,8 @@ export function NumeroVirtual() {
         item.country,
         item.stock,
         item.functionName,
+        item.operatorName,
+        item.ddd,
         item.option,
         item.code,
       ].some((value) => String(value ?? '').toLowerCase().includes(term))
@@ -201,7 +253,7 @@ export function NumeroVirtual() {
       </section>
 
       <main className="mx-auto max-w-[980px] px-4 py-6">
-        <div className="mb-5 grid gap-3 md:grid-cols-[minmax(0,1fr)_220px_auto_auto] md:items-center">
+        <div className="mb-5 grid gap-3 md:grid-cols-[minmax(0,1fr)_170px_220px_180px_auto] md:items-center">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--layout-text-muted)]" />
             <input
@@ -213,6 +265,31 @@ export function NumeroVirtual() {
           </div>
 
           <select
+            value={selectedCountry}
+            onChange={(event) => {
+              setSelectedCountry(event.target.value)
+              setSelectedDdd('')
+              setOpenGroups({})
+            }}
+            className="h-12 w-full rounded-md border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)]"
+          >
+            {countryOptions.map((item) => (
+              <option key={item.code} value={item.code}>{item.name}</option>
+            ))}
+          </select>
+
+          <select
+            value={selectedDdd}
+            onChange={(event) => setSelectedDdd(event.target.value)}
+            disabled={selectedCountry !== 'BR'}
+            className="h-12 w-full rounded-md border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)] disabled:opacity-60"
+          >
+            {brazilDddOptions.map((item) => (
+              <option key={item.code || 'any'} value={item.code}>{item.name}</option>
+            ))}
+          </select>
+
+          <select
             value={category}
             onChange={(event) => setCategory(event.target.value)}
             className="h-12 w-full rounded-md border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)]"
@@ -221,10 +298,6 @@ export function NumeroVirtual() {
               <option key={item} value={item}>{item === 'all' ? 'Todas as funcoes' : item}</option>
             ))}
           </select>
-
-          <button type="button" className="layout-secondary-button inline-flex h-12 w-12 items-center justify-center rounded-md" aria-label="Informacoes">
-            <Info className="h-5 w-5" />
-          </button>
 
           <button onClick={load} className="layout-secondary-button inline-flex h-12 items-center justify-center gap-2 rounded-md px-4 text-sm font-bold" disabled={loading}>
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -270,6 +343,7 @@ export function NumeroVirtual() {
                 key={group.key}
                 group={group}
                 open={Boolean(openGroups[group.key])}
+                selectedDdd={selectedDdd}
                 onToggle={() => setOpenGroups((current) => ({ ...current, [group.key]: !current[group.key] }))}
               />
             ))}

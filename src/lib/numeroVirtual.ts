@@ -7,6 +7,8 @@ export type VirtualNumberService = {
   providerName: string
   category: string
   functionName: string
+  operatorName: string
+  ddd: string
   option: string
   country: string
   stock: string
@@ -90,8 +92,8 @@ export async function invokeVirtualNumber(action: 'services' | 'status' | 'balan
   }
 }
 
-export async function getVirtualNumberServices() {
-  const result = await invokeVirtualNumber('services')
+export async function getVirtualNumberServices(country = 'BR') {
+  const result = await invokeVirtualNumber('services', { country })
   if (result.success === false) {
     throw new Error(friendlyVirtualNumberMessage(extractMessage(result.data) || result.error || null, result.status))
   }

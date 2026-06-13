@@ -59,6 +59,39 @@ function formatPrice(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
 }
 
+function normalizeCountry(value: unknown) {
+  const country = firstString(value, 'BR').toUpperCase()
+  return country.length === 2 ? country : 'BR'
+}
+
+const commonServiceNames: Record<string, string> = {
+  '1': 'WhatsApp',
+  '2': 'Telegram',
+  wa: 'WhatsApp',
+  whatsapp: 'WhatsApp',
+  tg: 'Telegram',
+  telegram: 'Telegram',
+  fb: 'Facebook',
+  facebook: 'Facebook',
+  go: 'Google',
+  google: 'Google',
+  gmail: 'Google / Gmail',
+  ig: 'Instagram',
+  instagram: 'Instagram',
+  tk: 'TikTok',
+  tiktok: 'TikTok',
+  mercado: 'Mercado',
+  ml: 'Mercado',
+}
+
+function serviceDisplayName(record: Record<string, unknown>, id: string) {
+  const explicit = firstString(record.name, record.title, record.service_name, record.label, record.app, record.application, record.function, record.function_name)
+  if (explicit) return explicit
+
+  const code = firstString(record.code, record.slug, record.short_name, id).toLowerCase()
+  return commonServiceNames[code] || commonServiceNames[id.toLowerCase()] || `Funcao #${id}`
+}
+
 async function parseRequestBody(req: Request) {
   const raw = await req.text()
   if (!raw) return {}
@@ -182,10 +215,11 @@ function mapServices(data: unknown, overrides: VirtualNumberOverride[], defaultM
       const override = overrideById.get(id)
       if (override && !override.is_active) return null
 
-      const serviceName = firstString(record.name, record.title, record.service_name, record.label, `Servico ${id}`)
+      const serviceName = serviceDisplayName(record, id)
       const providerPrice = toNumber(record.price ?? record.cost ?? record.rate ?? record.amount ?? record.value)
       const markup = override?.markup_percent ?? defaultMarkup
       const priceAmount = override?.price_amount ?? providerPrice * (1 + markup / 100)
+      const ddd = firstString(record.ddd, record.area_code, record.areaCode)
 
       return {
         id,
@@ -194,6 +228,8 @@ function mapServices(data: unknown, overrides: VirtualNumberOverride[], defaultM
         providerName: serviceName,
         category: override?.custom_category?.trim() || 'Receber SMS',
         functionName: `Receber SMS para ${serviceName}`,
+        operatorName: firstString(record.operator, record.carrier, record.provider, record.gateway, record.source, ddd ? `DDD ${ddd}` : ''),
+        ddd,
         option: firstString(record.option, record.option_name, record.type, record.provider_type, 'Ativacao por SMS'),
         country: firstString(record.country, record.country_name, record.location, record.iso, responseCountry),
         stock: firstString(record.stock, record.quantity, record.available, record.count, record.available_count, 'Disponivel'),
@@ -246,7 +282,8 @@ Deno.serve(async (req) => {
   }
 
   if (action === 'services') {
-    const result = await callProvider(settings, settings.services_path, { country: 'BR' })
+    const country = normalizeCountry(body.country || url.searchParams.get('country'))
+    const result = await callProvider(settings, settings.services_path, { country })
     if (result.configured === false || result.success === false) return json({ ...result, items: [] }, result.success === false ? 400 : 200)
 
     const overrides = await loadOverrides(supabaseAdmin)
