@@ -172,6 +172,8 @@ async function callProvider(settings: VirtualNumberSettings, path: string, paylo
 
 function mapServices(data: unknown, overrides: VirtualNumberOverride[], defaultMarkup: number) {
   const overrideById = new Map(overrides.map((item) => [String(item.service_id), item]))
+  const root = asRecord(data)
+  const responseCountry = firstString(root?.country, root?.countryCode, 'BR')
 
   return unwrapRows(data)
     .map((row, index) => {
@@ -180,6 +182,7 @@ function mapServices(data: unknown, overrides: VirtualNumberOverride[], defaultM
       const override = overrideById.get(id)
       if (override && !override.is_active) return null
 
+      const serviceName = firstString(record.name, record.title, record.service_name, record.label, `Servico ${id}`)
       const providerPrice = toNumber(record.price ?? record.cost ?? record.rate ?? record.amount ?? record.value)
       const markup = override?.markup_percent ?? defaultMarkup
       const priceAmount = override?.price_amount ?? providerPrice * (1 + markup / 100)
@@ -187,13 +190,13 @@ function mapServices(data: unknown, overrides: VirtualNumberOverride[], defaultM
       return {
         id,
         code: firstString(record.code, record.slug, record.short_name, id),
-        name: override?.custom_name?.trim() || firstString(record.name, record.title, record.service_name, record.label, `Servico ${id}`),
-        providerName: firstString(record.name, record.title, record.service_name, record.label, `Servico ${id}`),
-        category: override?.custom_category?.trim() || firstString(record.category, record.type, record.network, 'Numero virtual'),
-        operator: firstString(record.operator, record.carrier, record.provider, record.gateway, record.source, record.option_name),
-        option: firstString(record.option, record.option_name, record.type, record.provider_type, record.function, record.function_name),
-        country: firstString(record.country, record.country_name, record.location, record.iso, 'Global'),
-        stock: firstString(record.stock, record.quantity, record.available, record.count, 'Disponivel'),
+        name: override?.custom_name?.trim() || serviceName,
+        providerName: serviceName,
+        category: override?.custom_category?.trim() || 'Receber SMS',
+        functionName: `Receber SMS para ${serviceName}`,
+        option: firstString(record.option, record.option_name, record.type, record.provider_type, 'Ativacao por SMS'),
+        country: firstString(record.country, record.country_name, record.location, record.iso, responseCountry),
+        stock: firstString(record.stock, record.quantity, record.available, record.count, record.available_count, 'Disponivel'),
         providerPrice,
         priceAmount,
         priceLabel: formatPrice(priceAmount),

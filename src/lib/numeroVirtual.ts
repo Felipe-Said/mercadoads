@@ -6,7 +6,7 @@ export type VirtualNumberService = {
   name: string
   providerName: string
   category: string
-  operator: string
+  functionName: string
   option: string
   country: string
   stock: string

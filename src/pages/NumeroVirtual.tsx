@@ -16,38 +16,32 @@ function parseStock(value: string) {
   return Number.isFinite(parsed) ? parsed : 0
 }
 
-function normalizeGroupTitle(service: VirtualNumberService) {
-  const name = service.name || service.providerName || service.category || 'Numero virtual'
-  return name
-    .replace(/\s+\|\s+.+$/g, '')
-    .replace(/\s+-\s+(opcao|opção|sms24h|vivo|claro|tim|oi).+$/i, '')
-    .replace(/\s+\((opcao|opção|sms24h|vivo|claro|tim|oi).+\)$/i, '')
-    .trim()
+function serviceTitle(service: VirtualNumberService) {
+  return (service.name || service.providerName || service.code || 'Numero virtual').trim()
 }
 
 function buildServiceGroups(items: VirtualNumberService[]) {
   const groups = new Map<string, VirtualNumberService[]>()
 
   items.forEach((service) => {
-    const title = normalizeGroupTitle(service)
+    const title = serviceTitle(service)
     const key = title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     groups.set(key, [...(groups.get(key) ?? []), service])
   })
 
   return Array.from(groups.entries())
     .map(([key, services]) => {
-      const title = normalizeGroupTitle(services[0])
+      const title = serviceTitle(services[0])
       const stocks = services.map((service) => parseStock(service.stock))
+      const prices = services.map((service) => Number(service.priceAmount || 0)).filter(Boolean)
       return {
         key,
         title,
         initial: title.slice(0, 1).toUpperCase(),
         totalStock: stocks.reduce((sum, stock) => sum + stock, 0),
-        minPrice: Math.min(...services.map((service) => Number(service.priceAmount || 0)).filter(Boolean)),
+        minPrice: prices.length ? Math.min(...prices) : 0,
         services: services.sort((left, right) => {
-          return left.priceAmount - right.priceAmount
-            || left.country.localeCompare(right.country)
-            || left.category.localeCompare(right.category)
+          return left.priceAmount - right.priceAmount || left.country.localeCompare(right.country)
         }),
       } as ServiceGroup
     })
@@ -55,23 +49,24 @@ function buildServiceGroups(items: VirtualNumberService[]) {
 }
 
 function ServiceOption({ service }: { service: VirtualNumberService }) {
+  const functionName = service.functionName || `Receber SMS para ${serviceTitle(service)}`
   const descriptors = [
-    service.operator,
-    service.option,
-    service.category,
-    service.country,
+    functionName,
+    service.option || 'Ativacao por SMS',
+    service.country || 'BR',
   ].filter(Boolean)
 
   return (
     <div className="rounded-sm border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] p-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="min-w-0">
-          <p className="text-sm font-black text-[var(--layout-text-primary)]">{service.providerName || service.name}</p>
-          <p className="mt-1 text-xs text-[var(--layout-text-muted)]">{descriptors.join(' / ') || 'Opcao padrao'}</p>
+          <p className="text-sm font-black text-[var(--layout-text-primary)]">{functionName}</p>
+          <p className="mt-1 text-xs text-[var(--layout-text-muted)]">{descriptors.join(' / ')}</p>
+          {service.code && <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--layout-link-color)]">Codigo do servico: {service.code}</p>}
         </div>
         <div className="grid grid-cols-2 gap-3 text-xs md:min-w-[240px]">
           <div>
-            <p className="font-bold uppercase text-[var(--layout-text-muted)]">Estoque</p>
+            <p className="font-bold uppercase text-[var(--layout-text-muted)]">Disponiveis</p>
             <p className="mt-1 font-semibold text-[var(--layout-success-color)]">{service.stock || 'Disponivel'}</p>
           </div>
           <div>
@@ -102,9 +97,10 @@ function ServiceGroupRow({ group, open, onToggle }: { group: ServiceGroup; open:
         <span className="min-w-0 flex-1">
           <span className="block truncate text-base font-black text-[var(--layout-text-primary)]">{group.title}</span>
           <span className="mt-0.5 block text-xs text-[var(--layout-text-muted)]">
-            {group.services.length} opcao{group.services.length === 1 ? '' : 'es'}
+            Funcao de SMS
+            {group.services.length > 1 ? ` / ${group.services.length} opcoes` : ''}
             {group.totalStock ? ` / ${group.totalStock} disponiveis` : ''}
-            {Number.isFinite(group.minPrice) && group.minPrice > 0 ? ` / a partir de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(group.minPrice)}` : ''}
+            {group.minPrice > 0 ? ` / a partir de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(group.minPrice)}` : ''}
           </span>
         </span>
         <ChevronDown className={`h-5 w-5 flex-none text-[var(--layout-text-muted)] transition-transform ${open ? 'rotate-180' : ''}`} />
@@ -164,7 +160,7 @@ export function NumeroVirtual() {
         item.category,
         item.country,
         item.stock,
-        item.operator,
+        item.functionName,
         item.option,
         item.code,
       ].some((value) => String(value ?? '').toLowerCase().includes(term))
@@ -177,7 +173,7 @@ export function NumeroVirtual() {
   useEffect(() => {
     if (!query.trim() && category === 'all') return
     setOpenGroups(Object.fromEntries(groups.slice(0, 12).map((group) => [group.key, true])))
-  }, [query, category])
+  }, [query, category, groups])
 
   return (
     <div className="min-h-screen bg-[var(--layout-page-background)] pb-12 text-[var(--layout-text-primary)]">
@@ -188,7 +184,7 @@ export function NumeroVirtual() {
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--layout-dashboard-sidebar-kicker-text)]">Cookie Numero</p>
               <h1 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">Numeros virtuais</h1>
               <p className="mt-3 max-w-2xl text-sm text-[var(--layout-dashboard-sidebar-muted-text)]">
-                Escolha o app, abra as opcoes disponiveis e selecione a melhor disponibilidade para receber SMS.
+                Escolha a funcao do numero, como WhatsApp, Facebook ou Google, e solicite um numero proprio para receber SMS.
               </p>
             </div>
             <div className="layout-surface rounded-sm p-4 text-[var(--layout-text-primary)] shadow-sm">
@@ -212,7 +208,7 @@ export function NumeroVirtual() {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               className="h-12 w-full rounded-md border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] pl-10 pr-3 text-sm outline-none focus:border-[var(--layout-accent-color)]"
-              placeholder="Pesquisar"
+              placeholder="Pesquisar por app ou funcao"
             />
           </div>
 
@@ -243,7 +239,7 @@ export function NumeroVirtual() {
               <div>
                 <h2 className="font-bold">Numeros virtuais ainda nao configurados</h2>
                 <p className="mt-1 text-sm text-[var(--layout-text-muted)]">
-                  Configure a chave em Painel Admin &gt; Gateway para listar os servicos.
+                  Configure a chave em Painel Admin &gt; Gateway para listar as funcoes de SMS.
                 </p>
               </div>
             </div>
