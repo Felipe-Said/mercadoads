@@ -174,3 +174,111 @@
     background-color: var(--layout-button-secondary-hover);
   }
 }
+
+@media (max-width: 767px) {
+  html,
+  body,
+  #root {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    -webkit-tap-highlight-color: transparent;
+    background: var(--layout-page-background);
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    font-size: 16px;
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
+  }
+
+  main {
+    min-width: 0;
+  }
+
+  .layout-surface,
+  .dashboard-surface > *,
+  .dashboard-surface .bg-white,
+  .dashboard-surface [class*="shadow-sm"] {
+    border-radius: 0.5rem;
+  }
+
+  .dashboard-surface {
+    min-width: 0;
+  }
+
+  .dashboard-surface table {
+    min-width: 680px;
+  }
+
+  .dashboard-surface .overflow-x-auto,
+  main .overflow-x-auto {
+    margin-inline: -0.25rem;
+    padding-inline: 0.25rem;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .dashboard-surface input,
+  .dashboard-surface select,
+  .dashboard-surface textarea,
+  main input,
+  main select,
+  main textarea {
+    min-height: 44px;
+  }
+
+  .dashboard-surface button,
+  main button,
+  main a[class*="button"],
+  .layout-primary-button,
+  .layout-secondary-button {
+    min-height: 44px;
+  }
+
+  .dashboard-surface h1,
+  main h1 {
+    overflow-wrap: anywhere;
+  }
+
+  .dashboard-surface h2,
+  main h2,
+  .dashboard-surface h3,
+  main h3 {
+    overflow-wrap: anywhere;
+  }
+
+  [class*="max-w-[1440px]"],
+  [class*="max-w-7xl"],
+  [class*="max-w-[1280px]"] {
+    width: 100%;
+  }
+
+  [class*="grid-cols-["] {
+    min-width: 0;
+  }
+
+  .group\/carousel button[class*="absolute"] {
+    display: none;
+  }
+
+  [data-banner-position] {
+    border-radius: 0.5rem;
+  }
+
+  [data-banner-position] img,
+  picture img {
+    max-width: 100%;
+  }
+}

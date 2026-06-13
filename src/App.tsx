@@ -47,7 +47,7 @@ function App() {
     <div className="flex min-h-screen flex-col bg-[var(--layout-page-background)] text-[var(--layout-text-primary)]">
       <PlatformTheme />
       <Header />
-      <main className="flex-grow">
+      <main className="flex-grow pb-16 md:pb-0">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/groups" element={<Groups />} />
@@ -95,7 +95,7 @@ function App() {
       </main>
       
       {/* Simple Footer */}
-      <footer className="bg-[var(--layout-surface-background)] py-8">
+      <footer className="hidden bg-[var(--layout-surface-background)] py-8 md:block">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <p className="mb-2 text-sm text-[var(--layout-text-muted)]">Trabalhe conosco Termos e condições Como cuidamos da sua privacidade Acessibilidade Contato</p>
           <p className="text-xs text-[var(--layout-text-muted)]">Copyright © 2026 Cookie market LTDA.</p>

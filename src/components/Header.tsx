@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react"
-import { Search, Menu, ChevronDown, ChevronRight, LogOut, ShieldCheck, Store, UserRound } from "lucide-react"
+import { Home, Search, Menu, ChevronDown, ChevronRight, LogOut, ShieldCheck, Store, UserRound, Zap, Smartphone } from "lucide-react"
 import { Facebook, Google } from "iconsax-react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
 import { useCart } from "../contexts/CartContext"
 import { supabase } from "../lib/supabase"
@@ -71,6 +71,7 @@ export function Header() {
   const { user, profile, role, logout } = useAuth()
   const { totalItems } = useCart()
   const navigate = useNavigate()
+  const location = useLocation()
   const [settings, setSettings] = useState<HeaderSettings>(defaultSettings)
   const [walletBalance, setWalletBalance] = useState(0)
   const [categoryMenuOpen, setCategoryMenuOpen] = useState(false)
@@ -185,6 +186,10 @@ export function Header() {
   const firstName = profile?.full_name?.trim().split(/\s+/)[0] || user?.email?.split('@')[0] || 'usuario'
   const panelLink = role === 'admin' ? '/painel/admin' : role === 'seller' ? '/painel/vendedor' : '/painel/usuario'
   const panelLabel = role === 'admin' ? 'Painel Admin' : role === 'seller' ? 'Painel do Vendedor' : 'Meu Perfil'
+  const bottomItemClass = (href: string) => {
+    const active = href === '/' ? location.pathname === '/' : location.pathname.startsWith(href)
+    return `flex flex-col items-center gap-1 rounded-sm px-1 py-1.5 text-[11px] font-semibold transition-colors ${active ? 'bg-[var(--layout-button-primary-bg)] text-[var(--layout-button-primary-text)]' : 'text-[var(--layout-text-muted)]'}`
+  }
 
   return (
     <header
@@ -213,24 +218,24 @@ export function Header() {
         </div>
       </div>
 
-      <div className="mx-auto flex max-w-[1440px] flex-col gap-2 px-4 py-3" style={{ color: settings.navTextColor }}>
-        <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3 md:gap-5">
+      <div className="mx-auto flex max-w-[1440px] flex-col gap-2 px-3 py-2 md:px-4 md:py-3" style={{ color: settings.navTextColor }}>
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 md:grid-cols-[auto_1fr_auto] md:gap-5">
           <Link to="/" className="flex min-w-0 flex-shrink-0 items-center font-bold text-xl tracking-tight" style={{ color: settings.navTextColor }}>
-            <PlatformLogo fallbackClassName="text-xl" imageClassName="max-h-11" />
+            <PlatformLogo fallbackClassName="text-xl" imageClassName="max-h-9 md:max-h-11" />
           </Link>
 
-          <div className="relative min-w-0">
+          <div className="relative order-3 col-span-2 min-w-0 md:order-none md:col-span-1">
             <input
               type="text"
               placeholder="Buscar contas, BMs, perfis, proxies..."
-              className="h-11 w-full rounded-sm border border-black/10 bg-[var(--layout-surface-background)] px-4 pr-12 text-sm text-[var(--layout-text-primary)] shadow-sm outline-none transition focus:border-[var(--layout-accent-color)] focus:ring-2 focus:ring-[var(--layout-accent-color)]"
+              className="h-10 w-full rounded-sm border border-black/10 bg-[var(--layout-surface-background)] px-4 pr-12 text-[16px] text-[var(--layout-text-primary)] shadow-sm outline-none transition focus:border-[var(--layout-accent-color)] focus:ring-2 focus:ring-[var(--layout-accent-color)] md:h-11 md:text-sm"
             />
-            <button className="absolute right-0 top-0 flex h-11 w-12 items-center justify-center rounded-r-sm border-l border-[var(--layout-border-color)] bg-[var(--layout-subtle-background)] text-[var(--layout-text-muted)] hover:bg-[var(--layout-surface-background)] hover:text-[var(--layout-link-color)]">
+            <button className="absolute right-0 top-0 flex h-10 w-12 items-center justify-center rounded-r-sm border-l border-[var(--layout-border-color)] bg-[var(--layout-subtle-background)] text-[var(--layout-text-muted)] hover:bg-[var(--layout-surface-background)] hover:text-[var(--layout-link-color)] md:h-11">
               <Search className="h-5 w-5" />
             </button>
           </div>
 
-          <div className="flex items-center justify-end gap-3">
+          <div className="order-2 flex items-center justify-end gap-2 md:order-none md:gap-3">
             <button className="relative hidden p-2 text-current transition-opacity hover:opacity-75 md:block" aria-label="Notificacoes">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -253,7 +258,7 @@ export function Header() {
         </div>
 
         <div className="flex items-center justify-between gap-4 text-sm">
-          <div className="flex min-w-0 items-center gap-5 overflow-visible font-medium text-current/80">
+          <div className="flex min-w-0 items-center gap-4 overflow-x-auto font-medium text-current/80 [scrollbar-width:none] md:gap-5 md:overflow-visible [&::-webkit-scrollbar]:hidden">
             <div ref={categoryMenuRef} className="relative">
               <button
                 type="button"
@@ -265,7 +270,7 @@ export function Header() {
               </button>
 
               {categoryMenuOpen && (
-                <div className="absolute left-0 top-full z-50 mt-1 w-[min(92vw,680px)] overflow-hidden rounded-sm border bg-[var(--layout-category-menu-bg)] text-[var(--layout-category-menu-text)] shadow-2xl" style={{ borderColor: 'var(--layout-category-menu-border)' }}>
+                <div className="fixed inset-x-3 top-[126px] z-50 max-h-[70vh] overflow-y-auto rounded-sm border bg-[var(--layout-category-menu-bg)] text-[var(--layout-category-menu-text)] shadow-2xl md:absolute md:inset-auto md:left-0 md:top-full md:mt-1 md:w-[min(92vw,680px)]" style={{ borderColor: 'var(--layout-category-menu-border)' }}>
                   <div className="border-b px-3 py-2" style={{ backgroundColor: 'var(--layout-category-menu-header-bg)', borderColor: 'var(--layout-category-menu-border)' }}>
                     <p className="text-[13px] font-black">Categorias</p>
                     <p className="text-[11px] text-[var(--layout-category-menu-muted-text)]">Ativos organizados por plataforma.</p>
@@ -326,17 +331,17 @@ export function Header() {
             </div>
 
             <Link to="/ofertas" className="whitespace-nowrap py-2 transition-opacity hover:opacity-75">Ofertas do dia</Link>
-            <Link to="/historico" className="hidden whitespace-nowrap py-2 transition-opacity hover:opacity-75 md:block">Historico</Link>
+            <Link to="/historico" className="whitespace-nowrap py-2 transition-opacity hover:opacity-75">Historico</Link>
             {!role && (
               <Link to="/vender" className="hidden items-center gap-1 whitespace-nowrap py-2 transition-opacity hover:opacity-75 md:flex">
                 <Store className="h-4 w-4" /> Vender
               </Link>
             )}
-            <Link to="/contato" className="hidden whitespace-nowrap py-2 transition-opacity hover:opacity-75 md:block">Contato</Link>
-            <Link to="/proxy" className="hidden whitespace-nowrap py-2 transition-opacity hover:opacity-75 md:block">Proxy</Link>
-            <Link to="/smm" className="hidden whitespace-nowrap py-2 transition-opacity hover:opacity-75 md:block">SMM</Link>
-            <Link to="/numero-virtual" className="hidden whitespace-nowrap py-2 transition-opacity hover:opacity-75 md:block">Numero virtual</Link>
-            <Link to="/email-temporario" className="hidden whitespace-nowrap py-2 transition-opacity hover:opacity-75 md:block">Email temporario</Link>
+            <Link to="/contato" className="whitespace-nowrap py-2 transition-opacity hover:opacity-75">Contato</Link>
+            <Link to="/proxy" className="whitespace-nowrap py-2 transition-opacity hover:opacity-75">Proxy</Link>
+            <Link to="/smm" className="whitespace-nowrap py-2 transition-opacity hover:opacity-75">SMM</Link>
+            <Link to="/numero-virtual" className="whitespace-nowrap py-2 transition-opacity hover:opacity-75">Numero virtual</Link>
+            <Link to="/email-temporario" className="whitespace-nowrap py-2 transition-opacity hover:opacity-75">Email temporario</Link>
           </div>
 
           <div className="hidden shrink-0 items-center gap-4 md:flex">
@@ -374,6 +379,35 @@ export function Header() {
           </div>
         </div>
       </div>
+
+      <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-black/10 bg-[var(--layout-surface-background)] px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 text-[var(--layout-text-muted)] shadow-[0_-8px_24px_rgba(15,23,42,0.12)] md:hidden">
+        <div className="mx-auto grid max-w-md grid-cols-5 gap-1">
+          <Link to="/" className={bottomItemClass('/')}>
+            <Home className="h-5 w-5" />
+            Home
+          </Link>
+          <Link to="/ofertas" className={bottomItemClass('/ofertas')}>
+            <Zap className="h-5 w-5" />
+            Ofertas
+          </Link>
+          <Link to="/proxy" className={bottomItemClass('/proxy')}>
+            <ShieldCheck className="h-5 w-5" />
+            Proxy
+          </Link>
+          <Link to="/numero-virtual" className={bottomItemClass('/numero-virtual')}>
+            <Smartphone className="h-5 w-5" />
+            Numero
+          </Link>
+          <Link to={role ? panelLink : '/login'} className={bottomItemClass(role ? panelLink : '/login')}>
+            {profile?.avatar_url ? (
+              <img src={profile.avatar_url} alt="" className="h-5 w-5 rounded-full object-cover" />
+            ) : (
+              <UserRound className="h-5 w-5" />
+            )}
+            {role ? 'Perfil' : 'Entrar'}
+          </Link>
+        </div>
+      </nav>
     </header>
   )
 }
