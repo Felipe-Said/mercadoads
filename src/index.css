@@ -173,6 +173,15 @@
   .layout-secondary-button:hover {
     background-color: var(--layout-button-secondary-hover);
   }
+
+  .auth-primary-button {
+    background-color: var(--layout-auth-button-bg);
+    color: var(--layout-auth-button-text);
+  }
+
+  .auth-primary-button:hover {
+    background-color: var(--layout-auth-button-hover);
+  }
 }
 
 @media (max-width: 767px) {

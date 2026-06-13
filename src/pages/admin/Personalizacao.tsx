@@ -69,6 +69,7 @@ const sectionLinks = [
   { id: 'cabecalho', label: 'Cabecalho' },
   { id: 'cores', label: 'Cores globais' },
   { id: 'tokens', label: 'Tokens de layout' },
+  { id: 'auth', label: 'Login e cadastro' },
   { id: 'aba', label: 'Aba do navegador' },
   { id: 'banners', label: 'Banners' },
 ]
@@ -506,6 +507,26 @@ export function Personalizacao() {
                   <ColorControl label="Botao secundario - hover" value={layoutTheme.buttonSecondaryHover} onChange={(value) => updateLayoutTheme('buttonSecondaryHover', value)} />
                 </TokenGroup>
 
+                <TokenGroup title="Login e cadastro">
+                  <ColorControl label="Fundo da pagina" value={layoutTheme.authPageBg} onChange={(value) => updateLayoutTheme('authPageBg', value)} />
+                  <ColorControl label="Fundo do card" value={layoutTheme.authCardBg} onChange={(value) => updateLayoutTheme('authCardBg', value)} />
+                  <ColorControl label="Borda do card" value={layoutTheme.authCardBorder} onChange={(value) => updateLayoutTheme('authCardBorder', value)} />
+                  <ColorControl label="Sombra do card" value={layoutTheme.authCardShadow} onChange={(value) => updateLayoutTheme('authCardShadow', value)} />
+                  <ColorControl label="Titulo" value={layoutTheme.authTitleText} onChange={(value) => updateLayoutTheme('authTitleText', value)} />
+                  <ColorControl label="Texto de apoio" value={layoutTheme.authBodyText} onChange={(value) => updateLayoutTheme('authBodyText', value)} />
+                  <ColorControl label="Labels dos campos" value={layoutTheme.authLabelText} onChange={(value) => updateLayoutTheme('authLabelText', value)} />
+                  <ColorControl label="Fundo dos inputs" value={layoutTheme.authInputBg} onChange={(value) => updateLayoutTheme('authInputBg', value)} />
+                  <ColorControl label="Borda dos inputs" value={layoutTheme.authInputBorder} onChange={(value) => updateLayoutTheme('authInputBorder', value)} />
+                  <ColorControl label="Texto dos inputs" value={layoutTheme.authInputText} onChange={(value) => updateLayoutTheme('authInputText', value)} />
+                  <ColorControl label="Foco dos inputs" value={layoutTheme.authInputFocus} onChange={(value) => updateLayoutTheme('authInputFocus', value)} />
+                  <ColorControl label="Botao - fundo" value={layoutTheme.authButtonBg} onChange={(value) => updateLayoutTheme('authButtonBg', value)} />
+                  <ColorControl label="Botao - texto" value={layoutTheme.authButtonText} onChange={(value) => updateLayoutTheme('authButtonText', value)} />
+                  <ColorControl label="Botao - hover" value={layoutTheme.authButtonHover} onChange={(value) => updateLayoutTheme('authButtonHover', value)} />
+                  <ColorControl label="Links" value={layoutTheme.authLinkText} onChange={(value) => updateLayoutTheme('authLinkText', value)} />
+                  <ColorControl label="Linha divisoria" value={layoutTheme.authDivider} onChange={(value) => updateLayoutTheme('authDivider', value)} />
+                  <ColorControl label="Mensagem de erro" value={layoutTheme.authErrorText} onChange={(value) => updateLayoutTheme('authErrorText', value)} />
+                </TokenGroup>
+
                 <TokenGroup title="Destaques, preco e status">
                   <ColorControl label="Cor de destaque/acento" value={layoutTheme.accentColor} onChange={(value) => updateLayoutTheme('accentColor', value)} />
                   <ColorControl label="Texto sobre destaque" value={layoutTheme.accentTextColor} onChange={(value) => updateLayoutTheme('accentTextColor', value)} />
@@ -573,6 +594,24 @@ export function Personalizacao() {
                   <button type="button" className="layout-primary-button rounded-sm px-4 py-2 text-sm font-bold">Botao primario</button>
                   <button type="button" className="layout-secondary-button rounded-sm px-4 py-2 text-sm font-bold">Botao secundario</button>
                   <a className="layout-link px-2 py-2 text-sm font-bold" href="#tokens">Link</a>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card id="auth" className="rounded-sm border-gray-200 bg-white shadow-sm">
+            <CardContent className="p-6">
+              <SectionTitle title="Preview do login e cadastro" subtitle="Use os controles em Tokens de layout > Login e cadastro para mudar cada cor dessas telas." />
+              <div className="rounded-sm p-4" style={{ backgroundColor: 'var(--layout-auth-page-bg)' }}>
+                <div className="mx-auto max-w-sm rounded-md border p-5 shadow-sm" style={{ backgroundColor: 'var(--layout-auth-card-bg)', borderColor: 'var(--layout-auth-card-border)', boxShadow: '0 1px 4px var(--layout-auth-card-shadow)' }}>
+                  <h3 className="text-xl font-semibold" style={{ color: 'var(--layout-auth-title-text)' }}>Entre na sua conta</h3>
+                  <p className="mt-1 text-sm" style={{ color: 'var(--layout-auth-body-text)' }}>Preview das cores da tela de acesso.</p>
+                  <label className="mt-4 block text-sm" style={{ color: 'var(--layout-auth-label-text)' }}>E-mail</label>
+                  <div className="mt-1 h-11 rounded-sm border px-3 py-2 text-sm" style={{ backgroundColor: 'var(--layout-auth-input-bg)', borderColor: 'var(--layout-auth-input-border)', color: 'var(--layout-auth-input-text)' }}>usuario@email.com</div>
+                  <button type="button" className="auth-primary-button mt-4 h-11 w-full rounded-sm text-sm font-bold">Entrar</button>
+                  <div className="mt-4 border-t pt-4 text-center" style={{ borderColor: 'var(--layout-auth-divider)' }}>
+                    <span className="text-sm font-semibold" style={{ color: 'var(--layout-auth-link-text)' }}>Criar uma conta</span>
+                  </div>
                 </div>
               </div>
             </CardContent>

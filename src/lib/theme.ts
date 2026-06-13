@@ -69,6 +69,23 @@ export type LayoutTheme = {
   categoryMenuHoverBg: string
   categoryMenuHoverText: string
   categoryMenuIconBg: string
+  authPageBg: string
+  authCardBg: string
+  authCardBorder: string
+  authCardShadow: string
+  authTitleText: string
+  authBodyText: string
+  authLabelText: string
+  authInputBg: string
+  authInputBorder: string
+  authInputText: string
+  authInputFocus: string
+  authButtonBg: string
+  authButtonText: string
+  authButtonHover: string
+  authLinkText: string
+  authDivider: string
+  authErrorText: string
 }
 
 export const DEFAULT_LAYOUT_THEME: LayoutTheme = {
@@ -130,6 +147,23 @@ export const DEFAULT_LAYOUT_THEME: LayoutTheme = {
   categoryMenuHoverBg: '#f8fafc',
   categoryMenuHoverText: '#c7511f',
   categoryMenuIconBg: '#ffffff',
+  authPageBg: '#ededed',
+  authCardBg: '#ffffff',
+  authCardBorder: '#ffffff',
+  authCardShadow: '#d1d5db',
+  authTitleText: '#333333',
+  authBodyText: '#6b7280',
+  authLabelText: '#4b5563',
+  authInputBg: '#ffffff',
+  authInputBorder: '#d1d5db',
+  authInputText: '#111827',
+  authInputFocus: '#3483fa',
+  authButtonBg: '#3483fa',
+  authButtonText: '#ffffff',
+  authButtonHover: '#2968c8',
+  authLinkText: '#3483fa',
+  authDivider: '#f3f4f6',
+  authErrorText: '#ef4444',
 }
 
 function normalizeHex(value: string | null | undefined, fallback: string) {
