@@ -60,7 +60,7 @@ function serviceTitle(service: VirtualNumberService) {
   const title = (service.name || service.providerName || '').trim()
   if (title && !/^funcao #?\d+$/i.test(title)) return title
   if (service.code && !/^\d+$/.test(service.code)) return service.code.toUpperCase()
-  return 'Funcao de SMS'
+  return 'Plataforma'
 }
 
 function buildServiceGroups(items: VirtualNumberService[]) {
@@ -92,21 +92,21 @@ function buildServiceGroups(items: VirtualNumberService[]) {
 }
 
 function ServiceOption({ service, selectedDdd }: { service: VirtualNumberService; selectedDdd: string }) {
-  const functionName = service.functionName || `Receber SMS para ${serviceTitle(service)}`
+  const platformName = serviceTitle(service)
   const ddd = service.ddd || selectedDdd
   const operatorName = service.operatorName || (ddd ? dddLabel(ddd) : 'Qualquer DDD')
   const descriptors = [
-    functionName,
+    `Plataforma: ${platformName}`,
     operatorName,
-    service.option || 'Ativacao por SMS',
-    service.country || 'BR',
+    `Pais: ${service.country || 'BR'}`,
+    service.option || 'Recebimento de SMS',
   ].filter(Boolean)
 
   return (
     <div className="rounded-sm border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] p-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="min-w-0">
-          <p className="text-sm font-black text-[var(--layout-text-primary)]">{functionName}</p>
+          <p className="text-sm font-black text-[var(--layout-text-primary)]">Numero virtual para {platformName}</p>
           <p className="mt-1 text-xs text-[var(--layout-text-muted)]">{descriptors.join(' / ')}</p>
           <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--layout-link-color)]">
             {service.code && !/^\d+$/.test(service.code) ? `Codigo do servico: ${service.code}` : operatorName}
@@ -124,7 +124,7 @@ function ServiceOption({ service, selectedDdd }: { service: VirtualNumberService
         </div>
       </div>
       <button type="button" className="layout-primary-button mt-4 h-10 w-full rounded-sm text-sm font-bold md:w-auto md:px-5">
-        Solicitar numero
+        Comprar numero para {platformName}
       </button>
     </div>
   )
@@ -145,7 +145,7 @@ function ServiceGroupRow({ group, open, selectedDdd, onToggle }: { group: Servic
         <span className="min-w-0 flex-1">
           <span className="block truncate text-base font-black text-[var(--layout-text-primary)]">{group.title}</span>
           <span className="mt-0.5 block text-xs text-[var(--layout-text-muted)]">
-            Funcao de SMS
+            Plataforma para receber SMS
             {group.services.length > 1 ? ` / ${group.services.length} opcoes` : ''}
             {group.totalStock ? ` / ${group.totalStock} disponiveis` : ''}
             {group.minPrice > 0 ? ` / a partir de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(group.minPrice)}` : ''}
@@ -175,7 +175,7 @@ export function NumeroVirtual() {
   const [query, setQuery] = useState('')
   const [selectedCountry, setSelectedCountry] = useState('BR')
   const [selectedDdd, setSelectedDdd] = useState('')
-  const [category, setCategory] = useState('all')
+  const [selectedPlatform, setSelectedPlatform] = useState('all')
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
 
   const load = async () => {
@@ -196,14 +196,15 @@ export function NumeroVirtual() {
     load().catch(console.error)
   }, [selectedCountry])
 
-  const categories = useMemo(() => {
-    return ['all', ...Array.from(new Set(items.map((item) => item.category).filter(Boolean))).slice(0, 40)]
+  const platformOptions = useMemo(() => {
+    return ['all', ...Array.from(new Set(items.map((item) => serviceTitle(item)).filter(Boolean))).sort((left, right) => left.localeCompare(right))]
   }, [items])
 
   const filteredItems = useMemo(() => {
     const term = query.trim().toLowerCase()
     return items.filter((item) => {
-      const matchesCategory = category === 'all' || item.category === category
+      const platformName = serviceTitle(item)
+      const matchesPlatform = selectedPlatform === 'all' || platformName === selectedPlatform
       const matchesQuery = !term || [
         item.name,
         item.providerName,
@@ -216,16 +217,16 @@ export function NumeroVirtual() {
         item.option,
         item.code,
       ].some((value) => String(value ?? '').toLowerCase().includes(term))
-      return matchesCategory && matchesQuery
+      return matchesPlatform && matchesQuery
     })
-  }, [items, query, category])
+  }, [items, query, selectedPlatform])
 
   const groups = useMemo(() => buildServiceGroups(filteredItems), [filteredItems])
 
   useEffect(() => {
-    if (!query.trim() && category === 'all') return
+    if (!query.trim() && selectedPlatform === 'all') return
     setOpenGroups(Object.fromEntries(groups.slice(0, 12).map((group) => [group.key, true])))
-  }, [query, category, groups])
+  }, [query, selectedPlatform, groups])
 
   return (
     <div className="min-h-screen bg-[var(--layout-page-background)] pb-12 text-[var(--layout-text-primary)]">
@@ -236,7 +237,7 @@ export function NumeroVirtual() {
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--layout-dashboard-sidebar-kicker-text)]">Cookie Numero</p>
               <h1 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">Numeros virtuais</h1>
               <p className="mt-3 max-w-2xl text-sm text-[var(--layout-dashboard-sidebar-muted-text)]">
-                Escolha a funcao do numero, como WhatsApp, Facebook ou Google, e solicite um numero proprio para receber SMS.
+                Escolha a plataforma que vai receber o SMS, filtre por pais e DDD, e compre apenas servicos disponiveis no catalogo.
               </p>
             </div>
             <div className="layout-surface rounded-sm p-4 text-[var(--layout-text-primary)] shadow-sm">
@@ -253,16 +254,29 @@ export function NumeroVirtual() {
       </section>
 
       <main className="mx-auto max-w-[980px] px-4 py-6">
-        <div className="mb-5 grid gap-3 md:grid-cols-[minmax(0,1fr)_170px_220px_180px_auto] md:items-center">
+        <div className="mb-5 grid gap-3 md:grid-cols-[minmax(0,1fr)_190px_170px_220px_auto] md:items-center">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--layout-text-muted)]" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               className="h-12 w-full rounded-md border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] pl-10 pr-3 text-sm outline-none focus:border-[var(--layout-accent-color)]"
-              placeholder="Pesquisar por app ou funcao"
+              placeholder="Pesquisar plataforma"
             />
           </div>
+
+          <select
+            value={selectedPlatform}
+            onChange={(event) => {
+              setSelectedPlatform(event.target.value)
+              setOpenGroups({})
+            }}
+            className="h-12 w-full rounded-md border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)]"
+          >
+            {platformOptions.map((item) => (
+              <option key={item} value={item}>{item === 'all' ? 'Todas as plataformas' : item}</option>
+            ))}
+          </select>
 
           <select
             value={selectedCountry}
@@ -289,16 +303,6 @@ export function NumeroVirtual() {
             ))}
           </select>
 
-          <select
-            value={category}
-            onChange={(event) => setCategory(event.target.value)}
-            className="h-12 w-full rounded-md border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] px-3 text-sm outline-none focus:border-[var(--layout-accent-color)]"
-          >
-            {categories.map((item) => (
-              <option key={item} value={item}>{item === 'all' ? 'Todas as funcoes' : item}</option>
-            ))}
-          </select>
-
           <button onClick={load} className="layout-secondary-button inline-flex h-12 items-center justify-center gap-2 rounded-md px-4 text-sm font-bold" disabled={loading}>
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             Atualizar
@@ -312,7 +316,7 @@ export function NumeroVirtual() {
               <div>
                 <h2 className="font-bold">Numeros virtuais ainda nao configurados</h2>
                 <p className="mt-1 text-sm text-[var(--layout-text-muted)]">
-                  Configure a chave em Painel Admin &gt; Gateway para listar as funcoes de SMS.
+                  Configure a chave em Painel Admin &gt; Gateway para listar as plataformas disponiveis.
                 </p>
               </div>
             </div>
