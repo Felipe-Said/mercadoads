@@ -235,7 +235,7 @@ export function DashboardGlobal() {
       <div className="space-y-6">
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
           <Card className="overflow-hidden rounded-md border-none bg-white shadow-sm">
-            <CardContent className="flex min-h-[190px] flex-col justify-center gap-5 p-6">
+            <CardContent className="flex min-h-[320px] flex-col justify-center gap-8 p-6">
               <div className="flex min-w-0 items-center gap-4">
                 <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100 text-2xl font-light text-gray-400">
                   {profile?.avatar_url ? <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" /> : initial}
@@ -243,6 +243,49 @@ export function DashboardGlobal() {
                 <div className="min-w-0">
                   <h1 className="truncate text-2xl font-light text-ml-dark">Ola, {name}</h1>
                   <p className="mt-1 text-gray-500">Conta admin</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className="rounded-md border border-gray-100 bg-white p-5 shadow-sm">
+                  <div className="mb-4 flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="mb-1 text-sm font-medium text-gray-500">Volume Transacionado (Mes)</p>
+                      <h3 className="truncate text-2xl font-light text-ml-dark">{formatCurrency(stats.monthlyVolume)}</h3>
+                    </div>
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-50 text-green-500">
+                      <Activity className="h-5 w-5" />
+                    </div>
+                  </div>
+                  <p className={`text-xs font-medium ${monthlyChange == null || monthlyChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                    {monthlyChange == null ? 'Sem base do mes anterior' : `${monthlyChange >= 0 ? '+' : ''}${monthlyChange.toFixed(1)}% vs mes anterior`}
+                  </p>
+                </div>
+
+                <div className="rounded-md border border-gray-100 bg-white p-5 shadow-sm">
+                  <div className="mb-4 flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="mb-1 text-sm font-medium text-gray-500">Receita da Plataforma (Taxas)</p>
+                      <h3 className="truncate text-2xl font-light text-ml-dark">{formatCurrency(stats.platformRevenue)}</h3>
+                    </div>
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-ml-blue">
+                      <Shield className="h-5 w-5" />
+                    </div>
+                  </div>
+                  <p className="text-xs font-medium text-gray-400">Margem atual: {stats.platformFee}%</p>
+                </div>
+
+                <div className="rounded-md border border-gray-100 bg-white p-5 shadow-sm">
+                  <div className="mb-4 flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="mb-1 text-sm font-medium text-gray-500">Usuarios Ativos</p>
+                      <h3 className="truncate text-2xl font-light text-ml-dark">{stats.activeUsers}</h3>
+                    </div>
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-50 text-gray-500">
+                      <Users className="h-5 w-5" />
+                    </div>
+                  </div>
+                  <p className="text-xs font-medium text-gray-400">{stats.newUsersToday} novos hoje</p>
                 </div>
               </div>
             </CardContent>
@@ -323,55 +366,6 @@ export function DashboardGlobal() {
                 ))}
                 {groups.length === 0 && <p className="rounded-sm border border-dashed border-gray-200 p-3 text-center text-sm text-gray-500">Nenhum grupo cadastrado.</p>}
               </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="bg-white border-none shadow-sm rounded-md">
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-500 mb-1">Volume Transacionado (Mes)</p>
-                  <h3 className="text-2xl font-light text-ml-dark">{formatCurrency(stats.monthlyVolume)}</h3>
-                </div>
-                <div className="w-10 h-10 bg-green-50 rounded-full flex items-center justify-center text-green-500">
-                  <Activity className="w-5 h-5" />
-                </div>
-              </div>
-              <p className={`text-xs font-medium ${monthlyChange == null || monthlyChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                {monthlyChange == null ? 'Sem base do mes anterior' : `${monthlyChange >= 0 ? '+' : ''}${monthlyChange.toFixed(1)}% vs mes anterior`}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white border-none shadow-sm rounded-md">
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-500 mb-1">Receita da Plataforma (Taxas)</p>
-                  <h3 className="text-2xl font-light text-ml-dark">{formatCurrency(stats.platformRevenue)}</h3>
-                </div>
-                <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-ml-blue">
-                  <Shield className="w-5 h-5" />
-                </div>
-              </div>
-              <p className="text-xs text-gray-400 font-medium">Margem atual: {stats.platformFee}%</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white border-none shadow-sm rounded-md">
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-500 mb-1">Usuarios Ativos</p>
-                  <h3 className="text-2xl font-light text-ml-dark">{stats.activeUsers}</h3>
-                </div>
-                <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-500">
-                  <Users className="w-5 h-5" />
-                </div>
-              </div>
-              <p className="text-xs text-gray-400 font-medium">{stats.newUsersToday} novos hoje</p>
             </CardContent>
           </Card>
         </div>
