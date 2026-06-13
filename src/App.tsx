@@ -11,6 +11,7 @@ import { SellerRegistration } from './pages/SellerRegistration'
 import { Contact } from './pages/Contact'
 import { Proxy } from './pages/Proxy'
 import { SMM } from './pages/SMM'
+import { Ferramentas } from './pages/Ferramentas'
 import { NumeroVirtual } from './pages/NumeroVirtual'
 import { EmailTemporario } from './pages/EmailTemporario'
 import { ProductPage } from './pages/ProductPage'
@@ -57,6 +58,7 @@ function App() {
           <Route path="/contato" element={<Contact />} />
           <Route path="/proxy" element={<Proxy />} />
           <Route path="/smm" element={<SMM />} />
+          <Route path="/ferramentas" element={<Ferramentas />} />
           <Route path="/numero-virtual" element={<NumeroVirtual />} />
           <Route path="/email-temporario" element={<EmailTemporario />} />
           <Route path="/category/:name" element={<Offers />} />

@@ -7,15 +7,14 @@ import { Stories } from '../components/Stories'
 import { getProducts, type Product, formatCurrency } from '../lib/data'
 
 const departments = [
-  'Contas de anuncios',
-  'BM e perfis',
-  'Google Ads',
-  'Meta Ads',
-  'TikTok Ads',
-  'Proxies',
-  'Criativos',
-  'Ferramentas',
-  'Network',
+  { label: 'Contas de anuncios', href: '/category/contas%20de%20anuncios' },
+  { label: 'BM e perfis', href: '/category/bm%20e%20perfis' },
+  { label: 'Google Ads', href: '/category/google%20ads' },
+  { label: 'Meta Ads', href: '/category/meta%20ads' },
+  { label: 'TikTok Ads', href: '/category/tiktok%20ads' },
+  { label: 'Proxies', href: '/proxy' },
+  { label: 'Ferramentas', href: '/ferramentas' },
+  { label: 'Network', href: '/groups' },
 ]
 
 function ProductTile({ product }: { product: Product }) {
@@ -120,8 +119,8 @@ export function Home() {
             </div>
             <nav className="py-2">
               {departments.map((department) => (
-                <Link key={department} to={`/category/${encodeURIComponent(department.toLowerCase())}`} className="flex items-center justify-between px-4 py-2 text-sm font-medium hover:bg-[var(--layout-home-departments-hover-bg)] hover:text-[var(--layout-home-departments-hover-text)]">
-                  {department}
+                <Link key={department.label} to={department.href} className="flex items-center justify-between px-4 py-2 text-sm font-medium hover:bg-[var(--layout-home-departments-hover-bg)] hover:text-[var(--layout-home-departments-hover-text)]">
+                  {department.label}
                   <ChevronRight className="h-3.5 w-3.5 text-[var(--layout-home-departments-icon)]" />
                 </Link>
               ))}
@@ -226,7 +225,7 @@ export function Home() {
               <h2 className="text-lg font-bold">Categorias populares</h2>
             </div>
             <div className="flex flex-wrap gap-2">
-              {(categories.length ? categories : departments.slice(0, 7)).map((category) => (
+              {(categories.length ? categories : departments.slice(0, 7).map((department) => department.label)).map((category) => (
                 <Link key={category} to={`/category/${encodeURIComponent(category.toLowerCase())}`} className="rounded-sm border border-gray-200 px-3 py-2 text-xs font-semibold text-[var(--layout-link-color)] hover:border-[var(--layout-accent-color)] hover:text-[var(--layout-link-hover-color)]">
                   {category}
                 </Link>
