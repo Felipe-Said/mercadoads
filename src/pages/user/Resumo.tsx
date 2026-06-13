@@ -342,13 +342,13 @@ export function Resumo() {
       <div className="space-y-6">
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
           <Card className="overflow-hidden rounded-md border-none bg-white shadow-sm">
-            <CardContent className="grid gap-5 p-5 lg:grid-cols-[minmax(220px,0.7fr)_minmax(0,1.3fr)] lg:items-center">
+            <CardContent className="flex min-h-[210px] flex-col justify-center gap-5 p-6">
               <div className="flex min-w-0 items-center gap-4">
-                <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100 text-2xl font-light text-gray-400">
+                <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100 text-2xl font-light text-gray-400">
                   {profile?.avatar_url ? <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" /> : initial}
                 </div>
                 <div className="min-w-0">
-                  <h1 className="truncate text-xl font-light text-ml-dark">Ola, {name}</h1>
+                  <h1 className="truncate text-2xl font-light text-ml-dark">Ola, {name}</h1>
                   <p className="mt-1 text-gray-500">Conta {profile?.role ?? 'user'}</p>
                 </div>
               </div>
