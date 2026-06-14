@@ -150,7 +150,7 @@ export function ResumoVendas() {
               {profile?.store_slug ? (
                 <div className="flex items-center gap-2 mt-3">
                   <a href={`/loja/${profile.store_slug}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-sm font-medium text-ml-blue hover:text-ml-hover transition-colors bg-ml-blue/10 px-3 py-1.5 rounded-full">
-                    <ExternalLink className="w-3.5 h-3.5" /> saidads.com/loja/{profile.store_slug}
+                    <ExternalLink className="w-3.5 h-3.5" /> cookiemarket.lat/loja/{profile.store_slug}
                   </a>
                   <button 
                     onClick={copyBioLink}

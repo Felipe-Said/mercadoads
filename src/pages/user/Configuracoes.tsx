@@ -132,7 +132,7 @@ export function Configuracoes() {
                   <label className="block text-sm font-semibold text-ml-dark mb-2">Link na Bio da sua Loja (StoreBio)</label>
                   <div className="flex items-center">
                     <span className="h-12 px-3 bg-gray-100 border border-r-0 border-gray-300 rounded-l-sm text-gray-500 flex items-center text-sm">
-                      saidads.com/loja/
+                      cookiemarket.lat/loja/
                     </span>
                     <input 
                       type="text" 
