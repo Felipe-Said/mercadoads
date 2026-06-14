@@ -63,6 +63,19 @@ function BrandMark({ brand }: { brand: ProductTaxonomyGroup['brand'] }) {
     )
   }
 
+  if (brand === 'shopify') {
+    return (
+      <span className="inline-flex h-8 w-8 items-center justify-center rounded-sm bg-[var(--layout-category-menu-icon-bg)] shadow-sm ring-1 ring-black/10">
+        <svg viewBox="0 0 32 32" className="h-5 w-5" aria-hidden="true">
+          <path fill="#95BF47" d="M22.4 8.4c-.1-.1-.2-.1-.3-.1l-2.7-.2s-1.9-1.9-2.1-2.1c-.2-.2-.6-.1-.7 0l-1 .3c-.6-1.6-1.7-3-3.6-3.1h-.2c-.5-.6-1.1-.8-1.6-.8-4.1 0-6 5.1-6.6 7.7l-3.1 1c-.9.3-1 .3-1.1 1.2-.1.7-2.5 19-2.5 19L19.4 35l10.1-2.2S22.5 8.5 22.4 8.4Z" transform="translate(2 -2)" />
+          <path fill="#5E8E3E" d="m24.1 10.3-2.7-.2s-1.9-1.9-2.1-2.1c-.1-.1-.2-.1-.3-.1L17.7 33l10.1-2.2s-3.5-20.4-3.7-20.5Z" transform="translate(2 -2)" />
+          <path fill="#fff" d="M13.9 15.3 12.6 19s-1.1-.6-2.5-.6c-2 0-2.1 1.2-2.1 1.6 0 1.7 4.5 2.4 4.5 6.4 0 3.2-2 5.2-4.8 5.2-3.3 0-5-2.1-5-2.1l.9-2.9s1.7 1.5 3.2 1.5c1 0 1.4-.8 1.4-1.3 0-2.2-3.7-2.3-3.7-6 0-3.1 2.2-6.1 6.7-6.1 1.8 0 2.7.6 2.7.6Z" transform="translate(2 -2)" />
+          <path fill="#fff" d="M12 4.9c1 .1 1.6 1.3 1.9 2.5l-2.4.7c.5-2 1.4-3.1 2.5-3.2Zm-1.6.3c.2 0 .4.1.6.2-1.4.7-2.2 2.4-2.6 3.6l-2 .6c.7-2.4 2-4.4 4-4.4Zm-2.2 4.2c-.3 1.2-.4 2.1-.4 2.1l-2.6.8s.5-2.2 1.6-4.2l1.4-.4Z" transform="translate(2 -2)" />
+        </svg>
+      </span>
+    )
+  }
+
   return (
     <span className="inline-flex h-8 w-8 items-center justify-center rounded-sm bg-[var(--layout-category-menu-icon-bg)] shadow-sm ring-1 ring-black/10">
       <svg viewBox="0 0 32 32" className="h-5 w-5" aria-hidden="true">
@@ -283,12 +296,12 @@ export function Header() {
               </button>
 
               {categoryMenuOpen && (
-                <div className="fixed inset-x-3 top-[126px] z-50 max-h-[70vh] overflow-y-auto rounded-sm border bg-[var(--layout-category-menu-bg)] text-[var(--layout-category-menu-text)] shadow-2xl md:absolute md:inset-auto md:left-0 md:top-full md:mt-1 md:w-[min(92vw,680px)]" style={{ borderColor: 'var(--layout-category-menu-border)' }}>
+                <div className="fixed inset-x-3 top-[126px] z-50 max-h-[70vh] overflow-y-auto rounded-sm border bg-[var(--layout-category-menu-bg)] text-[var(--layout-category-menu-text)] shadow-2xl md:absolute md:inset-auto md:left-0 md:top-full md:mt-1 md:w-[min(92vw,860px)]" style={{ borderColor: 'var(--layout-category-menu-border)' }}>
                   <div className="border-b px-3 py-2" style={{ backgroundColor: 'var(--layout-category-menu-header-bg)', borderColor: 'var(--layout-category-menu-border)' }}>
                     <p className="text-[13px] font-black">Categorias</p>
                     <p className="text-[11px] text-[var(--layout-category-menu-muted-text)]">Ativos organizados por plataforma.</p>
                   </div>
-                  <div className="grid gap-0 md:grid-cols-3">
+                  <div className="grid gap-0 md:grid-cols-4">
                     {productTaxonomy.map((group) => (
                       <div key={group.brand} className="border-b p-3 last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0" style={{ borderColor: 'var(--layout-category-menu-border)' }}>
                         <div className="mb-2 flex items-center gap-2">

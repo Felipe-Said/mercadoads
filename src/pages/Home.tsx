@@ -14,6 +14,7 @@ const departments = [
   { label: 'Google Ads', href: '/category/google%20ads' },
   { label: 'Meta Ads', href: '/category/meta%20ads' },
   { label: 'TikTok Ads', href: '/category/tiktok%20ads' },
+  { label: 'Shopify', href: '/category/shopify' },
   { label: 'Proxies', href: '/proxy' },
   { label: 'Ferramentas', href: '/ferramentas' },
   { label: 'Network', href: '/groups' },

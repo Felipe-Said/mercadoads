@@ -67,6 +67,7 @@ export function SellerRegistration() {
                 <option value="meta">Contas / BMs (Meta Ads)</option>
                 <option value="google">Contas Google Ads</option>
                 <option value="tiktok">Contas TikTok Ads</option>
+                <option value="shopify">Shopify Payments / Temas</option>
                 <option value="outros">Outros</option>
               </select>
             </div>

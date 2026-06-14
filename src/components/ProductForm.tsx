@@ -21,6 +21,7 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
   const [category, setCategory] = useState(productCategoryOptions[0]?.value ?? '')
   const [imageUrl, setImageUrl] = useState('')
   const [imageFile, setImageFile] = useState<File | null>(null)
+  const [themeFile, setThemeFile] = useState<File | null>(null)
   const [stock, setStock] = useState('')
   const [deliveryMethod, setDeliveryMethod] = useState<'ready' | 'dropservice'>('ready')
   const [profileHandle, setProfileHandle] = useState('')
@@ -28,6 +29,9 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
   const [accountPassword, setAccountPassword] = useState('')
   const [recoveryEmail, setRecoveryEmail] = useState('')
   const [recoveryPassword, setRecoveryPassword] = useState('')
+  const [shopifyStoreUrl, setShopifyStoreUrl] = useState('')
+  const [shopifyKeys, setShopifyKeys] = useState('')
+  const [shopifyPaymentDelay, setShopifyPaymentDelay] = useState<'D1' | 'D2' | 'D3' | 'D7'>('D1')
   const [sellerNote, setSellerNote] = useState('')
   const [allowAffiliates, setAllowAffiliates] = useState(false)
   const [defaultCommission, setDefaultCommission] = useState('0')
@@ -35,16 +39,36 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
   const [message, setMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const isTikTokCategory = category.toLowerCase().includes('tiktok')
+  const isShopifyTheme = category.toLowerCase().includes('shopify temas')
+  const isShopifyPayments = category.toLowerCase().includes('shopify payments')
 
   useEffect(() => {
-    if (deliveryMethod === 'dropservice') {
+    if (deliveryMethod === 'dropservice' || isShopifyTheme) {
       setStock('1')
       setAccountEmail('')
       setAccountPassword('')
       setRecoveryEmail('')
       setRecoveryPassword('')
     }
-  }, [deliveryMethod])
+  }, [deliveryMethod, isShopifyTheme])
+
+  useEffect(() => {
+    if (isShopifyTheme) {
+      setDeliveryMethod('ready')
+      setShopifyStoreUrl('')
+      setShopifyKeys('')
+    } else {
+      setThemeFile(null)
+    }
+  }, [isShopifyTheme])
+
+  useEffect(() => {
+    if (!isShopifyPayments) {
+      setShopifyStoreUrl('')
+      setShopifyKeys('')
+      setShopifyPaymentDelay('D1')
+    }
+  }, [isShopifyPayments])
 
   useEffect(() => {
     if (!isTikTokCategory) setProfileHandle('')
@@ -58,6 +82,7 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
     setCategory(productCategoryOptions[0]?.value ?? '')
     setImageUrl('')
     setImageFile(null)
+    setThemeFile(null)
     setStock('')
     setDeliveryMethod('ready')
     setProfileHandle('')
@@ -65,6 +90,9 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
     setAccountPassword('')
     setRecoveryEmail('')
     setRecoveryPassword('')
+    setShopifyStoreUrl('')
+    setShopifyKeys('')
+    setShopifyPaymentDelay('D1')
     setSellerNote('')
     setAllowAffiliates(false)
     setDefaultCommission('0')
@@ -104,12 +132,41 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
       finalImageUrl = publicData.publicUrl
     }
 
+    let fileUrl: string | null = null
+    if (isShopifyTheme) {
+      if (!themeFile) {
+        setMessage('Envie o arquivo do tema Shopify.')
+        setLoading(false)
+        return
+      }
+
+      const fileExt = themeFile.name.split('.').pop() || 'zip'
+      const path = `${sellerId}/themes/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
+      const { data, error: fileUploadError } = await supabase.storage.from('product_files').upload(path, themeFile, {
+        cacheControl: '3600',
+        upsert: true,
+        contentType: themeFile.type || 'application/octet-stream',
+      })
+
+      if (fileUploadError) {
+        setMessage(fileUploadError.message)
+        setLoading(false)
+        return
+      }
+
+      fileUrl = data.path
+    }
+
     const deliveryLines = [
       isTikTokCategory && profileHandle.trim() ? `Perfil vinculado: ${profileHandle.trim()}` : '',
       deliveryMethod === 'ready' && accountEmail.trim() ? `Email da conta: ${accountEmail.trim()}` : '',
       deliveryMethod === 'ready' && accountPassword.trim() ? `Senha da conta: ${accountPassword.trim()}` : '',
       deliveryMethod === 'ready' && recoveryEmail.trim() ? `Email vinculado: ${recoveryEmail.trim()}` : '',
       deliveryMethod === 'ready' && recoveryPassword.trim() ? `Senha do email vinculado: ${recoveryPassword.trim()}` : '',
+      isShopifyPayments && shopifyStoreUrl.trim() ? `Loja Shopify: ${shopifyStoreUrl.trim()}` : '',
+      isShopifyPayments ? `Payments: ${shopifyPaymentDelay}` : '',
+      isShopifyPayments && shopifyKeys.trim() ? `Chaves Shopify:\n${shopifyKeys.trim()}` : '',
+      isShopifyTheme && themeFile ? `Arquivo do tema: ${themeFile.name}` : '',
       sellerNote.trim() ? `Observacao: ${sellerNote.trim()}` : '',
     ].filter(Boolean)
 
@@ -121,9 +178,10 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
       original_price: originalPrice ? Number(originalPrice) : null,
       image_url: finalImageUrl || null,
       category,
-      delivery_type: 'Entrega digital na plataforma',
+      delivery_type: isShopifyTheme ? 'Arquivo digital na plataforma' : 'Entrega digital na plataforma',
       delivery_method: deliveryMethod,
-      stock: deliveryMethod === 'dropservice' ? 1 : stock ? Number(stock) : 0,
+      stock: isShopifyTheme ? null : deliveryMethod === 'dropservice' ? 1 : stock ? Number(stock) : 0,
+      file_url: fileUrl,
       credentials_data: deliveryLines.length ? deliveryLines : [],
       seller_note: deliveryLines.join('\n') || null,
       allow_affiliates: allowAffiliates,
@@ -175,13 +233,14 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Estoque</label>
         <input
-          type="number"
+          type={isShopifyTheme ? 'text' : 'number'}
           min="0"
-          value={deliveryMethod === 'dropservice' ? '1' : stock}
+          value={isShopifyTheme ? 'Ilimitado' : deliveryMethod === 'dropservice' ? '1' : stock}
           onChange={(event) => setStock(event.target.value)}
-          disabled={deliveryMethod === 'dropservice'}
+          disabled={deliveryMethod === 'dropservice' || isShopifyTheme}
           className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue disabled:bg-gray-100 disabled:text-gray-500"
         />
+        {isShopifyTheme && <p className="mt-1 text-xs text-gray-500">Tema Shopify e arquivo digital: estoque ilimitado.</p>}
         {deliveryMethod === 'dropservice' && <p className="mt-1 text-xs text-gray-500">Dropservice sempre fica limitado a 1 unidade por anuncio.</p>}
       </div>
 
@@ -205,17 +264,32 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
       </div>
 
       <div className="md:col-span-2 rounded-md border border-gray-100 bg-white p-4">
-        <h3 className="mb-3 text-sm font-semibold text-ml-dark">Dados de entrega da conta</h3>
-        <div className="mb-4 grid gap-3 sm:grid-cols-2">
-          <label className={`rounded-md border p-3 text-sm ${deliveryMethod === 'ready' ? 'border-ml-blue bg-blue-50/40' : 'border-gray-200'}`}>
-            <input type="radio" checked={deliveryMethod === 'ready'} onChange={() => setDeliveryMethod('ready')} className="mr-2" />
-            Pronta entrega
+        <h3 className="mb-3 text-sm font-semibold text-ml-dark">{isShopifyTheme ? 'Arquivo do tema Shopify' : 'Dados de entrega da conta'}</h3>
+        {!isShopifyTheme && (
+          <div className="mb-4 grid gap-3 sm:grid-cols-2">
+            <label className={`rounded-md border p-3 text-sm ${deliveryMethod === 'ready' ? 'border-ml-blue bg-blue-50/40' : 'border-gray-200'}`}>
+              <input type="radio" checked={deliveryMethod === 'ready'} onChange={() => setDeliveryMethod('ready')} className="mr-2" />
+              Pronta entrega
+            </label>
+            <label className={`rounded-md border p-3 text-sm ${deliveryMethod === 'dropservice' ? 'border-ml-blue bg-blue-50/40' : 'border-gray-200'}`}>
+              <input type="radio" checked={deliveryMethod === 'dropservice'} onChange={() => setDeliveryMethod('dropservice')} className="mr-2" />
+              Dropservice
+            </label>
+          </div>
+        )}
+        {isShopifyTheme && (
+          <label className="mb-4 flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed border-gray-300 bg-gray-50 p-4 text-center transition-colors hover:bg-gray-100">
+            <ImagePlus className="mb-2 h-7 w-7 text-gray-400" />
+            <span className="text-sm font-semibold text-ml-dark">{themeFile ? themeFile.name : 'Enviar arquivo do tema'}</span>
+            <span className="mt-1 text-xs text-gray-500">Tema Shopify em ZIP ou arquivo compactado</span>
+            <input
+              type="file"
+              accept=".zip,.rar,.7z,application/zip,application/x-zip-compressed"
+              className="hidden"
+              onChange={(event) => setThemeFile(event.target.files?.[0] ?? null)}
+            />
           </label>
-          <label className={`rounded-md border p-3 text-sm ${deliveryMethod === 'dropservice' ? 'border-ml-blue bg-blue-50/40' : 'border-gray-200'}`}>
-            <input type="radio" checked={deliveryMethod === 'dropservice'} onChange={() => setDeliveryMethod('dropservice')} className="mr-2" />
-            Dropservice
-          </label>
-        </div>
+        )}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {isTikTokCategory && (
             <div>
@@ -240,6 +314,27 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Senha do email vinculado</label>
                 <input value={recoveryPassword} onChange={(event) => setRecoveryPassword(event.target.value)} className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
+              </div>
+            </>
+          )}
+          {isShopifyPayments && deliveryMethod === 'ready' && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">URL da loja Shopify</label>
+                <input value={shopifyStoreUrl} onChange={(event) => setShopifyStoreUrl(event.target.value)} placeholder="https://loja.myshopify.com" className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Prazo da Payments</label>
+                <select value={shopifyPaymentDelay} onChange={(event) => setShopifyPaymentDelay(event.target.value as 'D1' | 'D2' | 'D3' | 'D7')} className="w-full h-10 px-3 border border-gray-300 rounded-sm bg-white focus:outline-none focus:border-ml-blue">
+                  <option value="D1">D1</option>
+                  <option value="D2">D2</option>
+                  <option value="D3">D3</option>
+                  <option value="D7">D7</option>
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Chaves / dados da Shopify</label>
+                <textarea value={shopifyKeys} onChange={(event) => setShopifyKeys(event.target.value)} rows={3} placeholder="Cole aqui as keys, backup codes ou dados necessarios para operacao." className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue resize-y" />
               </div>
             </>
           )}

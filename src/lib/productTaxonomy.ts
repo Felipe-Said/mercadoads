@@ -4,7 +4,7 @@ export type ProductTaxonomyItem = {
 }
 
 export type ProductTaxonomyGroup = {
-  brand: 'meta' | 'google' | 'tiktok'
+  brand: 'meta' | 'google' | 'tiktok' | 'shopify'
   label: string
   items: Array<{
     label: string
@@ -68,6 +68,19 @@ export const productTaxonomy: ProductTaxonomyGroup[] = [
           { label: 'Conta nova', value: 'TikTok / Conta nova' },
           { label: 'Conta restabelecida 1x', value: 'TikTok / Conta restabelecida 1x' },
           { label: 'Conta restabelecida 2x', value: 'TikTok / Conta restabelecida 2x' },
+        ],
+      },
+    ],
+  },
+  {
+    brand: 'shopify',
+    label: 'Shopify',
+    items: [
+      {
+        label: 'Shopify',
+        children: [
+          { label: 'Shopify Payments', value: 'Shopify / Shopify Payments' },
+          { label: 'Shopify Temas', value: 'Shopify / Shopify Temas' },
         ],
       },
     ],
