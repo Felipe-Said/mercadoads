@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/button'
 import { type BannerPosition } from '../../lib/data'
 import { supabase } from '../../lib/supabase'
 import { applyPlatformTheme, DEFAULT_LAYOUT_THEME, type LayoutTheme } from '../../lib/theme'
+import { DEFAULT_PLATFORM_SETTINGS, type HomeSectionSettings } from '../../lib/platformSettings'
 
 type BannerForm = {
   title: string
@@ -71,7 +72,20 @@ const sectionLinks = [
   { id: 'tokens', label: 'Tokens de layout' },
   { id: 'auth', label: 'Login e cadastro' },
   { id: 'aba', label: 'Aba do navegador' },
+  { id: 'campos-home', label: 'Campos da home' },
   { id: 'banners', label: 'Banners' },
+]
+
+const homeSectionControls: { key: keyof HomeSectionSettings; label: string; helper: string }[] = [
+  { key: 'homeDealsTop', label: 'Banner de ofertas', helper: 'Faixa grande esquerda abaixo dos cards da home.' },
+  { key: 'homeDealsBottom', label: 'Banner de categoria', helper: 'Faixa grande direita abaixo dos cards da home.' },
+  { key: 'homeGrid1', label: 'Slot 1', helper: 'Primeiro card da grade de banners.' },
+  { key: 'homeGrid2', label: 'Slot 2', helper: 'Segundo card da grade de banners.' },
+  { key: 'homeGrid3', label: 'Slot 3', helper: 'Terceiro card da grade de banners.' },
+  { key: 'homeGrid4', label: 'Slot 4', helper: 'Quarto card da grade de banners.' },
+  { key: 'homePopularCategories', label: 'Categorias populares', helper: 'Bloco lateral com categorias detectadas pelos produtos.' },
+  { key: 'homeMiddle', label: 'Banner horizontal central', helper: 'Faixa larga ao lado de categorias populares.' },
+  { key: 'homeBottom', label: 'Banner inferior da home', helper: 'Banner largo perto do final da home.' },
 ]
 
 function getBannerPositionLabel(position: BannerPosition | string) {
@@ -108,6 +122,7 @@ export function Personalizacao() {
   const [headerNavBg, setHeaderNavBg] = useState('#ffe600')
   const [headerNavText, setHeaderNavText] = useState('#333333')
   const [layoutTheme, setLayoutTheme] = useState<LayoutTheme>(DEFAULT_LAYOUT_THEME)
+  const [homeSections, setHomeSections] = useState<HomeSectionSettings>(DEFAULT_PLATFORM_SETTINGS.homeSections)
   const [headerPromo, setHeaderPromo] = useState<HeaderPromoState>({
     enabled: true,
     gifUrl: '',
@@ -158,6 +173,7 @@ export function Personalizacao() {
     setHeaderNavBg(data?.header_nav_bg_color ?? '#ffe600')
     setHeaderNavText(data?.header_nav_text_color ?? '#333333')
     setLayoutTheme({ ...DEFAULT_LAYOUT_THEME, ...(data?.layout_theme_json ?? {}) })
+    setHomeSections({ ...DEFAULT_PLATFORM_SETTINGS.homeSections, ...(data?.home_sections_json ?? {}) })
     setHeaderPromo({
       enabled: data?.header_promo_json?.enabled ?? true,
       gifUrl: data?.header_promo_json?.gifUrl ?? '',
@@ -227,6 +243,7 @@ export function Personalizacao() {
       header_nav_bg_color: headerNavBg,
       header_nav_text_color: headerNavText,
       layout_theme_json: layoutTheme,
+      home_sections_json: homeSections,
       header_promo_json: {
         enabled: headerPromo.enabled,
         gifUrl: headerPromo.gifUrl,
@@ -332,6 +349,10 @@ export function Personalizacao() {
 
   const updateLayoutTheme = (key: keyof LayoutTheme, value: string) => {
     setLayoutTheme((current) => ({ ...current, [key]: value }))
+  }
+
+  const updateHomeSection = (key: keyof HomeSectionSettings, value: boolean) => {
+    setHomeSections((current) => ({ ...current, [key]: value }))
   }
 
   return (
@@ -627,6 +648,28 @@ export function Personalizacao() {
                 <Field label="Titulo com a pagina em segundo plano">
                   <input value={browserTitleInactive} onChange={(event) => setBrowserTitleInactive(event.target.value)} className="h-10 w-full rounded-sm border border-gray-300 px-3 text-sm" placeholder="Volte para Cookie market" />
                 </Field>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card id="campos-home" className="rounded-sm border-gray-200 bg-white shadow-sm">
+            <CardContent className="p-6">
+              <SectionTitle title="Campos extras da home" subtitle="Ative ou desative cada bloco separadamente. Todos ficam desligados por padrao." />
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {homeSectionControls.map((control) => (
+                  <label key={control.key} className="flex min-h-28 items-start justify-between gap-4 rounded-sm border border-[var(--layout-border-color)] bg-[var(--layout-subtle-background)] p-4">
+                    <span>
+                      <span className="block text-sm font-bold text-[var(--layout-text-primary)]">{control.label}</span>
+                      <span className="mt-1 block text-xs leading-relaxed text-[var(--layout-text-muted)]">{control.helper}</span>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={homeSections[control.key]}
+                      onChange={(event) => updateHomeSection(control.key, event.target.checked)}
+                      className="mt-1 h-5 w-5 shrink-0 accent-[var(--layout-accent-color)]"
+                    />
+                  </label>
+                ))}
               </div>
             </CardContent>
           </Card>

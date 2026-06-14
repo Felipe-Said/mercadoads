@@ -12,6 +12,18 @@ export type HeaderPromoSettings = {
   textColor: string
 }
 
+export type HomeSectionSettings = {
+  homeDealsTop: boolean
+  homeDealsBottom: boolean
+  homeGrid1: boolean
+  homeGrid2: boolean
+  homeGrid3: boolean
+  homeGrid4: boolean
+  homePopularCategories: boolean
+  homeMiddle: boolean
+  homeBottom: boolean
+}
+
 export type PlatformSettingsSnapshot = {
   primaryColor?: string | null
   secondaryColor?: string | null
@@ -27,6 +39,7 @@ export type PlatformSettingsSnapshot = {
   topbarTextColor: string
   navBackgroundColor: string
   navTextColor: string
+  homeSections: HomeSectionSettings
 }
 
 export const DEFAULT_HEADER_PROMO: HeaderPromoSettings = {
@@ -53,6 +66,17 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettingsSnapshot = {
   topbarTextColor: '#1f2937',
   navBackgroundColor: '#ffe600',
   navTextColor: '#333333',
+  homeSections: {
+    homeDealsTop: false,
+    homeDealsBottom: false,
+    homeGrid1: false,
+    homeGrid2: false,
+    homeGrid3: false,
+    homeGrid4: false,
+    homePopularCategories: false,
+    homeMiddle: false,
+    homeBottom: false,
+  },
 }
 
 type PlatformSettingsRow = {
@@ -70,6 +94,7 @@ type PlatformSettingsRow = {
   header_topbar_text_color?: string | null
   header_nav_bg_color?: string | null
   header_nav_text_color?: string | null
+  home_sections_json?: Partial<HomeSectionSettings> | null
 }
 
 let memorySnapshot: PlatformSettingsSnapshot | null = null
@@ -95,6 +120,10 @@ function normalizeSnapshot(row?: PlatformSettingsRow | null): PlatformSettingsSn
     topbarTextColor: row?.header_topbar_text_color ?? DEFAULT_PLATFORM_SETTINGS.topbarTextColor,
     navBackgroundColor: row?.header_nav_bg_color ?? DEFAULT_PLATFORM_SETTINGS.navBackgroundColor,
     navTextColor: row?.header_nav_text_color ?? DEFAULT_PLATFORM_SETTINGS.navTextColor,
+    homeSections: {
+      ...DEFAULT_PLATFORM_SETTINGS.homeSections,
+      ...(row?.home_sections_json ?? {}),
+    },
   }
 }
 
@@ -138,7 +167,7 @@ export async function loadPlatformSettings({ force = false } = {}) {
 
   pendingLoad = supabase
     .from('platform_settings')
-    .select('primary_color, secondary_color, favicon_url, browser_title, browser_title_inactive, layout_theme_json, logo_url, logo_desktop_size, logo_mobile_size, header_promo_json, header_topbar_bg_color, header_topbar_text_color, header_nav_bg_color, header_nav_text_color')
+    .select('primary_color, secondary_color, favicon_url, browser_title, browser_title_inactive, layout_theme_json, logo_url, logo_desktop_size, logo_mobile_size, header_promo_json, header_topbar_bg_color, header_topbar_text_color, header_nav_bg_color, header_nav_text_color, home_sections_json')
     .eq('id', 1)
     .maybeSingle()
     .then(({ data, error }) => {

@@ -6,6 +6,7 @@ import { ProductGrid } from '../components/ProductCard'
 import { Stories } from '../components/Stories'
 import { getPopularProducts, getProducts, recordProductSearch, type Product, formatCurrency } from '../lib/data'
 import { useAuth } from '../contexts/AuthContext'
+import { DEFAULT_PLATFORM_SETTINGS, loadPlatformSettings, readCachedPlatformSettings, type HomeSectionSettings } from '../lib/platformSettings'
 
 const departments = [
   { label: 'Contas de anuncios', href: '/category/contas%20de%20anuncios' },
@@ -85,6 +86,7 @@ export function Home() {
   const [products, setProducts] = useState<Product[]>([])
   const [popularProducts, setPopularProducts] = useState<Product[]>([])
   const [searchQuery, setSearchQuery] = useState('')
+  const [homeSections, setHomeSections] = useState<HomeSectionSettings>(() => readCachedPlatformSettings()?.homeSections ?? DEFAULT_PLATFORM_SETTINGS.homeSections)
   const [loading, setLoading] = useState(true)
   const lastTrackedSearch = useRef('')
 
@@ -93,6 +95,25 @@ export function Home() {
       .then(setProducts)
       .catch(console.error)
       .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    let mounted = true
+    const loadSections = async () => {
+      const settings = await loadPlatformSettings({ force: true })
+      if (mounted) setHomeSections(settings.homeSections)
+    }
+    loadSections().catch(console.error)
+
+    const handleSettingsUpdated = () => {
+      loadSections().catch(console.error)
+    }
+
+    window.addEventListener('platform-settings-updated', handleSettingsUpdated)
+    return () => {
+      mounted = false
+      window.removeEventListener('platform-settings-updated', handleSettingsUpdated)
+    }
   }, [])
 
   useEffect(() => {
@@ -141,6 +162,9 @@ export function Home() {
     .filter((product) => product.seller?.role === 'admin')
     .slice(0, 4)
   const categories = useMemo(() => Array.from(new Set(products.map((item) => item.category).filter(Boolean))).slice(0, 8) as string[], [products])
+  const showDealsRow = homeSections.homeDealsTop || homeSections.homeDealsBottom
+  const showGridRow = homeSections.homeGrid1 || homeSections.homeGrid2 || homeSections.homeGrid3 || homeSections.homeGrid4
+  const showMiddleRow = homeSections.homePopularCategories || homeSections.homeMiddle
 
   return (
     <div className="min-h-screen bg-[var(--layout-page-background)] pb-12 font-sans text-[var(--layout-text-primary)]">
@@ -204,10 +228,12 @@ export function Home() {
           </aside>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
-          <BannerSlot position="home_deals_top" className="h-40 md:h-56" fallbackTitle="Banner de ofertas" />
-          <BannerSlot position="home_deals_bottom" className="h-40 md:h-56" fallbackTitle="Banner de categoria" />
-        </section>
+        {showDealsRow && (
+          <section className={`grid gap-4 ${homeSections.homeDealsTop && homeSections.homeDealsBottom ? 'md:grid-cols-[1.2fr_0.8fr]' : ''}`}>
+            {homeSections.homeDealsTop && <BannerSlot position="home_deals_top" className="h-40 md:h-56" fallbackTitle="Banner de ofertas" />}
+            {homeSections.homeDealsBottom && <BannerSlot position="home_deals_bottom" className="h-40 md:h-56" fallbackTitle="Banner de categoria" />}
+          </section>
+        )}
 
         <section className="mt-4 rounded-sm border border-gray-200 bg-white p-4 shadow-sm">
           <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -241,41 +267,49 @@ export function Home() {
           )}
         </section>
 
-        <section className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <BannerSlot position="home_grid_1" className="h-44" compact fallbackTitle="Slot 1" />
-          <BannerSlot position="home_grid_2" className="h-44" compact fallbackTitle="Slot 2" />
-          <BannerSlot position="home_grid_3" className="h-44" compact fallbackTitle="Slot 3" />
-          <BannerSlot position="home_grid_4" className="h-44" compact fallbackTitle="Slot 4" />
-        </section>
+        {showGridRow && (
+          <section className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {homeSections.homeGrid1 && <BannerSlot position="home_grid_1" className="h-44" compact fallbackTitle="Slot 1" />}
+            {homeSections.homeGrid2 && <BannerSlot position="home_grid_2" className="h-44" compact fallbackTitle="Slot 2" />}
+            {homeSections.homeGrid3 && <BannerSlot position="home_grid_3" className="h-44" compact fallbackTitle="Slot 3" />}
+            {homeSections.homeGrid4 && <BannerSlot position="home_grid_4" className="h-44" compact fallbackTitle="Slot 4" />}
+          </section>
+        )}
 
         <div className="mt-4">
           <ProductGrid title="Ofertas do dia" linkText="Abrir ofertas" linkUrl="/ofertas" />
         </div>
 
-        <section className="mt-4 grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-          <aside className="rounded-sm border border-gray-200 bg-white p-4 shadow-sm">
-            <div className="mb-3 flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-[var(--layout-accent-color)]" />
-              <h2 className="text-lg font-bold">Categorias populares</h2>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {(categories.length ? categories : departments.slice(0, 7).map((department) => department.label)).map((category) => (
-                <Link key={category} to={`/category/${encodeURIComponent(category.toLowerCase())}`} className="rounded-sm border border-gray-200 px-3 py-2 text-xs font-semibold text-[var(--layout-link-color)] hover:border-[var(--layout-accent-color)] hover:text-[var(--layout-link-hover-color)]">
-                  {category}
-                </Link>
-              ))}
-            </div>
-          </aside>
-          <BannerSlot position="home_middle" className="h-52" fallbackTitle="Banner horizontal central" />
-        </section>
+        {showMiddleRow && (
+          <section className={`mt-4 grid gap-4 ${homeSections.homePopularCategories && homeSections.homeMiddle ? 'lg:grid-cols-[280px_minmax(0,1fr)]' : ''}`}>
+            {homeSections.homePopularCategories && (
+              <aside className="rounded-sm border border-gray-200 bg-white p-4 shadow-sm">
+                <div className="mb-3 flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-[var(--layout-accent-color)]" />
+                  <h2 className="text-lg font-bold">Categorias populares</h2>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {(categories.length ? categories : departments.slice(0, 7).map((department) => department.label)).map((category) => (
+                    <Link key={category} to={`/category/${encodeURIComponent(category.toLowerCase())}`} className="rounded-sm border border-gray-200 px-3 py-2 text-xs font-semibold text-[var(--layout-link-color)] hover:border-[var(--layout-accent-color)] hover:text-[var(--layout-link-hover-color)]">
+                      {category}
+                    </Link>
+                  ))}
+                </div>
+              </aside>
+            )}
+            {homeSections.homeMiddle && <BannerSlot position="home_middle" className="h-52" fallbackTitle="Banner horizontal central" />}
+          </section>
+        )}
 
         <div className="mt-4">
           <ProductGrid title="Mais vendidos da semana" linkText="Ver todos" shuffle />
         </div>
 
-        <div className="mt-4">
-          <BannerSlot position="home_bottom" className="h-48 md:h-64" fallbackTitle="Banner inferior da home" />
-        </div>
+        {homeSections.homeBottom && (
+          <div className="mt-4">
+            <BannerSlot position="home_bottom" className="h-48 md:h-64" fallbackTitle="Banner inferior da home" />
+          </div>
+        )}
 
         <div className="mt-4 mb-12">
           <ProductGrid title="Recomendados para voce" linkText="Descobrir mais" shuffle />
