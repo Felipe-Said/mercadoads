@@ -162,6 +162,17 @@ export function MeusAnunciosAdmin() {
     fetchProducts()
   }
 
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Tem certeza que deseja apagar este produto? Esta ação não pode ser desfeita.')) return
+    
+    const { error } = await supabase.from('products').delete().eq('id', id)
+    if (error) {
+      alert('Erro ao apagar produto: ' + error.message)
+    } else {
+      fetchProducts()
+    }
+  }
+
   const filteredProducts = products.filter(p => {
     if (activeTab === 'com-estoque') return p.stock !== null
     return p.stock === null
@@ -243,9 +254,14 @@ export function MeusAnunciosAdmin() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button onClick={() => openEditModal(product)} className="text-ml-blue hover:text-ml-hover font-medium text-sm transition-colors">
-                        Editar
-                      </button>
+                      <div className="flex items-center justify-end gap-3">
+                        <button onClick={() => openEditModal(product)} className="text-ml-blue hover:text-ml-hover font-medium text-sm transition-colors">
+                          Editar
+                        </button>
+                        <button onClick={() => handleDelete(product.id)} className="text-red-500 hover:text-red-700 font-medium text-sm transition-colors">
+                          Excluir
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

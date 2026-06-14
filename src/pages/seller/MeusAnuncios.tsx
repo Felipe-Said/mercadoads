@@ -5,6 +5,7 @@ import { Card } from '../../components/ui/card'
 import { formatCurrency, getProducts, isProductBoosted, type Product } from '../../lib/data'
 import { useAuth } from '../../contexts/AuthContext'
 import { ProductForm } from '../../components/ProductForm'
+import { supabase } from '../../lib/supabase'
 
 type Tab = 'products' | 'boosted'
 
@@ -26,6 +27,18 @@ export function MeusAnuncios() {
     }, 0)
     return () => window.clearTimeout(timeout)
   }, [loadProducts])
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Tem certeza que deseja apagar este anúncio? Esta ação não pode ser desfeita.')) return
+    
+    if (!user) return
+    const { error } = await supabase.from('products').delete().eq('id', id).eq('seller_id', user.id)
+    if (error) {
+      alert('Erro ao apagar produto: ' + error.message)
+    } else {
+      loadProducts()
+    }
+  }
 
   const boostedProducts = products.filter(isProductBoosted)
 
@@ -89,6 +102,7 @@ export function MeusAnuncios() {
                   <th className="px-6 py-4 font-medium">Vendas</th>
                   <th className="px-6 py-4 font-medium">Status</th>
                   {activeTab === 'boosted' && <th className="px-6 py-4 font-medium">Impulsionamento</th>}
+                  <th className="px-6 py-4 font-medium text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -111,11 +125,16 @@ export function MeusAnuncios() {
                         </p>
                       </td>
                     )}
+                    <td className="px-6 py-4 text-right">
+                      <button onClick={() => handleDelete(product.id)} className="text-red-500 hover:text-red-700 font-medium text-sm transition-colors">
+                        Excluir
+                      </button>
+                    </td>
                   </tr>
                 ))}
                 {(activeTab === 'products' ? products : boostedProducts).length === 0 && (
                   <tr>
-                    <td className="px-6 py-8 text-center text-gray-500" colSpan={activeTab === 'boosted' ? 6 : 5}>
+                    <td className="px-6 py-8 text-center text-gray-500" colSpan={activeTab === 'boosted' ? 7 : 6}>
                       {activeTab === 'products' ? 'Nenhum anuncio cadastrado.' : 'Nenhum produto impulsionado no momento.'}
                     </td>
                   </tr>
