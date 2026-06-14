@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Eye, EyeOff, Image as ImageIcon, Pencil, Plus, RotateCcw, Save, Trash2, Upload } from 'lucide-react'
+import { ArrowRight2 } from 'iconsax-react'
 import { AdminLayout } from '../../components/layouts/AdminLayout'
 import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
@@ -649,8 +650,8 @@ export function Personalizacao() {
           <Card id="link-bio" className="rounded-sm border-gray-200 bg-white shadow-sm">
             <CardContent className="p-6">
               <SectionTitle title="Link bio das lojas" subtitle="Somente o admin controla as cores e a identidade visual das paginas publicas /loja." />
-              <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-                <div className="grid gap-5 lg:grid-cols-2">
+              <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_420px]">
+                <div className="grid gap-5 xl:grid-cols-2">
                   <TokenGroup title="Pagina e perfil">
                     <ColorControl label="Fundo da pagina" value={storeBioTheme.pageBackground} onChange={(value) => updateStoreBioTheme('pageBackground', value)} />
                     <ColorControl label="Loader/carregamento" value={storeBioTheme.loaderColor} onChange={(value) => updateStoreBioTheme('loaderColor', value)} />
@@ -692,7 +693,7 @@ export function Personalizacao() {
                   </TokenGroup>
                 </div>
 
-                <div className="rounded-sm border border-gray-200 p-4" style={{ backgroundColor: storeBioTheme.pageBackground }}>
+                <div className="rounded-sm border border-gray-200 p-4 2xl:sticky 2xl:top-28 2xl:self-start" style={{ backgroundColor: storeBioTheme.pageBackground }}>
                   <p className="mb-4 text-xs font-bold uppercase tracking-[0.16em]" style={{ color: storeBioTheme.footerText }}>Preview link bio</p>
                   <div className="mb-4 flex flex-col items-center text-center">
                     <div className="mb-3 flex h-20 w-20 items-center justify-center rounded-full border-4 text-2xl font-bold" style={{ backgroundColor: storeBioTheme.avatarBackground, borderColor: storeBioTheme.avatarBorderColor, color: storeBioTheme.avatarFallbackText }}>C</div>
@@ -706,7 +707,9 @@ export function Personalizacao() {
                       <p className="text-sm font-extrabold" style={{ color: storeBioTheme.productTitleText }}>Produto exemplo</p>
                       <p className="text-sm font-black" style={{ color: storeBioTheme.productPriceText }}>R$ 150,00</p>
                     </div>
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full" style={{ backgroundColor: storeBioTheme.productButtonBackground, color: storeBioTheme.productButtonText }}>→</div>
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full" style={{ backgroundColor: storeBioTheme.productButtonBackground, color: storeBioTheme.productButtonText }}>
+                      <ArrowRight2 size={20} color="currentColor" variant="Linear" />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -923,7 +926,7 @@ function TokenGroup({ title, children }: { title: string; children: React.ReactN
   return (
     <div className="rounded-sm border border-[var(--layout-border-color)] bg-[var(--layout-subtle-background)] p-4">
       <h4 className="mb-4 text-sm font-bold uppercase tracking-[0.08em] text-[var(--layout-text-primary)]">{title}</h4>
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 2xl:grid-cols-2">
         {children}
       </div>
     </div>

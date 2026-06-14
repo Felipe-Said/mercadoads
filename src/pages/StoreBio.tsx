@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowRight, CheckCircle2, Package } from 'lucide-react'
+import { CheckCircle2, Package } from 'lucide-react'
+import { ArrowRight2 } from 'iconsax-react'
 import { PlatformLogo } from '../components/PlatformLogo'
 import { getProducts, getProfileBySlug, type Product, type Profile } from '../lib/data'
 import { DEFAULT_PLATFORM_SETTINGS, loadPlatformSettings, readCachedPlatformSettings, type StoreBioThemeSettings } from '../lib/platformSettings'
@@ -123,7 +124,7 @@ export function StoreBio() {
                   className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full transition-transform group-hover:translate-x-0.5"
                   style={{ backgroundColor: theme.productButtonBackground, color: theme.productButtonText }}
                 >
-                  <ArrowRight className="h-5 w-5" />
+                  <ArrowRight2 size={22} color="currentColor" variant="Linear" />
                 </span>
               </Link>
             ))
