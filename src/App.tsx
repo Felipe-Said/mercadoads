@@ -42,6 +42,7 @@ import { Resumo } from './pages/user/Resumo'
 import { Compras } from './pages/user/Compras'
 import { AfiliacoesUser } from './pages/user/AfiliacoesUser'
 import { Configuracoes } from './pages/user/Configuracoes'
+import { StoreBio } from './pages/StoreBio'
 import { storeAffiliateRefFromSearch } from './lib/affiliateTracking'
 
 function AffiliateRefTracker() {
@@ -73,6 +74,7 @@ function App() {
           <Route path="/ferramentas" element={<Ferramentas />} />
           <Route path="/numero-virtual" element={<NumeroVirtual />} />
           <Route path="/email-temporario" element={<EmailTemporario />} />
+          <Route path="/loja/:storeSlug" element={<StoreBio />} />
           <Route path="/category/:name" element={<Offers />} />
           <Route path="/produto/:id" element={<ProductPage />} />
           <Route path="/login" element={<Login />} />

@@ -14,6 +14,7 @@ export function Configuracoes() {
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
+  const [storeSlug, setStoreSlug] = useState('')
   const [saved, setSaved] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -23,6 +24,7 @@ export function Configuracoes() {
       setFullName(profile?.full_name ?? '')
       setPhone(profile?.phone ?? '')
       setAvatarUrl(profile?.avatar_url ?? '')
+      setStoreSlug(profile?.store_slug ?? '')
     }, 0)
     return () => window.clearTimeout(timeout)
   }, [profile])
@@ -55,9 +57,26 @@ export function Configuracoes() {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
-    await updateProfile({ full_name: fullName, phone, avatar_url: avatarUrl || null })
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    
+    // Auto-generate slug if not provided but user is a seller
+    let finalSlug = storeSlug
+    if (profile?.role === 'seller' && !finalSlug && profile.store_name) {
+      finalSlug = profile.store_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '')
+      setStoreSlug(finalSlug)
+    }
+
+    try {
+      await updateProfile({ 
+        full_name: fullName, 
+        phone, 
+        avatar_url: avatarUrl || null,
+        ...(profile?.role === 'seller' ? { store_slug: finalSlug || null } : {})
+      })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao salvar perfil')
+    }
   }
 
   const content = (
@@ -107,6 +126,25 @@ export function Configuracoes() {
                 <input type="email" value={user?.email ?? ''} className="w-full h-12 px-4 border border-gray-300 rounded-sm bg-gray-50" disabled />
                 <p className="text-xs text-gray-400 mt-2">O e-mail nao pode ser alterado por motivos de seguranca.</p>
               </div>
+
+              {profile?.role === 'seller' && (
+                <div className="bg-ml-blue/5 p-4 rounded-md border border-ml-blue/20">
+                  <label className="block text-sm font-semibold text-ml-dark mb-2">Link na Bio da sua Loja (StoreBio)</label>
+                  <div className="flex items-center">
+                    <span className="h-12 px-3 bg-gray-100 border border-r-0 border-gray-300 rounded-l-sm text-gray-500 flex items-center text-sm">
+                      saidads.com/loja/
+                    </span>
+                    <input 
+                      type="text" 
+                      value={storeSlug} 
+                      onChange={(event) => setStoreSlug(event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))} 
+                      placeholder="minha-loja-oficial"
+                      className="w-full h-12 px-4 border border-gray-300 rounded-r-sm focus:outline-none focus:ring-2 focus:ring-ml-blue focus:border-transparent transition-all" 
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">Este sera o link publico da sua loja. Coloque no Instagram/TikTok para vender mais!</p>
+                </div>
+              )}
 
               <div className="pt-4 border-t border-gray-100 flex items-center gap-3">
                 <Button className="bg-ml-blue text-white hover:bg-ml-hover font-semibold py-3 px-6 rounded-sm shadow-sm">Salvar alteracoes</Button>

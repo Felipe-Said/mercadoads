@@ -12,6 +12,7 @@ export interface Profile {
   pix_key?: string | null
   status?: 'active' | 'blocked'
   store_name?: string | null
+  store_slug?: string | null
   seller_category?: string | null
   created_at: string
 }
@@ -255,6 +256,32 @@ export async function getProduct(id: string) {
 
   if (error) throw error
   return data ? mapProduct(data as Record<string, unknown>) : null
+}
+
+export async function getProfileBySlug(slug: string): Promise<Profile | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('store_slug', slug)
+    .maybeSingle()
+
+  if (error) throw error
+  if (!data) return null
+
+  return {
+    id: String(data.id),
+    role: (data.role as Profile['role']) ?? 'user',
+    full_name: (data.full_name as string | null) ?? null,
+    email: (data.email as string | null) ?? null,
+    phone: (data.phone as string | null) ?? null,
+    avatar_url: (data.avatar_url as string | null) ?? null,
+    pix_key: (data.pix_key as string | null) ?? null,
+    status: (data.status as Profile['status']) ?? 'active',
+    store_name: (data.store_name as string | null) ?? null,
+    store_slug: (data.store_slug as string | null) ?? null,
+    seller_category: (data.seller_category as string | null) ?? null,
+    created_at: String(data.created_at ?? ''),
+  }
 }
 
 export async function recordProductClick(product: Product, userId?: string | null) {

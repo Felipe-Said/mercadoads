@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { SellerLayout } from '../../components/layouts/SellerLayout'
 import { Card, CardContent } from '../../components/ui/card'
-import { Star, Trophy, User } from 'lucide-react'
+import { Star, Trophy, User, Copy, ExternalLink, Check } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { formatCurrency, getSales, type Sale } from '../../lib/data'
 import { supabase } from '../../lib/supabase'
@@ -46,6 +46,18 @@ export function ResumoVendas() {
   const [sales, setSales] = useState<Sale[]>([])
   const [affiliates, setAffiliates] = useState<AffiliateRecord[]>([])
   const [period, setPeriod] = useState<RankingPeriod>('30d')
+  const [copiedLink, setCopiedLink] = useState(false)
+
+  const copyBioLink = () => {
+    if (!profile?.store_slug) {
+      alert("Configure seu Link na Bio primeiro em Configurações.")
+      return
+    }
+    const link = `${window.location.origin}/loja/${profile.store_slug}`
+    navigator.clipboard.writeText(link)
+    setCopiedLink(true)
+    setTimeout(() => setCopiedLink(false), 2000)
+  }
 
   useEffect(() => {
     if (!user) return
@@ -134,6 +146,27 @@ export function ResumoVendas() {
             <div className="flex-grow">
               <h1 className="text-2xl font-light text-ml-dark">{profile?.full_name ?? 'Vendedor'}</h1>
               <p className="text-gray-500 mt-1">Perfil conectado a plataforma</p>
+              
+              {profile?.store_slug ? (
+                <div className="flex items-center gap-2 mt-3">
+                  <a href={`/loja/${profile.store_slug}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-sm font-medium text-ml-blue hover:text-ml-hover transition-colors bg-ml-blue/10 px-3 py-1.5 rounded-full">
+                    <ExternalLink className="w-3.5 h-3.5" /> saidads.com/loja/{profile.store_slug}
+                  </a>
+                  <button 
+                    onClick={copyBioLink}
+                    className="p-1.5 text-gray-500 hover:text-ml-dark hover:bg-gray-100 rounded-full transition-colors"
+                    title="Copiar link"
+                  >
+                    {copiedLink ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-3">
+                  <a href="/painel/vendedor/configuracoes" className="text-sm font-medium text-amber-600 hover:text-amber-700 transition-colors bg-amber-50 px-3 py-1.5 rounded-full inline-block">
+                    ⚠️ Configure seu Link na Bio
+                  </a>
+                </div>
+              )}
             </div>
 
             <div className="bg-gray-50 p-4 rounded-md min-w-[200px] border border-gray-100 text-center">
