@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { type FormEvent, useEffect, useRef, useState } from "react"
 import { Home, Search, Menu, ChevronDown, ChevronRight, LogOut, ShieldCheck, Store, UserRound, Zap, Smartphone } from "lucide-react"
 import { Facebook, Google } from "iconsax-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
@@ -7,7 +7,7 @@ import { useCart } from "../contexts/CartContext"
 import { supabase } from "../lib/supabase"
 import { DEFAULT_PLATFORM_SETTINGS, loadPlatformSettings, readCachedPlatformSettings } from "../lib/platformSettings"
 import { PlatformLogo } from "./PlatformLogo"
-import { formatCurrency } from "../lib/data"
+import { formatCurrency, getProducts, recordProductSearch } from "../lib/data"
 import { productTaxonomy, type ProductTaxonomyGroup } from "../lib/productTaxonomy"
 
 type HeaderSettings = {
@@ -82,6 +82,7 @@ export function Header() {
   const [settings, setSettings] = useState<HeaderSettings>(getHeaderSettings)
   const [walletBalance, setWalletBalance] = useState(0)
   const [categoryMenuOpen, setCategoryMenuOpen] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
   const categoryMenuRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -178,6 +179,21 @@ export function Header() {
     navigate('/', { replace: true })
   }
 
+  const handleSearchSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const query = searchTerm.trim()
+    if (!query) return
+
+    try {
+      const products = await getProducts()
+      await recordProductSearch(query, products, user?.id)
+    } catch (error) {
+      console.error(error)
+    }
+
+    navigate(`/category/${encodeURIComponent(query)}`)
+  }
+
   const firstName = profile?.full_name?.trim().split(/\s+/)[0] || user?.email?.split('@')[0] || 'usuario'
   const panelLink = role === 'admin' ? '/painel/admin' : role === 'seller' ? '/painel/vendedor' : '/painel/usuario'
   const panelLabel = role === 'admin' ? 'Painel Admin' : role === 'seller' ? 'Painel do Vendedor' : 'Meu Perfil'
@@ -219,16 +235,18 @@ export function Header() {
             <PlatformLogo fallbackClassName="text-xl" imageClassName="max-h-9 md:max-h-11" />
           </Link>
 
-          <div className="relative order-3 col-span-2 min-w-0 md:order-none md:col-span-1">
+          <form onSubmit={handleSearchSubmit} className="relative order-3 col-span-2 min-w-0 md:order-none md:col-span-1">
             <input
               type="text"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
               placeholder="Buscar contas, BMs, perfis, proxies..."
               className="h-10 w-full rounded-sm border border-black/10 bg-[var(--layout-surface-background)] px-4 pr-12 text-[16px] text-[var(--layout-text-primary)] shadow-sm outline-none transition focus:border-[var(--layout-accent-color)] focus:ring-2 focus:ring-[var(--layout-accent-color)] md:h-11 md:text-sm"
             />
-            <button className="absolute right-0 top-0 flex h-10 w-12 items-center justify-center rounded-r-sm border-l border-[var(--layout-border-color)] bg-[var(--layout-subtle-background)] text-[var(--layout-text-muted)] hover:bg-[var(--layout-surface-background)] hover:text-[var(--layout-link-color)] md:h-11">
+            <button type="submit" className="absolute right-0 top-0 flex h-10 w-12 items-center justify-center rounded-r-sm border-l border-[var(--layout-border-color)] bg-[var(--layout-subtle-background)] text-[var(--layout-text-muted)] hover:bg-[var(--layout-surface-background)] hover:text-[var(--layout-link-color)] md:h-11">
               <Search className="h-5 w-5" />
             </button>
-          </div>
+          </form>
 
           <div className="order-2 flex items-center justify-end gap-2 md:order-none md:gap-3">
             <button className="relative hidden p-2 text-current transition-opacity hover:opacity-75 md:block" aria-label="Notificacoes">

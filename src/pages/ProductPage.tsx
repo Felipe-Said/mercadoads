@@ -5,7 +5,7 @@ import { RegistrationModal } from '../components/RegistrationModal'
 import { Button } from '../components/ui/button'
 import { useAuth } from '../contexts/AuthContext'
 import { useCart } from '../contexts/CartContext'
-import { formatCurrency, getProduct, type Product } from '../lib/data'
+import { formatCurrency, getProduct, recordProductClick, type Product } from '../lib/data'
 import { createWestPayPixInOrThrow, validateWestPayCustomer } from '../lib/westpay'
 import { supabase } from '../lib/supabase'
 import { getWalletBalances } from '../lib/wallet'
@@ -59,6 +59,7 @@ export function ProductPage() {
       ])
 
       setProduct(productData)
+      if (productData) recordProductClick(productData, user?.id).catch(console.error)
       if (questionsResult.error) throw questionsResult.error
       if (reviewsResult.error) throw reviewsResult.error
       setQuestions((questionsResult.data ?? []) as Question[])

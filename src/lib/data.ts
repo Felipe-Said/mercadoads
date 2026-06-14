@@ -31,6 +31,7 @@ export interface Product {
   sales_count: number
   status: 'draft' | 'active' | 'paused' | 'rejected'
   hidden_by_admin?: boolean
+  created_at: string
   seller?: Profile | null
 }
 
@@ -194,6 +195,7 @@ function mapProduct(row: Record<string, unknown>): Product {
     sales_count: toNumber(row.sales_count),
     status: (row.status as Product['status']) ?? 'active',
     hidden_by_admin: Boolean(row.hidden_by_admin ?? false),
+    created_at: String(row.created_at ?? ''),
     seller: (row.profiles as Profile | null) ?? null,
   }
 }
@@ -226,6 +228,81 @@ export async function getProduct(id: string) {
 
   if (error) throw error
   return data ? mapProduct(data as Record<string, unknown>) : null
+}
+
+export async function recordProductClick(product: Product, userId?: string | null) {
+  const { error } = await supabase.from('product_clicks').insert({
+    product_id: product.id,
+    user_id: userId ?? null,
+    category: product.category,
+  })
+
+  if (error) console.warn('product click ignored', error.message)
+}
+
+export async function recordProductSearch(query: string, products: Product[], userId?: string | null) {
+  const term = query.trim().toLowerCase()
+  if (term.length < 2) return
+
+  const matchedProduct = products.find((product) => {
+    const category = product.category?.toLowerCase() ?? ''
+    const title = product.title.toLowerCase()
+    return category.includes(term) || title.includes(term)
+  })
+
+  const { error } = await supabase.from('product_searches').insert({
+    query: query.trim(),
+    user_id: userId ?? null,
+    matched_category: matchedProduct?.category ?? null,
+  })
+
+  if (error) console.warn('product search ignored', error.message)
+}
+
+export async function getPopularProducts(products: Product[], limit = 4) {
+  const fallback = [...products]
+    .sort((left, right) => {
+      const salesDelta = Number(right.sales_count ?? 0) - Number(left.sales_count ?? 0)
+      if (salesDelta !== 0) return salesDelta
+      return new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
+    })
+    .slice(0, limit)
+
+  if (!products.length) return []
+
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+  const [clicksResult, searchesResult] = await Promise.all([
+    supabase.from('product_clicks').select('product_id, category').gte('created_at', since),
+    supabase.from('product_searches').select('matched_category').gte('created_at', since).not('matched_category', 'is', null),
+  ])
+
+  if (clicksResult.error || searchesResult.error) {
+    if (clicksResult.error) console.warn('popular clicks ignored', clicksResult.error.message)
+    if (searchesResult.error) console.warn('popular searches ignored', searchesResult.error.message)
+    return fallback
+  }
+
+  const clickCounts = new Map<string, number>()
+  const categorySearchCounts = new Map<string, number>()
+
+  for (const click of clicksResult.data ?? []) {
+    const productId = String(click.product_id ?? '')
+    if (productId) clickCounts.set(productId, (clickCounts.get(productId) ?? 0) + 1)
+  }
+
+  for (const search of searchesResult.data ?? []) {
+    const category = String(search.matched_category ?? '').toLowerCase()
+    if (category) categorySearchCounts.set(category, (categorySearchCounts.get(category) ?? 0) + 1)
+  }
+
+  return [...products]
+    .sort((left, right) => {
+      const leftScore = (clickCounts.get(left.id) ?? 0) * 3 + (categorySearchCounts.get((left.category ?? '').toLowerCase()) ?? 0) * 2 + Number(left.sales_count ?? 0)
+      const rightScore = (clickCounts.get(right.id) ?? 0) * 3 + (categorySearchCounts.get((right.category ?? '').toLowerCase()) ?? 0) * 2 + Number(right.sales_count ?? 0)
+      if (rightScore !== leftScore) return rightScore - leftScore
+      return new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
+    })
+    .slice(0, limit)
 }
 
 export async function getGroups(limit?: number) {

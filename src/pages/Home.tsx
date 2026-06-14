@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronRight, Clock3, CreditCard, PackageCheck, Search, ShieldCheck, Sparkles, Star, Truck } from 'lucide-react'
 import { BannerSlot, Banners } from '../components/Banners'
 import { ProductGrid } from '../components/ProductCard'
 import { Stories } from '../components/Stories'
-import { getProducts, type Product, formatCurrency } from '../lib/data'
+import { getPopularProducts, getProducts, recordProductSearch, type Product, formatCurrency } from '../lib/data'
+import { useAuth } from '../contexts/AuthContext'
 
 const departments = [
   { label: 'Contas de anuncios', href: '/category/contas%20de%20anuncios' },
@@ -80,9 +81,12 @@ function DenseShelf({ title, products, linkText = 'Ver tudo' }: { title: string;
 }
 
 export function Home() {
+  const { user } = useAuth()
   const [products, setProducts] = useState<Product[]>([])
+  const [popularProducts, setPopularProducts] = useState<Product[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(true)
+  const lastTrackedSearch = useRef('')
 
   useEffect(() => {
     getProducts()
@@ -90,6 +94,32 @@ export function Home() {
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    if (!products.length) {
+      setPopularProducts([])
+      return
+    }
+
+    getPopularProducts(products)
+      .then(setPopularProducts)
+      .catch((error) => {
+        console.error(error)
+        setPopularProducts(products.slice(0, 4))
+      })
+  }, [products])
+
+  useEffect(() => {
+    const query = searchQuery.trim()
+    if (query.length < 2 || query.toLowerCase() === lastTrackedSearch.current) return
+
+    const timeoutId = window.setTimeout(() => {
+      lastTrackedSearch.current = query.toLowerCase()
+      recordProductSearch(query, products, user?.id).catch(console.error)
+    }, 700)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [products, searchQuery, user?.id])
 
   const filteredProducts = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
@@ -103,9 +133,13 @@ export function Home() {
   }, [products, searchQuery])
 
   const featured = filteredProducts.slice(0, 6)
-  const dealProducts = products.slice(0, 4)
-  const newest = products.slice(4, 8)
-  const digital = products.slice(8, 12)
+  const mostWanted = (popularProducts.length ? popularProducts : products).slice(0, 4)
+  const newest = [...products]
+    .sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime())
+    .slice(0, 4)
+  const officialProducts = products
+    .filter((product) => product.seller?.role === 'admin')
+    .slice(0, 4)
   const categories = useMemo(() => Array.from(new Set(products.map((item) => item.category).filter(Boolean))).slice(0, 8) as string[], [products])
 
   return (
@@ -143,9 +177,9 @@ export function Home() {
       <main className="mx-auto -mt-1 max-w-[1440px] px-4">
         <section className="grid gap-4 py-4 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <DenseShelf title="Mais procurados agora" products={dealProducts} />
-            <DenseShelf title="Novidades da loja" products={newest.length ? newest : dealProducts} />
-            <DenseShelf title="Entrega digital rapida" products={digital.length ? digital : dealProducts} />
+            <DenseShelf title="Mais procurados agora" products={mostWanted} />
+            <DenseShelf title="Novidades da loja" products={newest} />
+            <DenseShelf title="Produtos oficiais" products={officialProducts.length ? officialProducts : newest} />
           </div>
 
           <aside className="rounded-sm border border-gray-200 bg-white p-4 shadow-sm">
