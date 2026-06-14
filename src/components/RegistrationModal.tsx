@@ -13,6 +13,7 @@ import { useAuth } from "../contexts/AuthContext"
 import { supabase } from "../lib/supabase"
 import type { Product } from "../lib/data"
 import { createWestPayPixInOrThrow, validateWestPayCustomer } from "../lib/westpay"
+import { getAffiliateSaleFields } from "../lib/affiliateTracking"
 
 interface RegistrationModalProps {
   open: boolean
@@ -37,12 +38,15 @@ export function RegistrationModal({ open, onOpenChange, product }: RegistrationM
   const createPendingPurchase = async (buyerId: string) => {
     if (!product) throw new Error("Produto indisponivel.")
 
+    const affiliateFields = await getAffiliateSaleFields(product.seller_id, product.price)
+
     const { data: saleData, error: saleError } = await supabase.from("sales").insert({
       product_id: Number(product.id),
       buyer_id: buyerId,
       seller_id: product.seller_id,
       amount: product.price,
       status: "pending",
+      ...affiliateFields,
     }).select('id').single()
 
     if (saleError) throw saleError

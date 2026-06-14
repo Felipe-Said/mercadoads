@@ -169,7 +169,7 @@ export function AfiliacoesUser() {
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {affiliates.map((affiliate) => {
-                      const linkStr = `https://mercadoads.com/loja/${affiliate.seller?.full_name?.replace(/\s+/g, '').toLowerCase() || 'loja'}?ref=${user?.id.substring(0,8)}`
+                      const linkStr = `https://mercadoads.com/loja/${affiliate.seller?.full_name?.replace(/\s+/g, '').toLowerCase() || 'loja'}?ref=${user?.id ?? ''}`
                       return (
                         <tr key={affiliate.id} className="hover:bg-gray-50/50 transition-colors">
                           <td className="px-6 py-4">

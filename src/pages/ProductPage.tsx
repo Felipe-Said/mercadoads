@@ -9,6 +9,7 @@ import { formatCurrency, getProduct, recordProductClick, type Product } from '..
 import { createWestPayPixInOrThrow, validateWestPayCustomer } from '../lib/westpay'
 import { supabase } from '../lib/supabase'
 import { getWalletBalances } from '../lib/wallet'
+import { getAffiliateSaleFields } from '../lib/affiliateTracking'
 
 type Question = {
   id: string
@@ -134,12 +135,15 @@ export function ProductPage() {
         }
       }
 
+      const affiliateFields = await getAffiliateSaleFields(product.seller_id, product.price)
+
       const { data: saleData, error: saleError } = await supabase.from('sales').insert({
         product_id: Number(product.id),
         buyer_id: user.id,
         seller_id: product.seller_id,
         amount: product.price,
         status: 'pending',
+        ...affiliateFields,
       }).select('id').single()
 
       if (saleError) throw saleError

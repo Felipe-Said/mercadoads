@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { createWestPayPixInOrThrow, validateWestPayCustomer } from '../lib/westpay'
 import { getWalletBalances } from '../lib/wallet'
+import { getAffiliateSaleFields } from '../lib/affiliateTracking'
 
 export function Cart() {
   const navigate = useNavigate()
@@ -86,12 +87,14 @@ export function Cart() {
         if (!product) continue
 
         const amount = Number(product.price ?? item.price) * item.quantity
+        const affiliateFields = await getAffiliateSaleFields(product.seller_id, amount)
         const { data: saleData, error: saleError } = await supabase.from('sales').insert({
           product_id: product.id,
           buyer_id: user.id,
           seller_id: product.seller_id,
           amount,
           status: 'pending',
+          ...affiliateFields,
         }).select('id').single()
 
         if (saleError) throw saleError

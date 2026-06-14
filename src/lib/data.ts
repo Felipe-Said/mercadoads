@@ -89,6 +89,9 @@ export interface Sale {
   payment_qrcode?: string | null
   payment_qrcode_text?: string | null
   payment_qrcode_expires_at?: string | null
+  affiliate_user_id?: string | null
+  affiliate_commission_percent?: number | null
+  affiliate_commission_amount?: number | null
   proxy_country_code?: string | null
   proxy_country_name?: string | null
   proxy_endpoint?: string | null
@@ -475,7 +478,12 @@ export async function getSales(options: { buyerId?: string; sellerId?: string } 
 
   const { data, error } = await query
   if (error) throw error
-  return (data ?? []).map((sale) => ({ ...sale, amount: Number(sale.amount) })) as Sale[]
+  return (data ?? []).map((sale) => ({
+    ...sale,
+    amount: Number(sale.amount),
+    affiliate_commission_percent: sale.affiliate_commission_percent == null ? null : Number(sale.affiliate_commission_percent),
+    affiliate_commission_amount: sale.affiliate_commission_amount == null ? null : Number(sale.affiliate_commission_amount),
+  })) as Sale[]
 }
 
 export async function getDashboardStats() {

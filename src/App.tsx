@@ -1,5 +1,5 @@
-import React from 'react'
-import { Routes, Route } from 'react-router-dom'
+import React, { useEffect } from 'react'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import { Header } from './components/Header'
 import { Footer } from './components/Footer'
 import { PlatformTheme } from './components/PlatformTheme'
@@ -42,11 +42,23 @@ import { Resumo } from './pages/user/Resumo'
 import { Compras } from './pages/user/Compras'
 import { AfiliacoesUser } from './pages/user/AfiliacoesUser'
 import { Configuracoes } from './pages/user/Configuracoes'
+import { storeAffiliateRefFromSearch } from './lib/affiliateTracking'
+
+function AffiliateRefTracker() {
+  const location = useLocation()
+
+  useEffect(() => {
+    storeAffiliateRefFromSearch(location.search)
+  }, [location.search])
+
+  return null
+}
 
 function App() {
   return (
     <div className="flex min-h-screen flex-col bg-[var(--layout-page-background)] text-[var(--layout-text-primary)]">
       <PlatformTheme />
+      <AffiliateRefTracker />
       <Header />
       <main className="flex-grow pb-16 md:pb-0">
         <Routes>
