@@ -1,7 +1,12 @@
 import React, { useEffect, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { CheckCircle2, Package, MapPin, ExternalLink } from 'lucide-react'
-import { getProfileBySlug, getProducts, type Profile, type Product } from '../lib/data'
+import { Link, useParams } from 'react-router-dom'
+import { ArrowRight, CheckCircle2, Package } from 'lucide-react'
+import { PlatformLogo } from '../components/PlatformLogo'
+import { getProducts, getProfileBySlug, type Product, type Profile } from '../lib/data'
+
+function formatPrice(price: number) {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)
+}
 
 export function StoreBio() {
   const { storeSlug } = useParams<{ storeSlug: string }>()
@@ -16,14 +21,16 @@ export function StoreBio() {
     async function load() {
       try {
         setLoading(true)
+        setError(null)
+
         const sellerProfile = await getProfileBySlug(storeSlug!)
         if (!sellerProfile) {
-          setError('Loja não encontrada.')
+          setError('Loja nao encontrada.')
           return
         }
 
-        setProfile(sellerProfile)
         const sellerProducts = await getProducts({ sellerId: sellerProfile.id })
+        setProfile(sellerProfile)
         setProducts(sellerProducts)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Erro ao carregar a loja.')
@@ -37,104 +44,96 @@ export function StoreBio() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-ml-blue border-t-transparent rounded-full animate-spin"></div>
+      <div className="flex min-h-screen items-center justify-center bg-[#f7f1ed]">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#3b1f18] border-t-transparent" />
       </div>
     )
   }
 
   if (error || !profile) {
     return (
-      <div className="min-h-screen bg-[#f8fafc] flex flex-col items-center justify-center p-4">
-        <Package className="w-16 h-16 text-gray-300 mb-4" />
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">Ops!</h1>
-        <p className="text-gray-500 mb-6">{error || 'Loja não encontrada.'}</p>
-        <Link to="/" className="bg-ml-blue text-white px-6 py-2 rounded-full font-semibold hover:bg-ml-hover transition-colors">
-          Voltar para a página inicial
+      <div className="flex min-h-screen flex-col items-center justify-center bg-[#f7f1ed] p-4 text-center">
+        <Package className="mb-4 h-16 w-16 text-[#8a4f3f]/40" />
+        <h1 className="mb-2 text-2xl font-bold text-[#1f130f]">Loja nao encontrada</h1>
+        <p className="mb-6 max-w-sm text-[#6b5a54]">{error || 'Este link bio nao esta disponivel no momento.'}</p>
+        <Link to="/" className="rounded-full bg-[#3b1f18] px-6 py-3 font-semibold text-white transition-colors hover:bg-[#5a2f25]">
+          Ir para Cookie Market
         </Link>
       </div>
     )
   }
 
+  const storeName = profile.store_name || profile.full_name || 'Cookie Market'
+  const bioText = profile.store_bio || profile.seller_category || 'Produtos digitais selecionados para compra segura.'
+  const pageBackground = profile.store_bio_background_color || '#f7f1ed'
+  const buttonColor = profile.store_bio_button_color || '#3b1f18'
+  const buttonTextColor = profile.store_bio_button_text_color || '#ffffff'
+
   return (
-    <div className="min-h-screen bg-[#f8fafc] font-sans pb-16">
-      {/* Header Minimalista */}
-      <header className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-100 shadow-sm">
-        <div className="max-w-2xl mx-auto px-4 h-16 flex items-center justify-center">
-          <Link to="/" className="flex items-center gap-2">
-            <span className="font-bold text-xl text-ml-dark tracking-tight">COOKIE<span className="text-ml-blue">MARKET</span></span>
+    <div className="min-h-screen font-sans" style={{ background: pageBackground }}>
+      <main className="mx-auto flex min-h-screen w-full max-w-[520px] flex-col px-5 py-8">
+        <div className="mb-8 flex justify-center">
+          <Link to="/" aria-label="Cookie Market">
+            <PlatformLogo />
           </Link>
         </div>
-      </header>
 
-      <main className="max-w-2xl mx-auto px-4 pt-10">
-        {/* Perfil do Vendedor */}
-        <div className="flex flex-col items-center text-center mb-10">
-          <div className="w-28 h-28 bg-white rounded-full p-1 shadow-md mb-4 relative">
-            <div className="w-full h-full rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+        <section className="mb-8 flex flex-col items-center text-center">
+          <div className="relative mb-4 h-28 w-28 rounded-full bg-white p-1 shadow-[0_14px_36px_rgba(31,19,15,0.16)]">
+            <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-[#f0e8e2]">
               {profile.avatar_url ? (
-                <img src={profile.avatar_url} alt={profile.store_name || profile.full_name || 'Vendedor'} className="w-full h-full object-cover" />
+                <img src={profile.avatar_url} alt={storeName} className="h-full w-full object-cover" />
               ) : (
-                <span className="text-3xl font-bold text-gray-400">
-                  {(profile.store_name || profile.full_name || 'L').charAt(0).toUpperCase()}
-                </span>
+                <span className="text-4xl font-bold text-[#8a4f3f]">{storeName.charAt(0).toUpperCase()}</span>
               )}
             </div>
-            {/* Badge de Verificado */}
-            <div className="absolute bottom-1 right-1 bg-white rounded-full p-0.5 shadow-sm">
-              <CheckCircle2 className="w-6 h-6 text-green-500 fill-white" />
+            <div className="absolute bottom-1 right-1 rounded-full bg-white p-1 shadow-sm">
+              <CheckCircle2 className="h-6 w-6 text-green-600" />
             </div>
           </div>
 
-          <h1 className="text-2xl font-extrabold text-ml-dark tracking-tight">
-            {profile.store_name || profile.full_name}
-          </h1>
-          <p className="text-gray-500 font-medium text-sm mt-1 flex items-center gap-1">
-            <MapPin className="w-4 h-4" /> Vendedor na Cookie Market
-          </p>
-          
-          <div className="mt-4 px-4 py-1.5 bg-green-50 text-green-700 text-xs font-bold uppercase tracking-wider rounded-full border border-green-200">
-            {products.length} Anúncios Ativos
-          </div>
-        </div>
+          <h1 className="text-3xl font-black leading-tight text-[#1f130f]">{storeName}</h1>
+          <p className="mt-2 max-w-sm text-sm leading-6 text-[#6b5a54]">{bioText}</p>
 
-        {/* Vitrine de Produtos - Estilo Linktree */}
-        <div className="space-y-3 w-full max-w-md mx-auto">
+          <div className="mt-4 rounded-full border border-white/70 bg-white/70 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[#7a4638] shadow-sm">
+            {products.length} produtos ativos
+          </div>
+        </section>
+
+        <section className="w-full space-y-3">
           {products.length > 0 ? (
             products.map((product) => (
-              <Link 
-                key={product.id} 
+              <Link
+                key={product.id}
                 to={`/produto/${product.id}`}
-                className="group flex items-center justify-between p-2 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1 w-full"
+                className="group flex min-h-[84px] w-full items-center gap-3 rounded-[22px] border border-white/80 bg-white/90 p-3 text-left shadow-[0_12px_34px_rgba(31,19,15,0.10)] transition-all hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(31,19,15,0.16)]"
               >
-                <div className="flex items-center gap-3 overflow-hidden">
-                  <div className="w-14 h-14 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                    <img src={product.image || '/favicon.svg'} alt={product.title} className="w-full h-full object-cover" />
-                  </div>
-                  <div className="flex flex-col overflow-hidden text-left">
-                    <span className="font-semibold text-ml-dark text-sm line-clamp-1 group-hover:text-ml-blue transition-colors">{product.title}</span>
-                    <span className="text-green-600 font-bold text-sm">
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.price)}
-                    </span>
-                  </div>
+                <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-2xl bg-[#f0e8e2]">
+                  <img src={product.image || '/favicon.svg'} alt={product.title} className="h-full w-full object-cover" />
                 </div>
-                <div className="px-3 flex-shrink-0">
-                  <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-ml-blue/10 transition-colors">
-                    <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-ml-blue" />
-                  </div>
+                <div className="min-w-0 flex-1">
+                  <p className="line-clamp-2 text-sm font-extrabold leading-5 text-[#1f130f]">{product.title}</p>
+                  <p className="mt-1 text-sm font-black text-green-700">{formatPrice(product.price)}</p>
                 </div>
+                <span
+                  className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full transition-transform group-hover:translate-x-0.5"
+                  style={{ backgroundColor: buttonColor, color: buttonTextColor }}
+                >
+                  <ArrowRight className="h-5 w-5" />
+                </span>
               </Link>
             ))
           ) : (
-            <div className="bg-white p-8 rounded-2xl text-center shadow-sm border border-gray-100">
-              <p className="text-gray-500">Esta loja ainda não possui anúncios ativos no momento.</p>
+            <div className="rounded-[24px] border border-white/80 bg-white/85 p-8 text-center shadow-[0_12px_34px_rgba(31,19,15,0.10)]">
+              <p className="text-sm text-[#6b5a54]">Esta loja ainda nao possui produtos ativos no momento.</p>
             </div>
           )}
-        </div>
+        </section>
 
-        {/* Footer Minimalista */}
-        <div className="mt-16 text-center pb-8">
-          <p className="text-xs text-gray-400 font-medium">Powered by Cookie Market</p>
+        <div className="mt-auto pt-10 text-center">
+          <Link to="/" className="text-xs font-bold uppercase tracking-[0.18em] text-[#7a4638]/70">
+            Cookie Market
+          </Link>
         </div>
       </main>
     </div>

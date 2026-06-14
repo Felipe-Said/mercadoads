@@ -13,6 +13,10 @@ export interface Profile {
   status?: 'active' | 'blocked'
   store_name?: string | null
   store_slug?: string | null
+  store_bio?: string | null
+  store_bio_background_color?: string | null
+  store_bio_button_color?: string | null
+  store_bio_button_text_color?: string | null
   seller_category?: string | null
   created_at: string
 }
@@ -279,6 +283,10 @@ export async function getProfileBySlug(slug: string): Promise<Profile | null> {
     status: (data.status as Profile['status']) ?? 'active',
     store_name: (data.store_name as string | null) ?? null,
     store_slug: (data.store_slug as string | null) ?? null,
+    store_bio: (data.store_bio as string | null) ?? null,
+    store_bio_background_color: (data.store_bio_background_color as string | null) ?? null,
+    store_bio_button_color: (data.store_bio_button_color as string | null) ?? null,
+    store_bio_button_text_color: (data.store_bio_button_text_color as string | null) ?? null,
     seller_category: (data.seller_category as string | null) ?? null,
     created_at: String(data.created_at ?? ''),
   }

@@ -53,7 +53,7 @@ export function ResumoVendas() {
       alert("Configure seu Link na Bio primeiro em Configurações.")
       return
     }
-    const link = `${window.location.origin}/loja/${profile.store_slug}`
+    const link = `https://cookiemarket.lat/loja/${profile.store_slug}`
     navigator.clipboard.writeText(link)
     setCopiedLink(true)
     setTimeout(() => setCopiedLink(false), 2000)
@@ -149,7 +149,7 @@ export function ResumoVendas() {
               
               {profile?.store_slug ? (
                 <div className="flex items-center gap-2 mt-3">
-                  <a href={`/loja/${profile.store_slug}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-sm font-medium text-ml-blue hover:text-ml-hover transition-colors bg-ml-blue/10 px-3 py-1.5 rounded-full">
+                  <a href={`https://cookiemarket.lat/loja/${profile.store_slug}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-sm font-medium text-ml-blue hover:text-ml-hover transition-colors bg-ml-blue/10 px-3 py-1.5 rounded-full">
                     <ExternalLink className="w-3.5 h-3.5" /> cookiemarket.lat/loja/{profile.store_slug}
                   </a>
                   <button 

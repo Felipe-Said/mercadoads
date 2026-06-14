@@ -15,6 +15,10 @@ export function Configuracoes() {
   const [phone, setPhone] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
   const [storeSlug, setStoreSlug] = useState('')
+  const [storeBio, setStoreBio] = useState('')
+  const [storeBioBackgroundColor, setStoreBioBackgroundColor] = useState('#f7f1ed')
+  const [storeBioButtonColor, setStoreBioButtonColor] = useState('#3b1f18')
+  const [storeBioButtonTextColor, setStoreBioButtonTextColor] = useState('#ffffff')
   const [saved, setSaved] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -25,6 +29,10 @@ export function Configuracoes() {
       setPhone(profile?.phone ?? '')
       setAvatarUrl(profile?.avatar_url ?? '')
       setStoreSlug(profile?.store_slug ?? '')
+      setStoreBio(profile?.store_bio ?? '')
+      setStoreBioBackgroundColor(profile?.store_bio_background_color ?? '#f7f1ed')
+      setStoreBioButtonColor(profile?.store_bio_button_color ?? '#3b1f18')
+      setStoreBioButtonTextColor(profile?.store_bio_button_text_color ?? '#ffffff')
     }, 0)
     return () => window.clearTimeout(timeout)
   }, [profile])
@@ -70,7 +78,13 @@ export function Configuracoes() {
         full_name: fullName, 
         phone, 
         avatar_url: avatarUrl || null,
-        ...(profile?.role === 'seller' ? { store_slug: finalSlug || null } : {})
+        ...(profile?.role === 'seller' ? {
+          store_slug: finalSlug || null,
+          store_bio: storeBio || null,
+          store_bio_background_color: storeBioBackgroundColor || null,
+          store_bio_button_color: storeBioButtonColor || null,
+          store_bio_button_text_color: storeBioButtonTextColor || null,
+        } : {})
       })
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
@@ -128,21 +142,51 @@ export function Configuracoes() {
               </div>
 
               {profile?.role === 'seller' && (
-                <div className="bg-ml-blue/5 p-4 rounded-md border border-ml-blue/20">
-                  <label className="block text-sm font-semibold text-ml-dark mb-2">Link na Bio da sua Loja (StoreBio)</label>
-                  <div className="flex items-center">
-                    <span className="h-12 px-3 bg-gray-100 border border-r-0 border-gray-300 rounded-l-sm text-gray-500 flex items-center text-sm">
-                      cookiemarket.lat/loja/
-                    </span>
-                    <input 
-                      type="text" 
-                      value={storeSlug} 
-                      onChange={(event) => setStoreSlug(event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))} 
-                      placeholder="minha-loja-oficial"
-                      className="w-full h-12 px-4 border border-gray-300 rounded-r-sm focus:outline-none focus:ring-2 focus:ring-ml-blue focus:border-transparent transition-all" 
-                    />
+                <div className="space-y-5 rounded-md border border-ml-blue/20 bg-ml-blue/5 p-4">
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-ml-dark">Link bio da loja</label>
+                    <div className="flex items-center">
+                      <span className="flex h-12 items-center rounded-l-sm border border-r-0 border-gray-300 bg-gray-100 px-3 text-sm text-gray-500">
+                        cookiemarket.lat/loja/
+                      </span>
+                      <input
+                        type="text"
+                        value={storeSlug}
+                        onChange={(event) => setStoreSlug(event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                        placeholder="minha-loja-oficial"
+                        className="h-12 w-full rounded-r-sm border border-gray-300 px-4 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-ml-blue"
+                      />
+                    </div>
+                    <p className="mt-2 text-xs text-gray-500">Este sera o link publico da sua loja para Instagram, TikTok e bio.</p>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">Este sera o link publico da sua loja. Coloque no Instagram/TikTok para vender mais!</p>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-ml-dark">Texto curto do link bio</label>
+                    <textarea
+                      value={storeBio}
+                      onChange={(event) => setStoreBio(event.target.value)}
+                      maxLength={180}
+                      rows={3}
+                      placeholder="Ex: Produtos digitais selecionados, suporte rapido e entrega segura."
+                      className="w-full rounded-sm border border-gray-300 px-4 py-3 text-sm transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-ml-blue"
+                    />
+                    <p className="mt-1 text-xs text-gray-400">{storeBio.length}/180</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <label className="text-sm font-semibold text-ml-dark">
+                      Fundo
+                      <input type="color" value={storeBioBackgroundColor} onChange={(event) => setStoreBioBackgroundColor(event.target.value)} className="mt-2 h-11 w-full rounded-sm border border-gray-300 bg-white p-1" />
+                    </label>
+                    <label className="text-sm font-semibold text-ml-dark">
+                      Botao
+                      <input type="color" value={storeBioButtonColor} onChange={(event) => setStoreBioButtonColor(event.target.value)} className="mt-2 h-11 w-full rounded-sm border border-gray-300 bg-white p-1" />
+                    </label>
+                    <label className="text-sm font-semibold text-ml-dark">
+                      Icone do botao
+                      <input type="color" value={storeBioButtonTextColor} onChange={(event) => setStoreBioButtonTextColor(event.target.value)} className="mt-2 h-11 w-full rounded-sm border border-gray-300 bg-white p-1" />
+                    </label>
+                  </div>
                 </div>
               )}
 

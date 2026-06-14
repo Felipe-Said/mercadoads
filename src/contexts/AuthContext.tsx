@@ -11,7 +11,7 @@ interface AuthContextType {
   loading: boolean
   signIn: (email: string, password: string) => Promise<Profile | null>
   signUp: (fullName: string, email: string, password: string, role?: Role) => Promise<void>
-  updateProfile: (updates: Partial<Pick<Profile, 'full_name' | 'phone' | 'pix_key' | 'avatar_url'>>) => Promise<void>
+  updateProfile: (updates: Partial<Profile>) => Promise<void>
   logout: () => Promise<void>
 }
 

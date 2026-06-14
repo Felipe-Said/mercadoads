@@ -56,12 +56,15 @@ function AffiliateRefTracker() {
 }
 
 function App() {
+  const location = useLocation()
+  const isStoreBioPage = location.pathname.startsWith('/loja/')
+
   return (
     <div className="flex min-h-screen flex-col bg-[var(--layout-page-background)] text-[var(--layout-text-primary)]">
       <PlatformTheme />
       <AffiliateRefTracker />
-      <Header />
-      <main className="flex-grow pb-16 md:pb-0">
+      {!isStoreBioPage && <Header />}
+      <main className={`flex-grow ${isStoreBioPage ? '' : 'pb-16 md:pb-0'}`}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/groups" element={<Groups />} />
@@ -113,7 +116,7 @@ function App() {
           <Route path="/painel/admin/minha-conta" element={<ProtectedRoute allowedRoles={['admin']}><Configuracoes /></ProtectedRoute>} />
         </Routes>
       </main>
-      <Footer />
+      {!isStoreBioPage && <Footer />}
     </div>
   )
 }
