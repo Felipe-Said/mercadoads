@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Button } from './ui/button'
 import { supabase } from '../lib/supabase'
 import { productCategoryOptions } from '../lib/productTaxonomy'
@@ -34,6 +34,21 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
   const [status, setStatus] = useState<ProductStatus>(defaultStatus)
   const [message, setMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const isTikTokCategory = category.toLowerCase().includes('tiktok')
+
+  useEffect(() => {
+    if (deliveryMethod === 'dropservice') {
+      setStock('1')
+      setAccountEmail('')
+      setAccountPassword('')
+      setRecoveryEmail('')
+      setRecoveryPassword('')
+    }
+  }, [deliveryMethod])
+
+  useEffect(() => {
+    if (!isTikTokCategory) setProfileHandle('')
+  }, [isTikTokCategory])
 
   const resetForm = () => {
     setTitle('')
@@ -90,11 +105,11 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
     }
 
     const deliveryLines = [
-      profileHandle.trim() ? `Perfil vinculado: ${profileHandle.trim()}` : '',
-      accountEmail.trim() ? `Email da conta: ${accountEmail.trim()}` : '',
-      accountPassword.trim() ? `Senha da conta: ${accountPassword.trim()}` : '',
-      recoveryEmail.trim() ? `Email vinculado: ${recoveryEmail.trim()}` : '',
-      recoveryPassword.trim() ? `Senha do email vinculado: ${recoveryPassword.trim()}` : '',
+      isTikTokCategory && profileHandle.trim() ? `Perfil vinculado: ${profileHandle.trim()}` : '',
+      deliveryMethod === 'ready' && accountEmail.trim() ? `Email da conta: ${accountEmail.trim()}` : '',
+      deliveryMethod === 'ready' && accountPassword.trim() ? `Senha da conta: ${accountPassword.trim()}` : '',
+      deliveryMethod === 'ready' && recoveryEmail.trim() ? `Email vinculado: ${recoveryEmail.trim()}` : '',
+      deliveryMethod === 'ready' && recoveryPassword.trim() ? `Senha do email vinculado: ${recoveryPassword.trim()}` : '',
       sellerNote.trim() ? `Observacao: ${sellerNote.trim()}` : '',
     ].filter(Boolean)
 
@@ -108,7 +123,7 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
       category,
       delivery_type: 'Entrega digital na plataforma',
       delivery_method: deliveryMethod,
-      stock: stock ? Number(stock) : 0,
+      stock: deliveryMethod === 'dropservice' ? 1 : stock ? Number(stock) : 0,
       credentials_data: deliveryLines.length ? deliveryLines : [],
       seller_note: deliveryLines.join('\n') || null,
       allow_affiliates: allowAffiliates,
@@ -159,7 +174,15 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Estoque</label>
-        <input type="number" min="0" value={stock} onChange={(event) => setStock(event.target.value)} className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
+        <input
+          type="number"
+          min="0"
+          value={deliveryMethod === 'dropservice' ? '1' : stock}
+          onChange={(event) => setStock(event.target.value)}
+          disabled={deliveryMethod === 'dropservice'}
+          className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue disabled:bg-gray-100 disabled:text-gray-500"
+        />
+        {deliveryMethod === 'dropservice' && <p className="mt-1 text-xs text-gray-500">Dropservice sempre fica limitado a 1 unidade por anuncio.</p>}
       </div>
 
       <div className="md:col-span-2 grid gap-3 rounded-md border border-gray-100 bg-gray-50 p-4">
@@ -194,31 +217,40 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
           </label>
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">@ do perfil vinculado</label>
-            <input value={profileHandle} onChange={(event) => setProfileHandle(event.target.value)} placeholder="@perfil" className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email da conta</label>
-            <input value={accountEmail} onChange={(event) => setAccountEmail(event.target.value)} className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Senha da conta</label>
-            <input value={accountPassword} onChange={(event) => setAccountPassword(event.target.value)} className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email vinculado</label>
-            <input value={recoveryEmail} onChange={(event) => setRecoveryEmail(event.target.value)} className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Senha do email vinculado</label>
-            <input value={recoveryPassword} onChange={(event) => setRecoveryPassword(event.target.value)} className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
-          </div>
+          {isTikTokCategory && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">@ do perfil vinculado</label>
+              <input value={profileHandle} onChange={(event) => setProfileHandle(event.target.value)} placeholder="@perfil" className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
+            </div>
+          )}
+          {deliveryMethod === 'ready' && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email da conta</label>
+                <input value={accountEmail} onChange={(event) => setAccountEmail(event.target.value)} className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Senha da conta</label>
+                <input value={accountPassword} onChange={(event) => setAccountPassword(event.target.value)} className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email vinculado</label>
+                <input value={recoveryEmail} onChange={(event) => setRecoveryEmail(event.target.value)} className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Senha do email vinculado</label>
+                <input value={recoveryPassword} onChange={(event) => setRecoveryPassword(event.target.value)} className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
+              </div>
+            </>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Observacao para o comprador</label>
             <input value={sellerNote} onChange={(event) => setSellerNote(event.target.value)} className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
           </div>
         </div>
+        {deliveryMethod === 'dropservice' && (
+          <p className="mt-3 text-xs text-gray-500">No dropservice, os logins nao ficam cadastrados antes da venda. O acesso deve ser entregue depois pelo vendedor.</p>
+        )}
       </div>
 
       <div>
