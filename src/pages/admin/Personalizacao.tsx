@@ -652,7 +652,7 @@ export function Personalizacao() {
               <SectionTitle title="Link bio das lojas" subtitle="Somente o admin controla as cores e a identidade visual das paginas publicas /loja." />
               <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_420px]">
                 <div className="grid gap-5 xl:grid-cols-2">
-                  <TokenGroup title="Pagina e perfil">
+                  <TokenGroup title="Pagina e perfil" columns="single">
                     <ColorControl label="Fundo da pagina" value={storeBioTheme.pageBackground} onChange={(value) => updateStoreBioTheme('pageBackground', value)} />
                     <ColorControl label="Loader/carregamento" value={storeBioTheme.loaderColor} onChange={(value) => updateStoreBioTheme('loaderColor', value)} />
                     <ColorControl label="Fundo do avatar" value={storeBioTheme.avatarBackground} onChange={(value) => updateStoreBioTheme('avatarBackground', value)} />
@@ -664,13 +664,13 @@ export function Personalizacao() {
                     <ColorControl label="Texto da bio" value={storeBioTheme.bioText} onChange={(value) => updateStoreBioTheme('bioText', value)} />
                   </TokenGroup>
 
-                  <TokenGroup title="Contador de produtos">
+                  <TokenGroup title="Contador de produtos" columns="single">
                     <ColorControl label="Fundo do contador" value={storeBioTheme.countBadgeBackground} onChange={(value) => updateStoreBioTheme('countBadgeBackground', value)} />
                     <ColorControl label="Borda do contador" value={storeBioTheme.countBadgeBorder} onChange={(value) => updateStoreBioTheme('countBadgeBorder', value)} />
                     <ColorControl label="Texto do contador" value={storeBioTheme.countBadgeText} onChange={(value) => updateStoreBioTheme('countBadgeText', value)} />
                   </TokenGroup>
 
-                  <TokenGroup title="Cards de produto">
+                  <TokenGroup title="Cards de produto" columns="single">
                     <ColorControl label="Fundo do card" value={storeBioTheme.productCardBackground} onChange={(value) => updateStoreBioTheme('productCardBackground', value)} />
                     <ColorControl label="Borda do card" value={storeBioTheme.productCardBorder} onChange={(value) => updateStoreBioTheme('productCardBorder', value)} />
                     <ColorControl label="Sombra do card" value={storeBioTheme.productCardShadow} onChange={(value) => updateStoreBioTheme('productCardShadow', value)} />
@@ -681,7 +681,7 @@ export function Personalizacao() {
                     <ColorControl label="Icone do botao/seta" value={storeBioTheme.productButtonText} onChange={(value) => updateStoreBioTheme('productButtonText', value)} />
                   </TokenGroup>
 
-                  <TokenGroup title="Estado vazio, rodape e erro">
+                  <TokenGroup title="Estado vazio, rodape e erro" columns="single">
                     <ColorControl label="Fundo do card vazio" value={storeBioTheme.emptyCardBackground} onChange={(value) => updateStoreBioTheme('emptyCardBackground', value)} />
                     <ColorControl label="Borda do card vazio" value={storeBioTheme.emptyCardBorder} onChange={(value) => updateStoreBioTheme('emptyCardBorder', value)} />
                     <ColorControl label="Texto do card vazio" value={storeBioTheme.emptyText} onChange={(value) => updateStoreBioTheme('emptyText', value)} />
@@ -922,11 +922,11 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-function TokenGroup({ title, children }: { title: string; children: React.ReactNode }) {
+function TokenGroup({ title, children, columns = 'responsive' }: { title: string; children: React.ReactNode; columns?: 'single' | 'responsive' }) {
   return (
     <div className="rounded-sm border border-[var(--layout-border-color)] bg-[var(--layout-subtle-background)] p-4">
       <h4 className="mb-4 text-sm font-bold uppercase tracking-[0.08em] text-[var(--layout-text-primary)]">{title}</h4>
-      <div className="grid gap-4 2xl:grid-cols-2">
+      <div className={`grid gap-4 ${columns === 'responsive' ? '2xl:grid-cols-2' : ''}`}>
         {children}
       </div>
     </div>
@@ -938,9 +938,9 @@ function ColorControl({ label, value, onChange }: { label: string; value: string
 
   return (
     <Field label={label}>
-      <div className="flex items-center gap-3">
-        <input type="color" value={pickerValue} onChange={(event) => onChange(event.target.value)} className="h-10 w-12 rounded-sm border border-gray-300 bg-white p-1" />
-        <input value={value} onChange={(event) => onChange(event.target.value)} className="h-10 w-full rounded-sm border border-gray-300 px-3 font-mono text-sm" />
+      <div className="grid grid-cols-[52px_minmax(0,1fr)] items-center gap-3">
+        <input type="color" value={pickerValue} onChange={(event) => onChange(event.target.value)} className="h-10 w-[52px] rounded-sm border border-gray-300 bg-white p-1" />
+        <input value={value} onChange={(event) => onChange(event.target.value)} className="h-10 min-w-0 rounded-sm border border-gray-300 px-3 font-mono text-sm" />
       </div>
     </Field>
   )
