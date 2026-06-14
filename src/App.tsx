@@ -1,6 +1,7 @@
 import React from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { Header } from './components/Header'
+import { Footer } from './components/Footer'
 import { PlatformTheme } from './components/PlatformTheme'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { Home } from './pages/Home'
@@ -18,6 +19,7 @@ import { ProductPage } from './pages/ProductPage'
 import { Login } from './pages/Login'
 import { Register } from './pages/Register'
 import { Cart } from './pages/Cart'
+import { AccessibilityPolicy, CommunityPolicy, DeliveryPolicy, PrivacyPolicy, RefundPolicy, TermsPolicy, WorkWithUsPolicy } from './pages/Policies'
 import { DashboardGlobal } from './pages/admin/DashboardGlobal'
 import { Usuarios } from './pages/admin/Usuarios'
 import { Moderacao } from './pages/admin/Moderacao'
@@ -30,14 +32,12 @@ import { MeusAnunciosAdmin } from './pages/admin/MeusAnunciosAdmin'
 import { VendasEntregasAdmin } from './pages/admin/VendasEntregasAdmin'
 import { PerguntasAdmin } from './pages/admin/PerguntasAdmin'
 import { AfiliadosAdmin } from './pages/admin/AfiliadosAdmin'
-
 import { ResumoVendas } from './pages/seller/ResumoVendas'
 import { MeusAnuncios } from './pages/seller/MeusAnuncios'
 import { VendasEntregas } from './pages/seller/VendasEntregas'
 import { Financeiro } from './pages/seller/Financeiro'
 import { AdsManagerSeller } from './pages/seller/AdsManagerSeller'
 import { AfiliadosSeller } from './pages/seller/AfiliadosSeller'
-
 import { Resumo } from './pages/user/Resumo'
 import { Compras } from './pages/user/Compras'
 import { AfiliacoesUser } from './pages/user/AfiliacoesUser'
@@ -66,11 +66,17 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/cadastro" element={<Register />} />
           <Route path="/carrinho" element={<Cart />} />
+          <Route path="/politicas/termos" element={<TermsPolicy />} />
+          <Route path="/politicas/privacidade" element={<PrivacyPolicy />} />
+          <Route path="/politicas/reembolso" element={<RefundPolicy />} />
+          <Route path="/politicas/entrega-digital" element={<DeliveryPolicy />} />
+          <Route path="/politicas/comunidade" element={<CommunityPolicy />} />
+          <Route path="/acessibilidade" element={<AccessibilityPolicy />} />
+          <Route path="/trabalhe-conosco" element={<WorkWithUsPolicy />} />
           <Route path="/painel/usuario" element={<ProtectedRoute allowedRoles={['user']}><Resumo /></ProtectedRoute>} />
           <Route path="/painel/usuario/compras" element={<ProtectedRoute allowedRoles={['user']}><Compras /></ProtectedRoute>} />
           <Route path="/painel/usuario/configuracoes" element={<ProtectedRoute allowedRoles={['user']}><Configuracoes /></ProtectedRoute>} />
           <Route path="/painel/usuario/afiliacoes" element={<ProtectedRoute allowedRoles={['user']}><AfiliacoesUser /></ProtectedRoute>} />
-
           <Route path="/painel/vendedor" element={<ProtectedRoute allowedRoles={['seller']}><ResumoVendas /></ProtectedRoute>} />
           <Route path="/painel/vendedor/anuncios" element={<ProtectedRoute allowedRoles={['seller']}><MeusAnuncios /></ProtectedRoute>} />
           <Route path="/painel/vendedor/vendas" element={<ProtectedRoute allowedRoles={['seller']}><VendasEntregas /></ProtectedRoute>} />
@@ -78,7 +84,6 @@ function App() {
           <Route path="/painel/vendedor/ads" element={<ProtectedRoute allowedRoles={['seller']}><AdsManagerSeller /></ProtectedRoute>} />
           <Route path="/painel/vendedor/afiliados" element={<ProtectedRoute allowedRoles={['seller']}><AfiliadosSeller /></ProtectedRoute>} />
           <Route path="/painel/vendedor/configuracoes" element={<ProtectedRoute allowedRoles={['seller']}><Configuracoes /></ProtectedRoute>} />
-
           <Route path="/painel/admin" element={<ProtectedRoute allowedRoles={['admin']}><DashboardGlobal /></ProtectedRoute>} />
           <Route path="/painel/admin/usuarios" element={<ProtectedRoute allowedRoles={['admin']}><Usuarios /></ProtectedRoute>} />
           <Route path="/painel/admin/moderacao" element={<ProtectedRoute allowedRoles={['admin']}><Moderacao /></ProtectedRoute>} />
@@ -86,7 +91,6 @@ function App() {
           <Route path="/painel/admin/gateway" element={<ProtectedRoute allowedRoles={['admin']}><Gateway /></ProtectedRoute>} />
           <Route path="/painel/admin/ads" element={<ProtectedRoute allowedRoles={['admin']}><AdsManagerAdmin /></ProtectedRoute>} />
           <Route path="/painel/admin/personalizacao" element={<ProtectedRoute allowedRoles={['admin']}><Personalizacao /></ProtectedRoute>} />
-          
           <Route path="/painel/admin/financeiro" element={<ProtectedRoute allowedRoles={['admin']}><FinanceiroAdmin /></ProtectedRoute>} />
           <Route path="/painel/admin/meus-anuncios" element={<ProtectedRoute allowedRoles={['admin']}><MeusAnunciosAdmin /></ProtectedRoute>} />
           <Route path="/painel/admin/entregas" element={<ProtectedRoute allowedRoles={['admin']}><VendasEntregasAdmin /></ProtectedRoute>} />
@@ -95,14 +99,7 @@ function App() {
           <Route path="/painel/admin/minha-conta" element={<ProtectedRoute allowedRoles={['admin']}><Configuracoes /></ProtectedRoute>} />
         </Routes>
       </main>
-      
-      {/* Simple Footer */}
-      <footer className="hidden bg-[var(--layout-surface-background)] py-8 md:block">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <p className="mb-2 text-sm text-[var(--layout-text-muted)]">Trabalhe conosco Termos e condições Como cuidamos da sua privacidade Acessibilidade Contato</p>
-          <p className="text-xs text-[var(--layout-text-muted)]">Copyright © 2026 Cookie market LTDA.</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }
