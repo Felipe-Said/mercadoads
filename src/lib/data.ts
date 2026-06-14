@@ -31,6 +31,9 @@ export interface Product {
   sales_count: number
   status: 'draft' | 'active' | 'paused' | 'rejected'
   hidden_by_admin?: boolean
+  is_boosted?: boolean
+  boosted_at?: string | null
+  boost_expires_at?: string | null
   created_at: string
   seller?: Profile | null
 }
@@ -198,9 +201,24 @@ function mapProduct(row: Record<string, unknown>): Product {
     sales_count: toNumber(row.sales_count),
     status: (row.status as Product['status']) ?? 'active',
     hidden_by_admin: Boolean(row.hidden_by_admin ?? false),
+    is_boosted: Boolean(row.is_boosted ?? false),
+    boosted_at: (row.boosted_at as string | null) ?? null,
+    boost_expires_at: (row.boost_expires_at as string | null) ?? null,
     created_at: String(row.created_at ?? ''),
     seller: (row.profiles as Profile | null) ?? null,
   }
+}
+
+export function isProductBoosted(product: Product) {
+  if (!product.is_boosted) return false
+  if (!product.boost_expires_at) return true
+  return new Date(product.boost_expires_at).getTime() > Date.now()
+}
+
+function sortBoostedFirst(left: Product, right: Product) {
+  const boostDelta = Number(isProductBoosted(right)) - Number(isProductBoosted(left))
+  if (boostDelta !== 0) return boostDelta
+  return new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
 }
 
 export async function getProducts(options: { offersOnly?: boolean; category?: string; sellerId?: string; includeInactive?: boolean } = {}) {
@@ -318,6 +336,9 @@ function uniqueProducts(products: Product[]) {
 }
 
 export async function getDailyOfferProducts(products: Product[], limit = 12) {
+  const boosted = products
+    .filter(isProductBoosted)
+    .sort(sortBoostedFirst)
   const discounted = products
     .filter((product) => Number(product.originalPrice ?? 0) > Number(product.price ?? 0))
     .sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime())
@@ -325,10 +346,11 @@ export async function getDailyOfferProducts(products: Product[], limit = 12) {
     .filter((product) => product.seller?.role === 'admin')
     .sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime())
 
-  return uniqueProducts([...discounted, ...official]).slice(0, limit)
+  return uniqueProducts([...boosted, ...discounted, ...official]).slice(0, limit)
 }
 
 export async function getWeeklyBestSellerProducts(products: Product[], limit = 12) {
+  const boosted = products.filter(isProductBoosted).sort(sortBoostedFirst)
   const official = products.filter((product) => product.seller?.role === 'admin')
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
   const { data, error } = await supabase
@@ -339,7 +361,7 @@ export async function getWeeklyBestSellerProducts(products: Product[], limit = 1
 
   if (error) {
     console.warn('weekly sellers ignored', error.message)
-    return uniqueProducts([...official, ...products.sort((left, right) => Number(right.sales_count ?? 0) - Number(left.sales_count ?? 0))]).slice(0, limit)
+    return uniqueProducts([...boosted, ...official, ...products.sort((left, right) => Number(right.sales_count ?? 0) - Number(left.sales_count ?? 0))]).slice(0, limit)
   }
 
   const saleCounts = new Map<string, number>()
@@ -356,7 +378,7 @@ export async function getWeeklyBestSellerProducts(products: Product[], limit = 1
       return new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
     })
 
-  return uniqueProducts([...weeklySold, ...official]).slice(0, limit)
+  return uniqueProducts([...boosted, ...weeklySold, ...official]).slice(0, limit)
 }
 
 export async function getRecommendedProducts(products: Product[], userId?: string | null, limit = 12) {
@@ -416,7 +438,10 @@ export async function getRecommendedProducts(products: Product[], userId?: strin
     })
     .map((item) => item.product)
 
-  if (scored.length) return uniqueProducts(scored).slice(0, limit)
+  if (scored.length) {
+    const boostedScored = scored.filter(isProductBoosted)
+    return uniqueProducts([...boostedScored, ...scored]).slice(0, limit)
+  }
   return getPopularProducts(products, limit)
 }
 

@@ -1,15 +1,18 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { SellerLayout } from '../../components/layouts/SellerLayout'
-import { PlusCircle } from 'lucide-react'
+import { Megaphone, PackageCheck, PlusCircle } from 'lucide-react'
 import { Card } from '../../components/ui/card'
-import { formatCurrency, getProducts, type Product } from '../../lib/data'
+import { formatCurrency, getProducts, isProductBoosted, type Product } from '../../lib/data'
 import { useAuth } from '../../contexts/AuthContext'
 import { ProductForm } from '../../components/ProductForm'
+
+type Tab = 'products' | 'boosted'
 
 export function MeusAnuncios() {
   const { user } = useAuth()
   const [products, setProducts] = useState<Product[]>([])
   const [showForm, setShowForm] = useState(false)
+  const [activeTab, setActiveTab] = useState<Tab>('products')
 
   const loadProducts = useCallback(async () => {
     if (!user) return
@@ -23,6 +26,8 @@ export function MeusAnuncios() {
     }, 0)
     return () => window.clearTimeout(timeout)
   }, [loadProducts])
+
+  const boostedProducts = products.filter(isProductBoosted)
 
   return (
     <SellerLayout>
@@ -46,6 +51,33 @@ export function MeusAnuncios() {
           </Card>
         )}
 
+        <Card className="bg-white border-none shadow-sm rounded-md p-1">
+          <div className="grid gap-1 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => setActiveTab('products')}
+              className={`flex items-center gap-3 rounded-sm px-4 py-3 text-left transition-colors ${activeTab === 'products' ? 'bg-ml-blue/10 text-ml-blue' : 'text-gray-500 hover:bg-gray-50 hover:text-ml-dark'}`}
+            >
+              <PackageCheck className="h-5 w-5" />
+              <span>
+                <span className="block text-sm font-semibold">Produtos cadastrados</span>
+                <span className="block text-xs opacity-75">{products.length} anuncio(s)</span>
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('boosted')}
+              className={`flex items-center gap-3 rounded-sm px-4 py-3 text-left transition-colors ${activeTab === 'boosted' ? 'bg-ml-blue/10 text-ml-blue' : 'text-gray-500 hover:bg-gray-50 hover:text-ml-dark'}`}
+            >
+              <Megaphone className="h-5 w-5" />
+              <span>
+                <span className="block text-sm font-semibold">Produtos impulsionados</span>
+                <span className="block text-xs opacity-75">{boostedProducts.length} ativo(s)</span>
+              </span>
+            </button>
+          </div>
+        </Card>
+
         <Card className="bg-white border-none shadow-sm rounded-md overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
@@ -56,21 +88,36 @@ export function MeusAnuncios() {
                   <th className="px-6 py-4 font-medium">Estoque</th>
                   <th className="px-6 py-4 font-medium">Vendas</th>
                   <th className="px-6 py-4 font-medium">Status</th>
+                  {activeTab === 'boosted' && <th className="px-6 py-4 font-medium">Impulsionamento</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {products.map((product) => (
+                {(activeTab === 'products' ? products : boostedProducts).map((product) => (
                   <tr key={product.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4 font-medium text-ml-dark">{product.title}</td>
                     <td className="px-6 py-4">{formatCurrency(product.price)}</td>
                     <td className="px-6 py-4">{product.stock ?? 0} unidades</td>
                     <td className="px-6 py-4">{product.sales_count}</td>
-                    <td className="px-6 py-4">{product.status}</td>
+                    <td className="px-6 py-4">
+                      <span className={`rounded-sm px-2 py-1 text-xs font-semibold ${product.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                        {product.status}
+                      </span>
+                    </td>
+                    {activeTab === 'boosted' && (
+                      <td className="px-6 py-4">
+                        <p className="font-semibold text-green-600">Ativo</p>
+                        <p className="text-xs text-gray-500">
+                          {product.boost_expires_at ? `Ate ${new Intl.DateTimeFormat('pt-BR').format(new Date(product.boost_expires_at))}` : 'Sem data final'}
+                        </p>
+                      </td>
+                    )}
                   </tr>
                 ))}
-                {products.length === 0 && (
+                {(activeTab === 'products' ? products : boostedProducts).length === 0 && (
                   <tr>
-                    <td className="px-6 py-8 text-center text-gray-500" colSpan={5}>Nenhum anuncio cadastrado.</td>
+                    <td className="px-6 py-8 text-center text-gray-500" colSpan={activeTab === 'boosted' ? 6 : 5}>
+                      {activeTab === 'products' ? 'Nenhum anuncio cadastrado.' : 'Nenhum produto impulsionado no momento.'}
+                    </td>
                   </tr>
                 )}
               </tbody>

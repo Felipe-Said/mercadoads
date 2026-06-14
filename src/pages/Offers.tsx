@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { ProductItem } from '../components/ProductItem'
-import { getProducts, type Product } from '../lib/data'
+import { getDailyOfferProducts, getProducts, type Product } from '../lib/data'
 
 export function Offers() {
   const [offers, setOffers] = useState<Product[]>([])
@@ -12,8 +12,15 @@ export function Offers() {
 
   useEffect(() => {
     setLoading(true)
-    getProducts(isCategoryPage ? { category: categoryName === 'all' ? undefined : categoryName ?? undefined } : { offersOnly: true })
-      .then(setOffers)
+    getProducts(isCategoryPage ? { category: categoryName === 'all' ? undefined : categoryName ?? undefined } : {})
+      .then(async (products) => {
+        if (isCategoryPage) {
+          setOffers(products)
+          return
+        }
+
+        setOffers(await getDailyOfferProducts(products, 60))
+      })
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [categoryName, isCategoryPage])
