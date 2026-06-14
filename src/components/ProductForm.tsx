@@ -297,7 +297,7 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
               <input value={profileHandle} onChange={(event) => setProfileHandle(event.target.value)} placeholder="@perfil" className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
             </div>
           )}
-          {deliveryMethod === 'ready' && (
+          {!isShopifyTheme && deliveryMethod === 'ready' && (
             <>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Email da conta</label>
@@ -317,7 +317,7 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
               </div>
             </>
           )}
-          {isShopifyPayments && deliveryMethod === 'ready' && (
+          {!isShopifyTheme && isShopifyPayments && deliveryMethod === 'ready' && (
             <>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">URL da loja Shopify</label>
