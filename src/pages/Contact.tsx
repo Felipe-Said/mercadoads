@@ -15,7 +15,7 @@ export function Contact() {
           <Card className="overflow-hidden flex flex-col justify-between bg-white border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 rounded-md h-full cursor-pointer">
             <CardContent className="p-8 flex flex-col items-center text-center">
               <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mb-6 text-green-500 group-hover/card:scale-110 transition-transform">
-                <Whatsapp size="32" variant="Bold" />
+                <Whatsapp size="32" variant="Bold" color="currentColor" />
               </div>
               <h2 className="text-xl font-medium text-ml-dark mb-2">WhatsApp</h2>
               <p className="text-gray-500 text-sm mb-6">
