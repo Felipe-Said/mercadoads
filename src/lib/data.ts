@@ -305,6 +305,118 @@ export async function getPopularProducts(products: Product[], limit = 4) {
     .slice(0, limit)
 }
 
+function uniqueProducts(products: Product[]) {
+  const seen = new Set<string>()
+  return products.filter((product) => {
+    if (seen.has(product.id)) return false
+    seen.add(product.id)
+    return true
+  })
+}
+
+export async function getDailyOfferProducts(products: Product[], limit = 12) {
+  const discounted = products
+    .filter((product) => Number(product.originalPrice ?? 0) > Number(product.price ?? 0))
+    .sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime())
+  const official = products
+    .filter((product) => product.seller?.role === 'admin')
+    .sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime())
+
+  return uniqueProducts([...discounted, ...official]).slice(0, limit)
+}
+
+export async function getWeeklyBestSellerProducts(products: Product[], limit = 12) {
+  const official = products.filter((product) => product.seller?.role === 'admin')
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+  const { data, error } = await supabase
+    .from('sales')
+    .select('product_id')
+    .eq('status', 'paid')
+    .gte('created_at', since)
+
+  if (error) {
+    console.warn('weekly sellers ignored', error.message)
+    return uniqueProducts([...official, ...products.sort((left, right) => Number(right.sales_count ?? 0) - Number(left.sales_count ?? 0))]).slice(0, limit)
+  }
+
+  const saleCounts = new Map<string, number>()
+  for (const sale of data ?? []) {
+    const productId = String(sale.product_id ?? '')
+    if (productId) saleCounts.set(productId, (saleCounts.get(productId) ?? 0) + 1)
+  }
+
+  const weeklySold = products
+    .filter((product) => (saleCounts.get(product.id) ?? 0) > 0)
+    .sort((left, right) => {
+      const saleDelta = (saleCounts.get(right.id) ?? 0) - (saleCounts.get(left.id) ?? 0)
+      if (saleDelta !== 0) return saleDelta
+      return new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
+    })
+
+  return uniqueProducts([...weeklySold, ...official]).slice(0, limit)
+}
+
+export async function getRecommendedProducts(products: Product[], userId?: string | null, limit = 12) {
+  if (!products.length) return []
+  if (!userId) return getPopularProducts(products, limit)
+
+  const since = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString()
+  const [clicksResult, searchesResult, purchasesResult] = await Promise.all([
+    supabase.from('product_clicks').select('product_id, category').eq('user_id', userId).gte('created_at', since),
+    supabase.from('product_searches').select('matched_category').eq('user_id', userId).gte('created_at', since).not('matched_category', 'is', null),
+    supabase.from('sales').select('product_id').eq('buyer_id', userId).in('status', ['pending', 'paid']).gte('created_at', since),
+  ])
+
+  if (clicksResult.error || searchesResult.error || purchasesResult.error) {
+    if (clicksResult.error) console.warn('recommendation clicks ignored', clicksResult.error.message)
+    if (searchesResult.error) console.warn('recommendation searches ignored', searchesResult.error.message)
+    if (purchasesResult.error) console.warn('recommendation purchases ignored', purchasesResult.error.message)
+    return getPopularProducts(products, limit)
+  }
+
+  const productScores = new Map<string, number>()
+  const categoryScores = new Map<string, number>()
+
+  for (const click of clicksResult.data ?? []) {
+    const productId = String(click.product_id ?? '')
+    const category = String(click.category ?? '').toLowerCase()
+    if (productId) productScores.set(productId, (productScores.get(productId) ?? 0) + 8)
+    if (category) categoryScores.set(category, (categoryScores.get(category) ?? 0) + 4)
+  }
+
+  for (const search of searchesResult.data ?? []) {
+    const category = String(search.matched_category ?? '').toLowerCase()
+    if (category) categoryScores.set(category, (categoryScores.get(category) ?? 0) + 6)
+  }
+
+  for (const purchase of purchasesResult.data ?? []) {
+    const productId = String(purchase.product_id ?? '')
+    if (productId) productScores.set(productId, (productScores.get(productId) ?? 0) + 12)
+    const purchasedProduct = products.find((product) => product.id === productId)
+    const category = purchasedProduct?.category?.toLowerCase() ?? ''
+    if (category) categoryScores.set(category, (categoryScores.get(category) ?? 0) + 8)
+  }
+
+  const scored = products
+    .map((product) => {
+      const category = (product.category ?? '').toLowerCase()
+      const score = (productScores.get(product.id) ?? 0)
+        + (categoryScores.get(category) ?? 0)
+        + Number(product.sales_count ?? 0)
+        + (product.seller?.role === 'admin' ? 2 : 0)
+      return { product, score }
+    })
+    .filter((item) => item.score > 0)
+    .sort((left, right) => {
+      if (right.score !== left.score) return right.score - left.score
+      return new Date(right.product.created_at).getTime() - new Date(left.product.created_at).getTime()
+    })
+    .map((item) => item.product)
+
+  if (scored.length) return uniqueProducts(scored).slice(0, limit)
+  return getPopularProducts(products, limit)
+}
+
 export async function getGroups(limit?: number) {
   let query = supabase
     .from('network_groups')

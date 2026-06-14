@@ -4,7 +4,7 @@ import { ChevronRight, Clock3, CreditCard, PackageCheck, Search, ShieldCheck, Sp
 import { BannerSlot, Banners } from '../components/Banners'
 import { ProductGrid } from '../components/ProductCard'
 import { Stories } from '../components/Stories'
-import { getPopularProducts, getProducts, recordProductSearch, type Product, formatCurrency } from '../lib/data'
+import { getDailyOfferProducts, getPopularProducts, getProducts, getRecommendedProducts, getWeeklyBestSellerProducts, recordProductSearch, type Product, formatCurrency } from '../lib/data'
 import { useAuth } from '../contexts/AuthContext'
 import { DEFAULT_PLATFORM_SETTINGS, loadPlatformSettings, readCachedPlatformSettings, type HomeSectionSettings } from '../lib/platformSettings'
 
@@ -85,6 +85,9 @@ export function Home() {
   const { user } = useAuth()
   const [products, setProducts] = useState<Product[]>([])
   const [popularProducts, setPopularProducts] = useState<Product[]>([])
+  const [dailyOfferProducts, setDailyOfferProducts] = useState<Product[]>([])
+  const [weeklyBestSellerProducts, setWeeklyBestSellerProducts] = useState<Product[]>([])
+  const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [homeSections, setHomeSections] = useState<HomeSectionSettings>(() => readCachedPlatformSettings()?.homeSections ?? DEFAULT_PLATFORM_SETTINGS.homeSections)
   const [loading, setLoading] = useState(true)
@@ -119,15 +122,35 @@ export function Home() {
   useEffect(() => {
     if (!products.length) {
       setPopularProducts([])
+      setDailyOfferProducts([])
+      setWeeklyBestSellerProducts([])
+      setRecommendedProducts([])
       return
     }
 
-    getPopularProducts(products)
-      .then(setPopularProducts)
+    Promise.all([
+      getPopularProducts(products),
+      getDailyOfferProducts(products),
+      getWeeklyBestSellerProducts(products),
+      getRecommendedProducts(products, user?.id),
+    ])
+      .then(([popular, dailyOffers, weeklyBestSellers, recommended]) => {
+        setPopularProducts(popular)
+        setDailyOfferProducts(dailyOffers)
+        setWeeklyBestSellerProducts(weeklyBestSellers)
+        setRecommendedProducts(recommended)
+      })
       .catch((error) => {
         console.error(error)
         setPopularProducts(products.slice(0, 4))
+        setDailyOfferProducts(products.filter((product) => Number(product.originalPrice ?? 0) > Number(product.price ?? 0)).slice(0, 12))
+        setWeeklyBestSellerProducts(products.slice(0, 12))
+        setRecommendedProducts(products.slice(0, 12))
       })
+  }, [products, user?.id])
+
+  const discountedProducts = useMemo(() => {
+    return products.filter((product) => Number(product.originalPrice ?? 0) > Number(product.price ?? 0))
   }, [products])
 
   useEffect(() => {
@@ -136,22 +159,22 @@ export function Home() {
 
     const timeoutId = window.setTimeout(() => {
       lastTrackedSearch.current = query.toLowerCase()
-      recordProductSearch(query, products, user?.id).catch(console.error)
+      recordProductSearch(query, discountedProducts, user?.id).catch(console.error)
     }, 700)
 
     return () => window.clearTimeout(timeoutId)
-  }, [products, searchQuery, user?.id])
+  }, [discountedProducts, searchQuery, user?.id])
 
   const filteredProducts = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
-    if (!query) return products
-    return products.filter((product) => {
+    if (!query) return discountedProducts
+    return discountedProducts.filter((product) => {
       const title = product.title.toLowerCase()
       const category = product.category?.toLowerCase() ?? ''
       const seller = product.seller?.store_name?.toLowerCase() ?? product.seller?.full_name?.toLowerCase() ?? ''
       return title.includes(query) || category.includes(query) || seller.includes(query)
     })
-  }, [products, searchQuery])
+  }, [discountedProducts, searchQuery])
 
   const featured = filteredProducts.slice(0, 6)
   const mostWanted = (popularProducts.length ? popularProducts : products).slice(0, 4)
@@ -239,7 +262,7 @@ export function Home() {
           <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <h2 className="text-xl font-bold tracking-tight">Ofertas em destaque</h2>
-              <p className="text-sm text-gray-500">Produtos ativos organizados em vitrine densa.</p>
+              <p className="text-sm text-gray-500">Produtos ativos com desconto real.</p>
             </div>
             <div className="relative w-full md:w-80">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -255,7 +278,7 @@ export function Home() {
           {loading && <div className="h-40 animate-pulse rounded-sm bg-gray-100" />}
           {!loading && featured.length === 0 && (
             <div className="rounded-sm border border-dashed border-gray-300 bg-gray-50 p-8 text-center text-sm text-gray-500">
-              Nenhum produto ativo cadastrado.
+              Nenhum produto com desconto encontrado.
             </div>
           )}
           {!loading && featured.length > 0 && (
@@ -277,7 +300,13 @@ export function Home() {
         )}
 
         <div className="mt-4">
-          <ProductGrid title="Ofertas do dia" linkText="Abrir ofertas" linkUrl="/ofertas" />
+          <ProductGrid
+            title="Ofertas do dia"
+            subtitle="Produtos que entraram em promocao recentemente ou oficiais da plataforma."
+            linkText="Abrir ofertas"
+            linkUrl="/ofertas"
+            products={dailyOfferProducts}
+          />
         </div>
 
         {showMiddleRow && (
@@ -302,7 +331,12 @@ export function Home() {
         )}
 
         <div className="mt-4">
-          <ProductGrid title="Mais vendidos da semana" linkText="Ver todos" shuffle />
+          <ProductGrid
+            title="Mais vendidos da semana"
+            subtitle="Produtos com mais vendas recentes e produtos oficiais."
+            linkText="Ver todos"
+            products={weeklyBestSellerProducts}
+          />
         </div>
 
         {homeSections.homeBottom && (
@@ -312,7 +346,12 @@ export function Home() {
         )}
 
         <div className="mt-4 mb-12">
-          <ProductGrid title="Recomendados para voce" linkText="Descobrir mais" shuffle />
+          <ProductGrid
+            title="Recomendados para voce"
+            subtitle="Selecionados pelo seu historico de buscas, cliques e compras."
+            linkText="Descobrir mais"
+            products={recommendedProducts}
+          />
         </div>
       </main>
     </div>

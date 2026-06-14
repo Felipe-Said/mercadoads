@@ -7,16 +7,20 @@ export type { Product }
 
 interface ProductGridProps {
   title?: string
+  subtitle?: string
   linkText?: string
   linkUrl?: string
   shuffle?: boolean
+  products?: Product[]
 }
 
 export function ProductGrid({
   title = "Anuncios disponiveis",
+  subtitle = "Produtos digitais verificados e prontos para compra via Pix.",
   linkText = "Ver historico",
   linkUrl = "/painel/usuario/compras",
-  shuffle = false
+  shuffle = false,
+  products: providedProducts
 }: ProductGridProps) {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
@@ -26,16 +30,28 @@ export function ProductGrid({
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    if (providedProducts) {
+      const finalData = shuffle ? [...providedProducts].sort(() => 0.5 - Math.random()) : providedProducts
+      setProducts(finalData)
+      setShowLeftBtn(false)
+      setShowRightBtn(finalData.length > 5)
+      setLoading(false)
+      setError(null)
+      return
+    }
+
+    setLoading(true)
     getProducts()
       .then((data) => {
         let finalData = [...data]
         if (shuffle) finalData = finalData.sort(() => 0.5 - Math.random())
         setProducts(finalData)
-        if (finalData.length <= 5) setShowRightBtn(false)
+        setShowLeftBtn(false)
+        setShowRightBtn(finalData.length > 5)
       })
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false))
-  }, [shuffle])
+  }, [providedProducts, shuffle])
 
   const handleScroll = () => {
     if (!scrollRef.current) return
@@ -58,7 +74,7 @@ export function ProductGrid({
       <div className="mb-4 flex items-end justify-between gap-4">
         <div>
           <h2 className="text-[22px] font-semibold tracking-tight text-[var(--layout-text-primary)]">{title}</h2>
-          <p className="mt-1 text-xs text-[var(--layout-text-muted)]">Produtos digitais verificados e prontos para compra via Pix.</p>
+          <p className="mt-1 text-xs text-[var(--layout-text-muted)]">{subtitle}</p>
         </div>
         <a href={linkUrl} className="shrink-0 text-[14px] font-semibold text-[var(--layout-link-color)] transition-colors hover:text-[var(--layout-link-hover-color)]">
           {linkText}
