@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { CheckCircle2, Package, MapPin } from 'lucide-react'
+import { CheckCircle2, Package, MapPin, ExternalLink } from 'lucide-react'
 import { getProfileBySlug, getProducts, type Profile, type Product } from '../lib/data'
-import { ProductItem } from '../components/ProductItem'
 
 export function StoreBio() {
   const { storeSlug } = useParams<{ storeSlug: string }>()
@@ -63,7 +62,7 @@ export function StoreBio() {
       <header className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-100 shadow-sm">
         <div className="max-w-2xl mx-auto px-4 h-16 flex items-center justify-center">
           <Link to="/" className="flex items-center gap-2">
-            <span className="font-bold text-xl text-ml-dark tracking-tight">SAID<span className="text-ml-blue">ADS</span></span>
+            <span className="font-bold text-xl text-ml-dark tracking-tight">COOKIE<span className="text-ml-blue">MARKET</span></span>
           </Link>
         </div>
       </header>
@@ -91,7 +90,7 @@ export function StoreBio() {
             {profile.store_name || profile.full_name}
           </h1>
           <p className="text-gray-500 font-medium text-sm mt-1 flex items-center gap-1">
-            <MapPin className="w-4 h-4" /> Vendedor na Said ADS
+            <MapPin className="w-4 h-4" /> Vendedor na Cookie Market
           </p>
           
           <div className="mt-4 px-4 py-1.5 bg-green-50 text-green-700 text-xs font-bold uppercase tracking-wider rounded-full border border-green-200">
@@ -99,13 +98,32 @@ export function StoreBio() {
           </div>
         </div>
 
-        {/* Vitrine de Produtos */}
-        <div className="space-y-4">
+        {/* Vitrine de Produtos - Estilo Linktree */}
+        <div className="space-y-3 w-full max-w-md mx-auto">
           {products.length > 0 ? (
             products.map((product) => (
-              <div key={product.id} className="transform transition-transform duration-200 hover:-translate-y-1">
-                <ProductItem product={product} />
-              </div>
+              <Link 
+                key={product.id} 
+                to={`/produto/${product.id}`}
+                className="group flex items-center justify-between p-2 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1 w-full"
+              >
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <div className="w-14 h-14 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                    <img src={product.image || '/favicon.svg'} alt={product.title} className="w-full h-full object-cover" />
+                  </div>
+                  <div className="flex flex-col overflow-hidden text-left">
+                    <span className="font-semibold text-ml-dark text-sm line-clamp-1 group-hover:text-ml-blue transition-colors">{product.title}</span>
+                    <span className="text-green-600 font-bold text-sm">
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.price)}
+                    </span>
+                  </div>
+                </div>
+                <div className="px-3 flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-ml-blue/10 transition-colors">
+                    <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-ml-blue" />
+                  </div>
+                </div>
+              </Link>
             ))
           ) : (
             <div className="bg-white p-8 rounded-2xl text-center shadow-sm border border-gray-100">
@@ -116,7 +134,7 @@ export function StoreBio() {
 
         {/* Footer Minimalista */}
         <div className="mt-16 text-center pb-8">
-          <p className="text-xs text-gray-400 font-medium">Powered by Said ADS</p>
+          <p className="text-xs text-gray-400 font-medium">Powered by Cookie Market</p>
         </div>
       </main>
     </div>
