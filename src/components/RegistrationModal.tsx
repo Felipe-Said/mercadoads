@@ -38,7 +38,7 @@ export function RegistrationModal({ open, onOpenChange, product }: RegistrationM
   const createPendingPurchase = async (buyerId: string) => {
     if (!product) throw new Error("Produto indisponivel.")
 
-    const affiliateFields = await getAffiliateSaleFields(product.seller_id, product.price)
+    const affiliateFields = await getAffiliateSaleFields(product.seller_id, product.price, product.id, buyerId)
 
     const { data: saleData, error: saleError } = await supabase.from("sales").insert({
       product_id: Number(product.id),

@@ -47,6 +47,8 @@ export function ProductPage() {
   const [buyerDocument, setBuyerDocument] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'wallet'>('pix')
   const [walletBalance, setWalletBalance] = useState(0)
+  const [affiliateLoading, setAffiliateLoading] = useState(false)
+  const [affiliateMessage, setAffiliateMessage] = useState<string | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -135,7 +137,7 @@ export function ProductPage() {
         }
       }
 
-      const affiliateFields = await getAffiliateSaleFields(product.seller_id, product.price)
+      const affiliateFields = await getAffiliateSaleFields(product.seller_id, product.price, product.id, user.id)
 
       const { data: saleData, error: saleError } = await supabase.from('sales').insert({
         product_id: Number(product.id),
@@ -208,6 +210,86 @@ export function ProductPage() {
 
     setQuestions((current) => [data as Question, ...current])
     setQuestion('')
+  }
+
+  const handleAffiliateProduct = async () => {
+    if (!product || authLoading || affiliateLoading) return
+
+    if (!user) {
+      setError('Entre na sua conta para se afiliar a este produto.')
+      return
+    }
+
+    if (user.id === product.seller_id) {
+      setError('Voce nao pode se afiliar ao proprio produto.')
+      return
+    }
+
+    if (!product.seller_id) {
+      setError('Este produto ainda nao possui vendedor valido para afiliacao.')
+      return
+    }
+
+    if (!product.allow_affiliates || Number(product.default_commission ?? 0) <= 0) {
+      setError('Este produto nao aceita afiliados no momento.')
+      return
+    }
+
+    setError(null)
+    setAffiliateMessage(null)
+    setAffiliateLoading(true)
+
+    const { data: existingAffiliate, error: existingError } = await supabase
+      .from('affiliates')
+      .select('id, status')
+      .eq('user_id', user.id)
+      .eq('product_id', Number(product.id))
+      .maybeSingle()
+
+    if (existingError) {
+      setAffiliateLoading(false)
+      setError(existingError.message)
+      return
+    }
+
+    const link = `${window.location.origin}/produto/${product.id}?ref=${user.id}`
+
+    if (existingAffiliate) {
+      setAffiliateLoading(false)
+      try {
+        await navigator.clipboard.writeText(link)
+        setAffiliateMessage('Voce ja esta afiliado a este produto. Link copiado.')
+      } catch {
+        setAffiliateMessage(`Voce ja esta afiliado a este produto. Seu link: ${link}`)
+      }
+      return
+    }
+
+    const payload = {
+      user_id: user.id,
+      seller_id: product.seller_id,
+      product_id: Number(product.id),
+      commission_percent: Number(product.default_commission ?? 0),
+      status: 'active',
+    }
+
+    const { error: affiliateError } = await supabase
+      .from('affiliates')
+      .insert(payload)
+
+    setAffiliateLoading(false)
+
+    if (affiliateError) {
+      setError(affiliateError.message)
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(link)
+      setAffiliateMessage('Afiliacao criada. Link copiado para sua area de transferencia.')
+    } catch {
+      setAffiliateMessage(`Afiliacao criada. Seu link: ${link}`)
+    }
   }
 
   if (loading) {
@@ -496,6 +578,16 @@ export function ProductPage() {
                 <div className="p-3 font-semibold">Bom atendimento</div>
                 <div className="p-3 font-semibold">Suporte interno</div>
               </div>
+              {product.allow_affiliates && Number(product.default_commission ?? 0) > 0 && (
+                <div className="mt-4 rounded-sm border border-gray-100 bg-[var(--layout-subtle-background)] p-3">
+                  <p className="text-xs font-semibold text-gray-500">Comissao deste produto</p>
+                  <p className="mt-1 text-lg font-bold text-[var(--layout-price-color)]">{product.default_commission}%</p>
+                  <Button onClick={handleAffiliateProduct} disabled={affiliateLoading || authLoading} className="mt-3 h-10 w-full rounded-sm font-bold">
+                    {affiliateLoading ? 'Afiliando...' : 'Afiliar a este produto'}
+                  </Button>
+                  {affiliateMessage && <p className="mt-2 text-xs font-medium text-green-600">{affiliateMessage}</p>}
+                </div>
+              )}
             </div>
           </aside>
         </div>

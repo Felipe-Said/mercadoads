@@ -132,6 +132,12 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
       finalImageUrl = publicData.publicUrl
     }
 
+    if (allowAffiliates && Number(defaultCommission || 0) <= 0) {
+      setMessage('Informe a porcentagem de comissao para afiliados.')
+      setLoading(false)
+      return
+    }
+
     let fileUrl: string | null = null
     if (isShopifyTheme) {
       if (!themeFile) {
@@ -348,15 +354,17 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
         )}
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Comissao padrao (%)</label>
-        <input type="number" min="0" max="100" value={defaultCommission} onChange={(event) => setDefaultCommission(event.target.value)} className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
-      </div>
-
       <label className="flex items-center gap-2 text-sm text-gray-700">
         <input type="checkbox" checked={allowAffiliates} onChange={(event) => setAllowAffiliates(event.target.checked)} />
         Permitir afiliados
       </label>
+
+      {allowAffiliates && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Comissao do afiliado (%)</label>
+          <input type="number" min="1" max="100" value={defaultCommission} onChange={(event) => setDefaultCommission(event.target.value)} required className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
+        </div>
+      )}
 
       {showStatus && (
         <div>

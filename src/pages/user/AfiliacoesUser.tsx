@@ -9,10 +9,12 @@ import { formatCurrency } from '../../lib/data'
 
 type Affiliate = {
   id: string
+  product_id?: number | null
   commission_percent: number
   status: string
   created_at: string
   seller?: { full_name: string | null } | null
+  product?: { id: number | null; title: string | null } | null
 }
 
 type Withdrawal = {
@@ -53,7 +55,7 @@ export function AfiliacoesUser() {
     // Load Affiliates
     const { data: affData, error: affError } = await supabase
       .from('affiliates')
-      .select('id, commission_percent, status, created_at, seller:seller_id(full_name)')
+      .select('id, product_id, commission_percent, status, created_at, seller:seller_id(full_name), product:product_id(id,title)')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
 
@@ -169,12 +171,17 @@ export function AfiliacoesUser() {
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {affiliates.map((affiliate) => {
-                      const linkStr = `https://mercadoads.com/loja/${affiliate.seller?.full_name?.replace(/\s+/g, '').toLowerCase() || 'loja'}?ref=${user?.id ?? ''}`
+                      const baseUrl = typeof window === 'undefined' ? 'https://cookiemarket.net' : window.location.origin
+                      const productId = affiliate.product?.id ?? affiliate.product_id
+                      const fallbackStore = affiliate.seller?.full_name?.replace(/\s+/g, '').toLowerCase() || 'loja'
+                      const linkStr = productId
+                        ? `${baseUrl}/produto/${productId}?ref=${user?.id ?? ''}`
+                        : `${baseUrl}/loja/${fallbackStore}?ref=${user?.id ?? ''}`
                       return (
                         <tr key={affiliate.id} className="hover:bg-gray-50/50 transition-colors">
                           <td className="px-6 py-4">
                             <p className="font-medium text-ml-dark">{affiliate.seller?.full_name ?? 'Vendedor'}</p>
-                            <p className="text-xs text-gray-500">{affiliate.status}</p>
+                            <p className="text-xs text-gray-500">{affiliate.product?.title ?? 'Programa da loja'} · {affiliate.status}</p>
                           </td>
                           <td className="px-6 py-4">
                             <span className="bg-green-100 text-green-700 px-2 py-1 rounded-sm text-xs font-semibold">{affiliate.commission_percent}%</span>

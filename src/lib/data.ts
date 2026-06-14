@@ -28,6 +28,8 @@ export interface Product {
   image: string
   category: string | null
   stock: number | null
+  allow_affiliates?: boolean
+  default_commission?: number
   sales_count: number
   status: 'draft' | 'active' | 'paused' | 'rejected'
   hidden_by_admin?: boolean
@@ -199,6 +201,8 @@ function mapProduct(row: Record<string, unknown>): Product {
     image: String(row.image_url ?? ''),
     category: (row.category as string | null) ?? null,
     stock: row.stock == null ? null : toNumber(row.stock),
+    allow_affiliates: Boolean(row.allow_affiliates ?? false),
+    default_commission: toNumber(row.default_commission),
     sales_count: toNumber(row.sales_count),
     status: (row.status as Product['status']) ?? 'active',
     hidden_by_admin: Boolean(row.hidden_by_admin ?? false),

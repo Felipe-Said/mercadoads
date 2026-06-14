@@ -48,8 +48,8 @@ function AffiliateRefTracker() {
   const location = useLocation()
 
   useEffect(() => {
-    storeAffiliateRefFromSearch(location.search)
-  }, [location.search])
+    storeAffiliateRefFromSearch(location.search, location.pathname)
+  }, [location.pathname, location.search])
 
   return null
 }

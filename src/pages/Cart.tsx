@@ -87,7 +87,7 @@ export function Cart() {
         if (!product) continue
 
         const amount = Number(product.price ?? item.price) * item.quantity
-        const affiliateFields = await getAffiliateSaleFields(product.seller_id, amount)
+        const affiliateFields = await getAffiliateSaleFields(product.seller_id, amount, product.id, user.id)
         const { data: saleData, error: saleError } = await supabase.from('sales').insert({
           product_id: product.id,
           buyer_id: user.id,

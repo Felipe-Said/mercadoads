@@ -91,6 +91,96 @@ function firstString(...values: unknown[]) {
   return found === undefined || found === null ? null : String(found).trim()
 }
 
+function getRequestIp(req: Request) {
+  const forwarded = req.headers.get('forwarded')?.match(/for="?([^;"]+)/i)?.[1]
+  return firstString(
+    req.headers.get('cf-connecting-ip'),
+    req.headers.get('x-real-ip'),
+    req.headers.get('x-forwarded-for')?.split(',')[0],
+    forwarded,
+  )
+}
+
+async function blockAffiliateFraud(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  saleId: string,
+  affiliateUserId: string,
+  reason: string,
+) {
+  await supabaseAdmin.rpc('freeze_affiliate_balance', {
+    target_user_id: affiliateUserId,
+    freeze_reason: reason,
+  })
+
+  await supabaseAdmin
+    .from('sales')
+    .update({
+      affiliate_fraud_status: 'blocked',
+      affiliate_fraud_reason: reason,
+    })
+    .eq('id', saleId)
+}
+
+async function validateAffiliateSale(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  saleId: string,
+  buyerIp: string | null,
+) {
+  const { data, error } = await supabaseAdmin
+    .from('sales')
+    .select('id, buyer_id, product_id, affiliate_user_id, affiliate_ref_product_id')
+    .eq('id', saleId)
+    .maybeSingle()
+
+  if (error) throw error
+  const sale = asRecord(data)
+  if (!sale) return { ok: false as const, error: 'Pedido nao encontrado.' }
+
+  const updates: Record<string, unknown> = {}
+  if (buyerIp) updates.buyer_ip = buyerIp
+
+  const affiliateUserId = firstString(sale.affiliate_user_id)
+  const buyerId = firstString(sale.buyer_id)
+  if (!affiliateUserId) {
+    if (Object.keys(updates).length > 0) {
+      await supabaseAdmin.from('sales').update(updates).eq('id', saleId)
+    }
+    return { ok: true as const }
+  }
+
+  if (affiliateUserId === buyerId) {
+    await blockAffiliateFraud(supabaseAdmin, saleId, affiliateUserId, 'self_affiliate_purchase')
+    return { ok: false as const, error: 'Compra bloqueada por uso do proprio link de afiliado.' }
+  }
+
+  const productId = firstString(sale.affiliate_ref_product_id, sale.product_id)
+  if (buyerIp && productId) {
+    const { data: affiliateData } = await supabaseAdmin
+      .from('affiliates')
+      .select('referral_ip, last_referral_ip')
+      .eq('user_id', affiliateUserId)
+      .eq('product_id', productId)
+      .maybeSingle()
+
+    const affiliate = asRecord(affiliateData)
+    const sameIp = [affiliate?.referral_ip, affiliate?.last_referral_ip]
+      .map((value) => firstString(value))
+      .filter(Boolean)
+      .includes(buyerIp)
+
+    if (sameIp) {
+      await blockAffiliateFraud(supabaseAdmin, saleId, affiliateUserId, 'same_ip_affiliate_purchase')
+      return { ok: false as const, error: 'Compra bloqueada por seguranca do programa de afiliados.' }
+    }
+  }
+
+  if (Object.keys(updates).length > 0) {
+    await supabaseAdmin.from('sales').update(updates).eq('id', saleId)
+  }
+
+  return { ok: true as const }
+}
+
 function inferPixKeyType(pixKey: string) {
   const trimmed = pixKey.trim()
   const digits = normalizeDigits(trimmed)
@@ -971,6 +1061,11 @@ Deno.serve(async (req) => {
 
     if (!normalizedCustomer.phone || !normalizedCustomer.document.number || !normalizedCustomer.document.type) {
       return json({ success: false, configured: true, error: 'Informe nome, WhatsApp e CPF/CNPJ para gerar o Pix.' }, 400)
+    }
+
+    const affiliateValidation = await validateAffiliateSale(supabaseAdmin, saleId, getRequestIp(req))
+    if (!affiliateValidation.ok) {
+      return json({ success: false, configured: true, error: affiliateValidation.error }, 403)
     }
 
     const westpayResult = await callWestPay(settings, '/api/v1/transactions', 'POST', {
