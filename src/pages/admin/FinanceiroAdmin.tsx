@@ -22,15 +22,18 @@ type AdminSale = {
   id: number
   amount: number
   created_at: string
+  claim_until?: string | null
   seller_id: string | null
-  products?: { title: string } | null
+  products?: { title: string; delivery_method?: string | null } | null
   buyer?: { full_name: string | null } | null
+  seller?: { full_name: string | null; email: string | null } | null
 }
 
 export function FinanceiroAdmin() {
   const [activeTab, setActiveTab] = useState<'saques' | 'vendas'>('saques')
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([])
   const [adminSales, setAdminSales] = useState<AdminSale[]>([])
+  const [heldSales, setHeldSales] = useState<AdminSale[]>([])
   const [totalPending, setTotalPending] = useState(0)
   const [gatewayBalance, setGatewayBalance] = useState(0)
   const [todayAdminSales, setTodayAdminSales] = useState(0)
@@ -57,7 +60,7 @@ export function FinanceiroAdmin() {
       supabase.from('profiles').select('id').eq('role', 'admin'),
       supabase
         .from('sales')
-        .select('id, amount, created_at, seller_id, products:product_id(title), buyer:buyer_id(full_name)')
+        .select('id, amount, created_at, claim_until, seller_id, products:product_id(title, delivery_method), buyer:buyer_id(full_name), seller:seller_id(full_name, email)')
         .eq('status', 'paid')
         .order('created_at', { ascending: false }),
       supabase.from('platform_settings').select('platform_fee_percent').eq('id', 1).maybeSingle(),
@@ -70,14 +73,26 @@ export function FinanceiroAdmin() {
     const adminIds = new Set((adminsResult.data ?? []).map((admin) => admin.id))
     const paidSales = (salesResult.data ?? []) as AdminSale[]
     const directAdminSales = paidSales.filter((sale) => sale.seller_id && adminIds.has(sale.seller_id))
+    const now = Date.now()
+    const retainedSales = paidSales.filter((sale) => sale.seller_id && sale.claim_until && new Date(sale.claim_until).getTime() > now)
     const platformFee = Number(settingsResult.data?.platform_fee_percent ?? 10) / 100
     const platformRevenue = paidSales.reduce((sum, sale) => sum + Number(sale.amount ?? 0) * platformFee, 0)
 
     setAdminSales(directAdminSales.slice(0, 10))
+    setHeldSales(retainedSales.slice(0, 30))
     setGatewayBalance(platformRevenue + directAdminSales.reduce((sum, sale) => sum + Number(sale.amount ?? 0), 0))
     setTodayAdminSales(directAdminSales
       .filter((sale) => new Date(sale.created_at) >= todayStart)
       .reduce((sum, sale) => sum + Number(sale.amount ?? 0), 0))
+  }
+
+  const handleReleaseSale = async (id: number) => {
+    const { error } = await supabase
+      .from('sales')
+      .update({ claim_until: new Date().toISOString() })
+      .eq('id', id)
+
+    if (!error) await loadAdminSales()
   }
 
   useEffect(() => {
@@ -207,6 +222,52 @@ export function FinanceiroAdmin() {
                     {withdrawals.length === 0 && (
                       <tr>
                         <td className="px-6 py-8 text-center text-gray-500" colSpan={5}>Nenhum saque solicitado.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+
+            <Card className="bg-white border-none shadow-sm rounded-md overflow-hidden">
+              <div className="p-4 border-b border-gray-100">
+                <h3 className="text-lg font-medium text-ml-dark">Valores retidos de vendedores</h3>
+                <p className="mt-1 text-xs text-gray-500">Libere manualmente vendas que ainda estao no prazo de reclamacao.</p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-gray-50/50 text-gray-500 border-b border-gray-100">
+                    <tr>
+                      <th className="px-6 py-4 font-medium">Produto</th>
+                      <th className="px-6 py-4 font-medium">Vendedor</th>
+                      <th className="px-6 py-4 font-medium">Tipo</th>
+                      <th className="px-6 py-4 font-medium">Libera em</th>
+                      <th className="px-6 py-4 font-medium">Valor</th>
+                      <th className="px-6 py-4 font-medium text-right">Acao</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {heldSales.map((sale) => (
+                      <tr key={sale.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="px-6 py-4 font-medium text-ml-dark">{sale.products?.title ?? `Pedido #${sale.id}`}</td>
+                        <td className="px-6 py-4 text-gray-600">{sale.seller?.full_name || sale.seller?.email || 'Vendedor'}</td>
+                        <td className="px-6 py-4">
+                          <span className="rounded-sm bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-700">
+                            {sale.products?.delivery_method === 'dropservice' ? 'Dropservice' : 'Pronta entrega'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-gray-500">{sale.claim_until ? new Date(sale.claim_until).toLocaleString('pt-BR') : '-'}</td>
+                        <td className="px-6 py-4 font-medium">{formatCurrency(sale.amount)}</td>
+                        <td className="px-6 py-4 text-right">
+                          <Button onClick={() => handleReleaseSale(sale.id)} className="h-auto rounded-sm bg-green-500 px-4 py-1.5 text-xs font-semibold text-white hover:bg-green-600">
+                            Liberar agora
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                    {heldSales.length === 0 && (
+                      <tr>
+                        <td className="px-6 py-8 text-center text-gray-500" colSpan={6}>Nenhuma venda retida no momento.</td>
                       </tr>
                     )}
                   </tbody>

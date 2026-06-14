@@ -745,8 +745,9 @@ async function updateSaleFromWebhook(supabaseAdmin: ReturnType<typeof createClie
     updates.status = mappedStatus
     if (mappedStatus === 'paid') {
       const paidAt = new Date().toISOString()
+      const releaseHours = await getSaleReleaseHours(supabaseAdmin, saleId)
       updates.paid_at = paidAt
-      updates.claim_until = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+      updates.claim_until = new Date(Date.now() + releaseHours * 60 * 60 * 1000).toISOString()
     }
   }
 
@@ -765,6 +766,22 @@ async function updateSaleFromWebhook(supabaseAdmin: ReturnType<typeof createClie
     ? await provisionSmmSale(supabaseAdmin, saleId)
     : { skipped: true }
   return { updated: true, proxyDelivery, virtualNumberDelivery, tempEmailDelivery, smmDelivery }
+}
+
+async function getSaleReleaseHours(supabaseAdmin: ReturnType<typeof createClient>, saleId: string) {
+  const { data, error } = await supabaseAdmin
+    .from('sales')
+    .select('products:product_id(delivery_method)')
+    .eq('id', saleId)
+    .maybeSingle()
+
+  if (error) {
+    console.warn('sale release window fallback', error.message)
+    return 24
+  }
+
+  const product = Array.isArray(data?.products) ? data?.products[0] : data?.products
+  return product?.delivery_method === 'dropservice' ? 48 : 24
 }
 
 async function updateWalletDepositFromWebhook(supabaseAdmin: ReturnType<typeof createClient>, payload: Record<string, unknown>) {

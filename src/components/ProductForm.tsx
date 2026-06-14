@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Button } from './ui/button'
 import { supabase } from '../lib/supabase'
 import { productCategoryOptions } from '../lib/productTaxonomy'
+import { ImagePlus } from 'lucide-react'
 
 export type ProductStatus = 'draft' | 'active' | 'paused' | 'rejected'
 
@@ -19,7 +20,15 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
   const [originalPrice, setOriginalPrice] = useState('')
   const [category, setCategory] = useState(productCategoryOptions[0]?.value ?? '')
   const [imageUrl, setImageUrl] = useState('')
+  const [imageFile, setImageFile] = useState<File | null>(null)
   const [stock, setStock] = useState('')
+  const [deliveryMethod, setDeliveryMethod] = useState<'ready' | 'dropservice'>('ready')
+  const [profileHandle, setProfileHandle] = useState('')
+  const [accountEmail, setAccountEmail] = useState('')
+  const [accountPassword, setAccountPassword] = useState('')
+  const [recoveryEmail, setRecoveryEmail] = useState('')
+  const [recoveryPassword, setRecoveryPassword] = useState('')
+  const [sellerNote, setSellerNote] = useState('')
   const [allowAffiliates, setAllowAffiliates] = useState(false)
   const [defaultCommission, setDefaultCommission] = useState('0')
   const [status, setStatus] = useState<ProductStatus>(defaultStatus)
@@ -33,7 +42,15 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
     setOriginalPrice('')
     setCategory(productCategoryOptions[0]?.value ?? '')
     setImageUrl('')
+    setImageFile(null)
     setStock('')
+    setDeliveryMethod('ready')
+    setProfileHandle('')
+    setAccountEmail('')
+    setAccountPassword('')
+    setRecoveryEmail('')
+    setRecoveryPassword('')
+    setSellerNote('')
     setAllowAffiliates(false)
     setDefaultCommission('0')
     setStatus(defaultStatus)
@@ -44,16 +61,56 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
     setMessage(null)
     setLoading(true)
 
+    const allowedImageTypes = ['image/png', 'image/jpeg', 'image/svg+xml']
+    let finalImageUrl = imageUrl.trim()
+
+    if (imageFile) {
+      if (!allowedImageTypes.includes(imageFile.type)) {
+        setMessage('Envie imagem PNG, SVG ou JPEG.')
+        setLoading(false)
+        return
+      }
+
+      const fileExt = imageFile.name.split('.').pop() || 'png'
+      const path = `${sellerId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
+      const { data, error: uploadError } = await supabase.storage.from('product_images').upload(path, imageFile, {
+        cacheControl: '3600',
+        upsert: true,
+        contentType: imageFile.type,
+      })
+
+      if (uploadError) {
+        setMessage(uploadError.message)
+        setLoading(false)
+        return
+      }
+
+      const { data: publicData } = supabase.storage.from('product_images').getPublicUrl(data.path)
+      finalImageUrl = publicData.publicUrl
+    }
+
+    const deliveryLines = [
+      profileHandle.trim() ? `Perfil vinculado: ${profileHandle.trim()}` : '',
+      accountEmail.trim() ? `Email da conta: ${accountEmail.trim()}` : '',
+      accountPassword.trim() ? `Senha da conta: ${accountPassword.trim()}` : '',
+      recoveryEmail.trim() ? `Email vinculado: ${recoveryEmail.trim()}` : '',
+      recoveryPassword.trim() ? `Senha do email vinculado: ${recoveryPassword.trim()}` : '',
+      sellerNote.trim() ? `Observacao: ${sellerNote.trim()}` : '',
+    ].filter(Boolean)
+
     const { error } = await supabase.from('products').insert({
       seller_id: sellerId,
       title,
       description: description || null,
       price: Number(price),
       original_price: originalPrice ? Number(originalPrice) : null,
-      image_url: imageUrl || null,
+      image_url: finalImageUrl || null,
       category,
       delivery_type: 'Entrega digital na plataforma',
+      delivery_method: deliveryMethod,
       stock: stock ? Number(stock) : 0,
+      credentials_data: deliveryLines.length ? deliveryLines : [],
+      seller_note: deliveryLines.join('\n') || null,
       allow_affiliates: allowAffiliates,
       default_commission: Number(defaultCommission || 0),
       status,
@@ -105,9 +162,63 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
         <input type="number" min="0" value={stock} onChange={(event) => setStock(event.target.value)} className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
       </div>
 
-      <div className="md:col-span-2">
-        <label className="block text-sm font-medium text-gray-700 mb-1">URL da imagem</label>
+      <div className="md:col-span-2 grid gap-3 rounded-md border border-gray-100 bg-gray-50 p-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Imagem do produto</label>
+          <p className="text-xs text-gray-500">Envie PNG, SVG ou JPEG direto pelo painel, ou use uma URL se preferir.</p>
+        </div>
+        <label className="flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed border-gray-300 bg-white p-4 text-center transition-colors hover:bg-gray-50">
+          <ImagePlus className="mb-2 h-7 w-7 text-gray-400" />
+          <span className="text-sm font-semibold text-ml-dark">{imageFile ? imageFile.name : 'Clique para enviar imagem'}</span>
+          <span className="mt-1 text-xs text-gray-500">PNG, SVG ou JPEG</span>
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/svg+xml"
+            className="hidden"
+            onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
+          />
+        </label>
         <input type="url" value={imageUrl} onChange={(event) => setImageUrl(event.target.value)} placeholder="https://..." className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
+      </div>
+
+      <div className="md:col-span-2 rounded-md border border-gray-100 bg-white p-4">
+        <h3 className="mb-3 text-sm font-semibold text-ml-dark">Dados de entrega da conta</h3>
+        <div className="mb-4 grid gap-3 sm:grid-cols-2">
+          <label className={`rounded-md border p-3 text-sm ${deliveryMethod === 'ready' ? 'border-ml-blue bg-blue-50/40' : 'border-gray-200'}`}>
+            <input type="radio" checked={deliveryMethod === 'ready'} onChange={() => setDeliveryMethod('ready')} className="mr-2" />
+            Pronta entrega
+          </label>
+          <label className={`rounded-md border p-3 text-sm ${deliveryMethod === 'dropservice' ? 'border-ml-blue bg-blue-50/40' : 'border-gray-200'}`}>
+            <input type="radio" checked={deliveryMethod === 'dropservice'} onChange={() => setDeliveryMethod('dropservice')} className="mr-2" />
+            Dropservice
+          </label>
+        </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">@ do perfil vinculado</label>
+            <input value={profileHandle} onChange={(event) => setProfileHandle(event.target.value)} placeholder="@perfil" className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email da conta</label>
+            <input value={accountEmail} onChange={(event) => setAccountEmail(event.target.value)} className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Senha da conta</label>
+            <input value={accountPassword} onChange={(event) => setAccountPassword(event.target.value)} className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email vinculado</label>
+            <input value={recoveryEmail} onChange={(event) => setRecoveryEmail(event.target.value)} className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Senha do email vinculado</label>
+            <input value={recoveryPassword} onChange={(event) => setRecoveryPassword(event.target.value)} className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Observacao para o comprador</label>
+            <input value={sellerNote} onChange={(event) => setSellerNote(event.target.value)} className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
+          </div>
+        </div>
       </div>
 
       <div>

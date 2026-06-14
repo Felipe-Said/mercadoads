@@ -31,6 +31,7 @@ export interface Product {
   sales_count: number
   status: 'draft' | 'active' | 'paused' | 'rejected'
   hidden_by_admin?: boolean
+  delivery_method?: 'ready' | 'dropservice' | null
   is_boosted?: boolean
   boosted_at?: string | null
   boost_expires_at?: string | null
@@ -201,6 +202,7 @@ function mapProduct(row: Record<string, unknown>): Product {
     sales_count: toNumber(row.sales_count),
     status: (row.status as Product['status']) ?? 'active',
     hidden_by_admin: Boolean(row.hidden_by_admin ?? false),
+    delivery_method: (row.delivery_method as Product['delivery_method']) ?? 'ready',
     is_boosted: Boolean(row.is_boosted ?? false),
     boosted_at: (row.boosted_at as string | null) ?? null,
     boost_expires_at: (row.boost_expires_at as string | null) ?? null,
