@@ -11,7 +11,7 @@ export function Contact() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <a href="https://wa.me/5511999999999" target="_blank" rel="noopener noreferrer" className="block outline-none group/card">
+        <a href="https://wa.me/message/JLRCET4IDO5QD1" target="_blank" rel="noopener noreferrer" className="block outline-none group/card">
           <Card className="overflow-hidden flex flex-col justify-between bg-white border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 rounded-md h-full cursor-pointer">
             <CardContent className="p-8 flex flex-col items-center text-center">
               <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mb-6 text-green-500 group-hover/card:scale-110 transition-transform">
@@ -26,7 +26,7 @@ export function Contact() {
           </Card>
         </a>
 
-        <a href="mailto:suporte@mercadoads.com.br" className="block outline-none group/card">
+        <a href="mailto:saidlabsglobal@gmail.com" className="block outline-none group/card">
           <Card className="overflow-hidden flex flex-col justify-between bg-white border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 rounded-md h-full cursor-pointer">
             <CardContent className="p-8 flex flex-col items-center text-center">
               <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-6 text-ml-blue group-hover/card:scale-110 transition-transform">
