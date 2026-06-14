@@ -171,12 +171,12 @@ export function AfiliacoesUser() {
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {affiliates.map((affiliate) => {
-                      const baseUrl = typeof window === 'undefined' ? 'https://cookiemarket.net' : window.location.origin
+                      const publicBaseUrl = 'https://cookiemarket.lat'
                       const productId = affiliate.product?.id ?? affiliate.product_id
                       const fallbackStore = affiliate.seller?.full_name?.replace(/\s+/g, '').toLowerCase() || 'loja'
                       const linkStr = productId
-                        ? `${baseUrl}/produto/${productId}?ref=${user?.id ?? ''}`
-                        : `${baseUrl}/loja/${fallbackStore}?ref=${user?.id ?? ''}`
+                        ? `${publicBaseUrl}/produto/${productId}?ref=${user?.id ?? ''}`
+                        : `${publicBaseUrl}/loja/${fallbackStore}?ref=${user?.id ?? ''}`
                       return (
                         <tr key={affiliate.id} className="hover:bg-gray-50/50 transition-colors">
                           <td className="px-6 py-4">

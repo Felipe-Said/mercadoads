@@ -252,7 +252,7 @@ export function ProductPage() {
       return
     }
 
-    const link = `${window.location.origin}/produto/${product.id}?ref=${user.id}`
+    const link = `https://cookiemarket.lat/produto/${product.id}?ref=${user.id}`
 
     if (existingAffiliate) {
       setAffiliateLoading(false)
