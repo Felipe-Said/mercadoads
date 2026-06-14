@@ -99,9 +99,6 @@ export function StoreBio() {
           <h1 className="text-3xl font-black leading-tight" style={{ color: theme.storeNameText }}>{storeName}</h1>
           <p className="mt-2 max-w-sm text-sm leading-6" style={{ color: theme.bioText }}>{bioText}</p>
 
-          <div className="mt-4 rounded-full border px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] shadow-sm" style={{ backgroundColor: theme.countBadgeBackground, borderColor: theme.countBadgeBorder, color: theme.countBadgeText }}>
-            {products.length} produtos ativos
-          </div>
         </section>
 
         <section className="w-full space-y-3">

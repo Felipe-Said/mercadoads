@@ -664,12 +664,6 @@ export function Personalizacao() {
                     <ColorControl label="Texto da bio" value={storeBioTheme.bioText} onChange={(value) => updateStoreBioTheme('bioText', value)} />
                   </TokenGroup>
 
-                  <TokenGroup title="Contador de produtos" columns="single">
-                    <ColorControl label="Fundo do contador" value={storeBioTheme.countBadgeBackground} onChange={(value) => updateStoreBioTheme('countBadgeBackground', value)} />
-                    <ColorControl label="Borda do contador" value={storeBioTheme.countBadgeBorder} onChange={(value) => updateStoreBioTheme('countBadgeBorder', value)} />
-                    <ColorControl label="Texto do contador" value={storeBioTheme.countBadgeText} onChange={(value) => updateStoreBioTheme('countBadgeText', value)} />
-                  </TokenGroup>
-
                   <TokenGroup title="Cards de produto" columns="single">
                     <ColorControl label="Fundo do card" value={storeBioTheme.productCardBackground} onChange={(value) => updateStoreBioTheme('productCardBackground', value)} />
                     <ColorControl label="Borda do card" value={storeBioTheme.productCardBorder} onChange={(value) => updateStoreBioTheme('productCardBorder', value)} />
@@ -699,7 +693,6 @@ export function Personalizacao() {
                     <div className="mb-3 flex h-20 w-20 items-center justify-center rounded-full border-4 text-2xl font-bold" style={{ backgroundColor: storeBioTheme.avatarBackground, borderColor: storeBioTheme.avatarBorderColor, color: storeBioTheme.avatarFallbackText }}>C</div>
                     <h3 className="text-xl font-black" style={{ color: storeBioTheme.storeNameText }}>Cookie Shop</h3>
                     <p className="mt-1 text-sm" style={{ color: storeBioTheme.bioText }}>Produtos digitais selecionados.</p>
-                    <span className="mt-3 rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-[0.14em]" style={{ backgroundColor: storeBioTheme.countBadgeBackground, borderColor: storeBioTheme.countBadgeBorder, color: storeBioTheme.countBadgeText }}>3 produtos ativos</span>
                   </div>
                   <div className="flex items-center gap-3 rounded-[18px] border p-3" style={{ backgroundColor: storeBioTheme.productCardBackground, borderColor: storeBioTheme.productCardBorder, boxShadow: `0 10px 24px ${storeBioTheme.productCardShadow}` }}>
                     <div className="h-14 w-14 rounded-2xl" style={{ backgroundColor: storeBioTheme.productImageBackground }} />
