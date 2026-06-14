@@ -24,6 +24,37 @@ export type HomeSectionSettings = {
   homeBottom: boolean
 }
 
+export type StoreBioThemeSettings = {
+  pageBackground: string
+  loaderColor: string
+  avatarBackground: string
+  avatarBorderColor: string
+  avatarFallbackText: string
+  verifiedBadgeBackground: string
+  verifiedBadgeIcon: string
+  storeNameText: string
+  bioText: string
+  countBadgeBackground: string
+  countBadgeBorder: string
+  countBadgeText: string
+  productCardBackground: string
+  productCardBorder: string
+  productCardShadow: string
+  productImageBackground: string
+  productTitleText: string
+  productPriceText: string
+  productButtonBackground: string
+  productButtonText: string
+  emptyCardBackground: string
+  emptyCardBorder: string
+  emptyText: string
+  footerText: string
+  errorTitleText: string
+  errorBodyText: string
+  errorButtonBackground: string
+  errorButtonText: string
+}
+
 export type PlatformSettingsSnapshot = {
   primaryColor?: string | null
   secondaryColor?: string | null
@@ -40,6 +71,7 @@ export type PlatformSettingsSnapshot = {
   navBackgroundColor: string
   navTextColor: string
   homeSections: HomeSectionSettings
+  storeBioTheme: StoreBioThemeSettings
 }
 
 export const DEFAULT_HEADER_PROMO: HeaderPromoSettings = {
@@ -77,6 +109,36 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettingsSnapshot = {
     homeMiddle: false,
     homeBottom: false,
   },
+  storeBioTheme: {
+    pageBackground: '#f7f1ed',
+    loaderColor: '#3b1f18',
+    avatarBackground: '#f0e8e2',
+    avatarBorderColor: '#ffffff',
+    avatarFallbackText: '#8a4f3f',
+    verifiedBadgeBackground: '#ffffff',
+    verifiedBadgeIcon: '#16a34a',
+    storeNameText: '#1f130f',
+    bioText: '#6b5a54',
+    countBadgeBackground: '#ffffff',
+    countBadgeBorder: '#ffffff',
+    countBadgeText: '#7a4638',
+    productCardBackground: '#ffffff',
+    productCardBorder: '#ffffff',
+    productCardShadow: '#d8c9c1',
+    productImageBackground: '#f0e8e2',
+    productTitleText: '#1f130f',
+    productPriceText: '#15803d',
+    productButtonBackground: '#3b1f18',
+    productButtonText: '#ffffff',
+    emptyCardBackground: '#ffffff',
+    emptyCardBorder: '#ffffff',
+    emptyText: '#6b5a54',
+    footerText: '#7a4638',
+    errorTitleText: '#1f130f',
+    errorBodyText: '#6b5a54',
+    errorButtonBackground: '#3b1f18',
+    errorButtonText: '#ffffff',
+  },
 }
 
 type PlatformSettingsRow = {
@@ -95,6 +157,7 @@ type PlatformSettingsRow = {
   header_nav_bg_color?: string | null
   header_nav_text_color?: string | null
   home_sections_json?: Partial<HomeSectionSettings> | null
+  store_bio_theme_json?: Partial<StoreBioThemeSettings> | null
 }
 
 let memorySnapshot: PlatformSettingsSnapshot | null = null
@@ -123,6 +186,10 @@ function normalizeSnapshot(row?: PlatformSettingsRow | null): PlatformSettingsSn
     homeSections: {
       ...DEFAULT_PLATFORM_SETTINGS.homeSections,
       ...(row?.home_sections_json ?? {}),
+    },
+    storeBioTheme: {
+      ...DEFAULT_PLATFORM_SETTINGS.storeBioTheme,
+      ...(row?.store_bio_theme_json ?? {}),
     },
   }
 }
@@ -167,7 +234,7 @@ export async function loadPlatformSettings({ force = false } = {}) {
 
   pendingLoad = supabase
     .from('platform_settings')
-    .select('primary_color, secondary_color, favicon_url, browser_title, browser_title_inactive, layout_theme_json, logo_url, logo_desktop_size, logo_mobile_size, header_promo_json, header_topbar_bg_color, header_topbar_text_color, header_nav_bg_color, header_nav_text_color, home_sections_json')
+    .select('primary_color, secondary_color, favicon_url, browser_title, browser_title_inactive, layout_theme_json, logo_url, logo_desktop_size, logo_mobile_size, header_promo_json, header_topbar_bg_color, header_topbar_text_color, header_nav_bg_color, header_nav_text_color, home_sections_json, store_bio_theme_json')
     .eq('id', 1)
     .maybeSingle()
     .then(({ data, error }) => {

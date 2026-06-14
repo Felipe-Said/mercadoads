@@ -16,9 +16,6 @@ export function Configuracoes() {
   const [avatarUrl, setAvatarUrl] = useState('')
   const [storeSlug, setStoreSlug] = useState('')
   const [storeBio, setStoreBio] = useState('')
-  const [storeBioBackgroundColor, setStoreBioBackgroundColor] = useState('#f7f1ed')
-  const [storeBioButtonColor, setStoreBioButtonColor] = useState('#3b1f18')
-  const [storeBioButtonTextColor, setStoreBioButtonTextColor] = useState('#ffffff')
   const [saved, setSaved] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -30,9 +27,6 @@ export function Configuracoes() {
       setAvatarUrl(profile?.avatar_url ?? '')
       setStoreSlug(profile?.store_slug ?? '')
       setStoreBio(profile?.store_bio ?? '')
-      setStoreBioBackgroundColor(profile?.store_bio_background_color ?? '#f7f1ed')
-      setStoreBioButtonColor(profile?.store_bio_button_color ?? '#3b1f18')
-      setStoreBioButtonTextColor(profile?.store_bio_button_text_color ?? '#ffffff')
     }, 0)
     return () => window.clearTimeout(timeout)
   }, [profile])
@@ -81,9 +75,6 @@ export function Configuracoes() {
         ...(profile?.role === 'seller' ? {
           store_slug: finalSlug || null,
           store_bio: storeBio || null,
-          store_bio_background_color: storeBioBackgroundColor || null,
-          store_bio_button_color: storeBioButtonColor || null,
-          store_bio_button_text_color: storeBioButtonTextColor || null,
         } : {})
       })
       setSaved(true)
@@ -172,21 +163,9 @@ export function Configuracoes() {
                     />
                     <p className="mt-1 text-xs text-gray-400">{storeBio.length}/180</p>
                   </div>
-
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <label className="text-sm font-semibold text-ml-dark">
-                      Fundo
-                      <input type="color" value={storeBioBackgroundColor} onChange={(event) => setStoreBioBackgroundColor(event.target.value)} className="mt-2 h-11 w-full rounded-sm border border-gray-300 bg-white p-1" />
-                    </label>
-                    <label className="text-sm font-semibold text-ml-dark">
-                      Botao
-                      <input type="color" value={storeBioButtonColor} onChange={(event) => setStoreBioButtonColor(event.target.value)} className="mt-2 h-11 w-full rounded-sm border border-gray-300 bg-white p-1" />
-                    </label>
-                    <label className="text-sm font-semibold text-ml-dark">
-                      Icone do botao
-                      <input type="color" value={storeBioButtonTextColor} onChange={(event) => setStoreBioButtonTextColor(event.target.value)} className="mt-2 h-11 w-full rounded-sm border border-gray-300 bg-white p-1" />
-                    </label>
-                  </div>
+                  <p className="rounded-sm border border-gray-200 bg-white p-3 text-xs text-gray-500">
+                    As cores e aparencia do link bio sao controladas pelo admin em Personalizacao.
+                  </p>
                 </div>
               )}
 

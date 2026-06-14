@@ -6,7 +6,7 @@ import { Button } from '../../components/ui/button'
 import { type BannerPosition } from '../../lib/data'
 import { supabase } from '../../lib/supabase'
 import { applyPlatformTheme, DEFAULT_LAYOUT_THEME, type LayoutTheme } from '../../lib/theme'
-import { DEFAULT_PLATFORM_SETTINGS, type HomeSectionSettings } from '../../lib/platformSettings'
+import { DEFAULT_PLATFORM_SETTINGS, type HomeSectionSettings, type StoreBioThemeSettings } from '../../lib/platformSettings'
 
 type BannerForm = {
   title: string
@@ -71,6 +71,7 @@ const sectionLinks = [
   { id: 'cores', label: 'Cores globais' },
   { id: 'tokens', label: 'Tokens de layout' },
   { id: 'auth', label: 'Login e cadastro' },
+  { id: 'link-bio', label: 'Link bio' },
   { id: 'aba', label: 'Aba do navegador' },
   { id: 'campos-home', label: 'Campos da home' },
   { id: 'banners', label: 'Banners' },
@@ -123,6 +124,7 @@ export function Personalizacao() {
   const [headerNavText, setHeaderNavText] = useState('#333333')
   const [layoutTheme, setLayoutTheme] = useState<LayoutTheme>(DEFAULT_LAYOUT_THEME)
   const [homeSections, setHomeSections] = useState<HomeSectionSettings>(DEFAULT_PLATFORM_SETTINGS.homeSections)
+  const [storeBioTheme, setStoreBioTheme] = useState<StoreBioThemeSettings>(DEFAULT_PLATFORM_SETTINGS.storeBioTheme)
   const [headerPromo, setHeaderPromo] = useState<HeaderPromoState>({
     enabled: true,
     gifUrl: '',
@@ -174,6 +176,7 @@ export function Personalizacao() {
     setHeaderNavText(data?.header_nav_text_color ?? '#333333')
     setLayoutTheme({ ...DEFAULT_LAYOUT_THEME, ...(data?.layout_theme_json ?? {}) })
     setHomeSections({ ...DEFAULT_PLATFORM_SETTINGS.homeSections, ...(data?.home_sections_json ?? {}) })
+    setStoreBioTheme({ ...DEFAULT_PLATFORM_SETTINGS.storeBioTheme, ...(data?.store_bio_theme_json ?? {}) })
     setHeaderPromo({
       enabled: data?.header_promo_json?.enabled ?? true,
       gifUrl: data?.header_promo_json?.gifUrl ?? '',
@@ -244,6 +247,7 @@ export function Personalizacao() {
       header_nav_text_color: headerNavText,
       layout_theme_json: layoutTheme,
       home_sections_json: homeSections,
+      store_bio_theme_json: storeBioTheme,
       header_promo_json: {
         enabled: headerPromo.enabled,
         gifUrl: headerPromo.gifUrl,
@@ -353,6 +357,10 @@ export function Personalizacao() {
 
   const updateHomeSection = (key: keyof HomeSectionSettings, value: boolean) => {
     setHomeSections((current) => ({ ...current, [key]: value }))
+  }
+
+  const updateStoreBioTheme = (key: keyof StoreBioThemeSettings, value: string) => {
+    setStoreBioTheme((current) => ({ ...current, [key]: value }))
   }
 
   return (
@@ -638,6 +646,73 @@ export function Personalizacao() {
             </CardContent>
           </Card>
 
+          <Card id="link-bio" className="rounded-sm border-gray-200 bg-white shadow-sm">
+            <CardContent className="p-6">
+              <SectionTitle title="Link bio das lojas" subtitle="Somente o admin controla as cores e a identidade visual das paginas publicas /loja." />
+              <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+                <div className="grid gap-5 lg:grid-cols-2">
+                  <TokenGroup title="Pagina e perfil">
+                    <ColorControl label="Fundo da pagina" value={storeBioTheme.pageBackground} onChange={(value) => updateStoreBioTheme('pageBackground', value)} />
+                    <ColorControl label="Loader/carregamento" value={storeBioTheme.loaderColor} onChange={(value) => updateStoreBioTheme('loaderColor', value)} />
+                    <ColorControl label="Fundo do avatar" value={storeBioTheme.avatarBackground} onChange={(value) => updateStoreBioTheme('avatarBackground', value)} />
+                    <ColorControl label="Borda do avatar" value={storeBioTheme.avatarBorderColor} onChange={(value) => updateStoreBioTheme('avatarBorderColor', value)} />
+                    <ColorControl label="Letra do avatar sem foto" value={storeBioTheme.avatarFallbackText} onChange={(value) => updateStoreBioTheme('avatarFallbackText', value)} />
+                    <ColorControl label="Fundo do selo verificado" value={storeBioTheme.verifiedBadgeBackground} onChange={(value) => updateStoreBioTheme('verifiedBadgeBackground', value)} />
+                    <ColorControl label="Icone do selo verificado" value={storeBioTheme.verifiedBadgeIcon} onChange={(value) => updateStoreBioTheme('verifiedBadgeIcon', value)} />
+                    <ColorControl label="Nome da loja" value={storeBioTheme.storeNameText} onChange={(value) => updateStoreBioTheme('storeNameText', value)} />
+                    <ColorControl label="Texto da bio" value={storeBioTheme.bioText} onChange={(value) => updateStoreBioTheme('bioText', value)} />
+                  </TokenGroup>
+
+                  <TokenGroup title="Contador de produtos">
+                    <ColorControl label="Fundo do contador" value={storeBioTheme.countBadgeBackground} onChange={(value) => updateStoreBioTheme('countBadgeBackground', value)} />
+                    <ColorControl label="Borda do contador" value={storeBioTheme.countBadgeBorder} onChange={(value) => updateStoreBioTheme('countBadgeBorder', value)} />
+                    <ColorControl label="Texto do contador" value={storeBioTheme.countBadgeText} onChange={(value) => updateStoreBioTheme('countBadgeText', value)} />
+                  </TokenGroup>
+
+                  <TokenGroup title="Cards de produto">
+                    <ColorControl label="Fundo do card" value={storeBioTheme.productCardBackground} onChange={(value) => updateStoreBioTheme('productCardBackground', value)} />
+                    <ColorControl label="Borda do card" value={storeBioTheme.productCardBorder} onChange={(value) => updateStoreBioTheme('productCardBorder', value)} />
+                    <ColorControl label="Sombra do card" value={storeBioTheme.productCardShadow} onChange={(value) => updateStoreBioTheme('productCardShadow', value)} />
+                    <ColorControl label="Fundo da imagem" value={storeBioTheme.productImageBackground} onChange={(value) => updateStoreBioTheme('productImageBackground', value)} />
+                    <ColorControl label="Titulo do produto" value={storeBioTheme.productTitleText} onChange={(value) => updateStoreBioTheme('productTitleText', value)} />
+                    <ColorControl label="Preco" value={storeBioTheme.productPriceText} onChange={(value) => updateStoreBioTheme('productPriceText', value)} />
+                    <ColorControl label="Fundo do botao/seta" value={storeBioTheme.productButtonBackground} onChange={(value) => updateStoreBioTheme('productButtonBackground', value)} />
+                    <ColorControl label="Icone do botao/seta" value={storeBioTheme.productButtonText} onChange={(value) => updateStoreBioTheme('productButtonText', value)} />
+                  </TokenGroup>
+
+                  <TokenGroup title="Estado vazio, rodape e erro">
+                    <ColorControl label="Fundo do card vazio" value={storeBioTheme.emptyCardBackground} onChange={(value) => updateStoreBioTheme('emptyCardBackground', value)} />
+                    <ColorControl label="Borda do card vazio" value={storeBioTheme.emptyCardBorder} onChange={(value) => updateStoreBioTheme('emptyCardBorder', value)} />
+                    <ColorControl label="Texto do card vazio" value={storeBioTheme.emptyText} onChange={(value) => updateStoreBioTheme('emptyText', value)} />
+                    <ColorControl label="Rodape Cookie Market" value={storeBioTheme.footerText} onChange={(value) => updateStoreBioTheme('footerText', value)} />
+                    <ColorControl label="Erro - titulo" value={storeBioTheme.errorTitleText} onChange={(value) => updateStoreBioTheme('errorTitleText', value)} />
+                    <ColorControl label="Erro - texto" value={storeBioTheme.errorBodyText} onChange={(value) => updateStoreBioTheme('errorBodyText', value)} />
+                    <ColorControl label="Erro - fundo do botao" value={storeBioTheme.errorButtonBackground} onChange={(value) => updateStoreBioTheme('errorButtonBackground', value)} />
+                    <ColorControl label="Erro - texto do botao" value={storeBioTheme.errorButtonText} onChange={(value) => updateStoreBioTheme('errorButtonText', value)} />
+                  </TokenGroup>
+                </div>
+
+                <div className="rounded-sm border border-gray-200 p-4" style={{ backgroundColor: storeBioTheme.pageBackground }}>
+                  <p className="mb-4 text-xs font-bold uppercase tracking-[0.16em]" style={{ color: storeBioTheme.footerText }}>Preview link bio</p>
+                  <div className="mb-4 flex flex-col items-center text-center">
+                    <div className="mb-3 flex h-20 w-20 items-center justify-center rounded-full border-4 text-2xl font-bold" style={{ backgroundColor: storeBioTheme.avatarBackground, borderColor: storeBioTheme.avatarBorderColor, color: storeBioTheme.avatarFallbackText }}>C</div>
+                    <h3 className="text-xl font-black" style={{ color: storeBioTheme.storeNameText }}>Cookie Shop</h3>
+                    <p className="mt-1 text-sm" style={{ color: storeBioTheme.bioText }}>Produtos digitais selecionados.</p>
+                    <span className="mt-3 rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-[0.14em]" style={{ backgroundColor: storeBioTheme.countBadgeBackground, borderColor: storeBioTheme.countBadgeBorder, color: storeBioTheme.countBadgeText }}>3 produtos ativos</span>
+                  </div>
+                  <div className="flex items-center gap-3 rounded-[18px] border p-3" style={{ backgroundColor: storeBioTheme.productCardBackground, borderColor: storeBioTheme.productCardBorder, boxShadow: `0 10px 24px ${storeBioTheme.productCardShadow}` }}>
+                    <div className="h-14 w-14 rounded-2xl" style={{ backgroundColor: storeBioTheme.productImageBackground }} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-extrabold" style={{ color: storeBioTheme.productTitleText }}>Produto exemplo</p>
+                      <p className="text-sm font-black" style={{ color: storeBioTheme.productPriceText }}>R$ 150,00</p>
+                    </div>
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full" style={{ backgroundColor: storeBioTheme.productButtonBackground, color: storeBioTheme.productButtonText }}>→</div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card id="aba" className="rounded-sm border-gray-200 bg-white shadow-sm">
             <CardContent className="p-6">
               <SectionTitle title="Aba do navegador" subtitle="Controle o texto quando o usuario esta na pagina e quando sai dela." />
@@ -856,10 +931,12 @@ function TokenGroup({ title, children }: { title: string; children: React.ReactN
 }
 
 function ColorControl({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  const pickerValue = /^#[0-9a-fA-F]{6}$/.test(value) ? value : '#000000'
+
   return (
     <Field label={label}>
       <div className="flex items-center gap-3">
-        <input type="color" value={value} onChange={(event) => onChange(event.target.value)} className="h-10 w-12 rounded-sm border border-gray-300 bg-white p-1" />
+        <input type="color" value={pickerValue} onChange={(event) => onChange(event.target.value)} className="h-10 w-12 rounded-sm border border-gray-300 bg-white p-1" />
         <input value={value} onChange={(event) => onChange(event.target.value)} className="h-10 w-full rounded-sm border border-gray-300 px-3 font-mono text-sm" />
       </div>
     </Field>
