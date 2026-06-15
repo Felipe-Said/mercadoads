@@ -14,11 +14,14 @@ export function MeusAnuncios() {
   const [products, setProducts] = useState<Product[]>([])
   const [showForm, setShowForm] = useState(false)
   const [activeTab, setActiveTab] = useState<Tab>('products')
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null)
+  const [deleteMessage, setDeleteMessage] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const loadProducts = useCallback(async () => {
     if (!user) return
     const data = await getProducts({ sellerId: user.id, includeInactive: true })
-    setProducts(data)
+    setProducts(data.filter((product) => product.status !== 'paused' && !product.hidden_by_admin))
   }, [user])
 
   useEffect(() => {
@@ -28,19 +31,31 @@ export function MeusAnuncios() {
     return () => window.clearTimeout(timeout)
   }, [loadProducts])
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Tem certeza que deseja apagar este anúncio? Esta ação não pode ser desfeita.')) return
-    
-    if (!user) return
-    const { error } = await supabase.from('products').delete().eq('id', id).eq('seller_id', user.id)
+  const handleDelete = async () => {
+    if (!user || !productToDelete) return
+
+    setDeleting(true)
+    setDeleteMessage(null)
+
+    const { error } = await supabase
+      .from('products')
+      .update({ status: 'paused', hidden_by_admin: true })
+      .eq('id', productToDelete.id)
+      .eq('seller_id', user.id)
+
     if (error) {
-      alert('Erro ao apagar produto: ' + error.message)
+      setDeleteMessage('Erro ao remover produto: ' + error.message)
     } else {
-      loadProducts()
+      setProducts((current) => current.filter((product) => product.id !== productToDelete.id))
+      setProductToDelete(null)
+      await loadProducts()
     }
+
+    setDeleting(false)
   }
 
   const boostedProducts = products.filter(isProductBoosted)
+  const visibleProducts = activeTab === 'products' ? products : boostedProducts
 
   return (
     <SellerLayout>
@@ -102,11 +117,11 @@ export function MeusAnuncios() {
                   <th className="px-6 py-4 font-medium">Vendas</th>
                   <th className="px-6 py-4 font-medium">Status</th>
                   {activeTab === 'boosted' && <th className="px-6 py-4 font-medium">Impulsionamento</th>}
-                  <th className="px-6 py-4 font-medium text-right">Ações</th>
+                  <th className="px-6 py-4 font-medium text-right">Acoes</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {(activeTab === 'products' ? products : boostedProducts).map((product) => (
+                {visibleProducts.map((product) => (
                   <tr key={product.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4 font-medium text-ml-dark">{product.title}</td>
                     <td className="px-6 py-4">{formatCurrency(product.price)}</td>
@@ -126,13 +141,13 @@ export function MeusAnuncios() {
                       </td>
                     )}
                     <td className="px-6 py-4 text-right">
-                      <button onClick={() => handleDelete(product.id)} className="text-red-500 hover:text-red-700 font-medium text-sm transition-colors">
+                      <button onClick={() => setProductToDelete(product)} className="text-red-500 hover:text-red-700 font-medium text-sm transition-colors">
                         Excluir
                       </button>
                     </td>
                   </tr>
                 ))}
-                {(activeTab === 'products' ? products : boostedProducts).length === 0 && (
+                {visibleProducts.length === 0 && (
                   <tr>
                     <td className="px-6 py-8 text-center text-gray-500" colSpan={activeTab === 'boosted' ? 7 : 6}>
                       {activeTab === 'products' ? 'Nenhum anuncio cadastrado.' : 'Nenhum produto impulsionado no momento.'}
@@ -143,6 +158,38 @@ export function MeusAnuncios() {
             </table>
           </div>
         </Card>
+
+        {productToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+            <div className="w-full max-w-md rounded-md border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] p-6 shadow-2xl">
+              <h3 className="text-lg font-bold text-[var(--layout-text-primary)]">Excluir produto</h3>
+              <p className="mt-2 text-sm leading-6 text-[var(--layout-text-muted)]">
+                Tem certeza que deseja remover <strong>{productToDelete.title}</strong>? O produto saira da loja, mas o historico de vendas sera mantido.
+              </p>
+              {deleteMessage && <p className="mt-3 text-sm font-semibold text-red-600">{deleteMessage}</p>}
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProductToDelete(null)
+                    setDeleteMessage(null)
+                  }}
+                  className="rounded-sm border border-[var(--layout-border-color)] px-4 py-2 text-sm font-semibold text-[var(--layout-text-primary)] transition-colors hover:bg-[var(--layout-subtle-background)]"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="rounded-sm bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-wait disabled:opacity-70"
+                >
+                  {deleting ? 'Removendo...' : 'Excluir produto'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </SellerLayout>
   )

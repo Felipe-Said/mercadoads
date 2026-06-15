@@ -21,6 +21,7 @@ type AdminProduct = {
   credentials_data: string[] | null
   file_url: string | null
   seller_note: string | null
+  hidden_by_admin?: boolean | null
 }
 
 export function MeusAnunciosAdmin() {
@@ -44,6 +45,9 @@ export function MeusAnunciosAdmin() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [sellerNote, setSellerNote] = useState('')
+  const [productToDelete, setProductToDelete] = useState<AdminProduct | null>(null)
+  const [deleteMessage, setDeleteMessage] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     fetchProducts()
@@ -56,7 +60,7 @@ export function MeusAnunciosAdmin() {
       .order('created_at', { ascending: false })
       .then(({ data, error }) => {
         if (!error && data) {
-          setProducts((data ?? []).map((product) => ({
+          setProducts((data ?? []).filter((product) => product.status !== 'paused' && !product.hidden_by_admin).map((product) => ({
             ...product,
             id: String(product.id),
             price: Number(product.price ?? 0),
@@ -162,7 +166,7 @@ export function MeusAnunciosAdmin() {
     fetchProducts()
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDeleteLegacy = async (id: string) => {
     if (!window.confirm('Tem certeza que deseja apagar este produto? Esta ação não pode ser desfeita.')) return
     
     const { error } = await supabase.from('products').delete().eq('id', id)
@@ -171,6 +175,28 @@ export function MeusAnunciosAdmin() {
     } else {
       fetchProducts()
     }
+  }
+
+  const archiveProduct = async () => {
+    if (!productToDelete) return
+
+    setDeleting(true)
+    setDeleteMessage(null)
+
+    const { error } = await supabase
+      .from('products')
+      .update({ status: 'paused', hidden_by_admin: true })
+      .eq('id', productToDelete.id)
+
+    if (error) {
+      setDeleteMessage('Erro ao remover produto: ' + error.message)
+    } else {
+      setProducts((current) => current.filter((product) => product.id !== productToDelete.id))
+      setProductToDelete(null)
+      fetchProducts()
+    }
+
+    setDeleting(false)
   }
 
   const filteredProducts = products.filter(p => {
@@ -258,7 +284,7 @@ export function MeusAnunciosAdmin() {
                         <button onClick={() => openEditModal(product)} className="text-ml-blue hover:text-ml-hover font-medium text-sm transition-colors">
                           Editar
                         </button>
-                        <button onClick={() => handleDelete(product.id)} className="text-red-500 hover:text-red-700 font-medium text-sm transition-colors">
+                        <button onClick={() => setProductToDelete(product)} className="text-red-500 hover:text-red-700 font-medium text-sm transition-colors">
                           Excluir
                         </button>
                       </div>
@@ -275,6 +301,38 @@ export function MeusAnunciosAdmin() {
           </div>
         </Card>
       </div>
+
+      <Dialog open={Boolean(productToDelete)} onOpenChange={(open) => {
+        if (!open) {
+          setProductToDelete(null)
+          setDeleteMessage(null)
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Excluir produto</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja remover {productToDelete?.title ? `"${productToDelete.title}"` : 'este produto'}? O produto saira da loja, mas o historico de vendas sera mantido.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteMessage && <p className="text-sm font-semibold text-red-600">{deleteMessage}</p>}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setProductToDelete(null)
+                setDeleteMessage(null)
+              }}
+              disabled={deleting}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={archiveProduct} disabled={deleting} className="bg-red-600 text-white hover:bg-red-700">
+              {deleting ? 'Removendo...' : 'Excluir produto'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
