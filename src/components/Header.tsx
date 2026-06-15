@@ -275,18 +275,20 @@ export function Header() {
   }
 
   const acceptAffiliateInvite = async (notification: NotificationItem) => {
-    const affiliateId = Number(notification.metadata?.affiliate_id ?? 0)
+    const affiliateId = String(notification.metadata?.affiliate_id ?? '').trim()
     if (!affiliateId) return
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('affiliates')
       .update({ status: 'active' })
       .eq('id', affiliateId)
       .eq('user_id', user?.id)
       .eq('status', 'pending')
+      .select('id, status')
+      .maybeSingle()
 
-    if (error) {
-      console.error(error)
+    if (error || !data) {
+      console.error(error ?? new Error('Convite de afiliado nao encontrado ou ja processado.'))
       return
     }
 
