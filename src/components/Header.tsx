@@ -108,6 +108,8 @@ export function Header() {
   const [categoryMenuOpen, setCategoryMenuOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
+  const [notificationActionId, setNotificationActionId] = useState<number | null>(null)
+  const [notificationActionError, setNotificationActionError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const categoryMenuRef = useRef<HTMLDivElement | null>(null)
   const notificationsRef = useRef<HTMLDivElement | null>(null)
@@ -211,6 +213,25 @@ export function Header() {
   }, [user?.id])
 
   useEffect(() => {
+    if (!user) return
+
+    const channel = supabase
+      .channel(`notifications:${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+        () => {
+          loadNotifications().catch(console.error)
+        },
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [user?.id])
+
+  useEffect(() => {
     if (!categoryMenuOpen) return
 
     const closeOnOutsideClick = (event: MouseEvent) => {
@@ -278,22 +299,23 @@ export function Header() {
     const affiliateId = String(notification.metadata?.affiliate_id ?? '').trim()
     if (!affiliateId) return
 
-    const { data, error } = await supabase
-      .from('affiliates')
-      .update({ status: 'active' })
-      .eq('id', affiliateId)
-      .eq('user_id', user?.id)
-      .eq('status', 'pending')
-      .select('id, status')
-      .maybeSingle()
+    setNotificationActionError(null)
+    setNotificationActionId(notification.id)
 
-    if (error || !data) {
+    const { data, error } = await supabase.rpc('accept_affiliate_invite', {
+      target_affiliate_id: affiliateId,
+    })
+
+    if (error || data !== true) {
       console.error(error ?? new Error('Convite de afiliado nao encontrado ou ja processado.'))
+      setNotificationActionError('Nao foi possivel aceitar o convite. Atualize e tente novamente.')
+      setNotificationActionId(null)
       return
     }
 
     await markNotificationRead(notification)
     await loadNotifications()
+    setNotificationActionId(null)
   }
 
   const firstName = profile?.full_name?.trim().split(/\s+/)[0] || user?.email?.split('@')[0] || 'usuario'
@@ -389,10 +411,14 @@ export function Header() {
                             <button
                               type="button"
                               onClick={() => acceptAffiliateInvite(notification)}
-                              className="mt-3 rounded-sm bg-[var(--layout-button-primary-bg)] px-3 py-2 text-xs font-bold text-[var(--layout-button-primary-text)]"
+                              disabled={notificationActionId === notification.id}
+                              className="mt-3 rounded-sm bg-[var(--layout-button-primary-bg)] px-3 py-2 text-xs font-bold text-[var(--layout-button-primary-text)] disabled:cursor-wait disabled:opacity-70"
                             >
-                              Aceitar convite
+                              {notificationActionId === notification.id ? 'Aceitando...' : 'Aceitar convite'}
                             </button>
+                          )}
+                          {notificationActionError && notification.type === 'affiliate_invite' && !notification.read_at && (
+                            <p className="mt-2 text-xs font-semibold text-red-600">{notificationActionError}</p>
                           )}
                         </div>
                       ))}
