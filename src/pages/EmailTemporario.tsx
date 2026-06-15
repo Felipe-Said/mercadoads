@@ -7,6 +7,7 @@ import { getTempEmailServices, provisionTempEmailSale, type TempEmailService } f
 import { supabase } from '../lib/supabase'
 import { getWalletBalances } from '../lib/wallet'
 import { createWestPayPixInOrThrow, validateWestPayCustomer } from '../lib/westpay'
+import { getLinkBioToolSaleFields } from '../lib/affiliateTracking'
 
 function serviceLabel(service: TempEmailService) {
   return (service.name || service.providerName || 'Email temporario').trim()
@@ -185,6 +186,8 @@ export function EmailTemporario() {
         if (balance < service.priceAmount) throw new Error('Voce nao possui fundos suficiente')
       }
 
+      const affiliateFields = await getLinkBioToolSaleFields(service.priceAmount, user.id)
+
       const { data: saleData, error: saleError } = await supabase.from('sales').insert({
         product_id: null,
         buyer_id: user.id,
@@ -195,6 +198,7 @@ export function EmailTemporario() {
         temp_email_service_name: serviceLabel(service),
         temp_email_service_code: service.code,
         temp_email_domain: service.domain || null,
+        ...affiliateFields,
       }).select('id').single()
 
       if (saleError) throw saleError

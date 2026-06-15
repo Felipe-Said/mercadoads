@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import type { Profile, Role } from '../lib/data'
+import { applyStoredLinkBioRef } from '../lib/affiliateTracking'
 
 interface AuthContextType {
   user: User | null
@@ -64,6 +65,14 @@ async function enforceActiveProfile(nextProfile: Profile | null) {
   return nextProfile
 }
 
+async function hydrateProfileAttribution(nextProfile: Profile | null) {
+  if (!nextProfile?.id) return nextProfile
+  const referrerId = await applyStoredLinkBioRef(nextProfile.id)
+  return referrerId && !nextProfile.linkbio_referrer_id
+    ? { ...nextProfile, linkbio_referrer_id: referrerId }
+    : nextProfile
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -77,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const sessionUser = data.session?.user ?? null
       setUser(sessionUser)
       try {
-        setProfile(sessionUser ? await enforceActiveProfile(await ensureProfile(sessionUser)) : null)
+        setProfile(sessionUser ? await hydrateProfileAttribution(await enforceActiveProfile(await ensureProfile(sessionUser))) : null)
       } catch (error) {
         console.error(error)
         setUser(null)
@@ -97,6 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       ensureProfile(sessionUser)
         .then(enforceActiveProfile)
+        .then(hydrateProfileAttribution)
         .then(setProfile)
         .catch((error) => {
           console.error(error)
@@ -121,9 +131,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
       const nextProfile = data.user ? await enforceActiveProfile(await ensureProfile(data.user)) : null
+      const attributedProfile = await hydrateProfileAttribution(nextProfile)
       setUser(data.user)
-      setProfile(nextProfile)
-      return nextProfile
+      setProfile(attributedProfile)
+      return attributedProfile
     },
     signUp: async (fullName, email, password, role = 'user') => {
       const { error } = await supabase.auth.signUp({

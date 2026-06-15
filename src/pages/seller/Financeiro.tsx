@@ -18,8 +18,20 @@ export function Financeiro() {
   const now = Date.now()
   const available = paid.filter((sale) => !sale.claim_until || new Date(sale.claim_until).getTime() <= now)
   const held = paid.filter((sale) => sale.claim_until && new Date(sale.claim_until).getTime() > now)
-  const availableTotal = available.reduce((sum, sale) => sum + sale.amount, 0)
-  const heldTotal = held.reduce((sum, sale) => sum + sale.amount, 0)
+  const getEntryAmount = (sale: Sale) => (
+    sale.affiliate_source === 'linkbio' && sale.affiliate_user_id === user?.id
+      ? Number(sale.affiliate_commission_amount ?? 0)
+      : sale.amount
+  )
+  const getSaleTitle = (sale: Sale) => (
+    sale.products?.title
+      ?? sale.proxy_offers?.name
+      ?? sale.virtual_number_service_name
+      ?? sale.temp_email_service_name
+      ?? (sale.smm_service_name ? `SMM - ${sale.smm_service_name}` : 'Ferramenta da plataforma')
+  )
+  const availableTotal = available.reduce((sum, sale) => sum + getEntryAmount(sale), 0)
+  const heldTotal = held.reduce((sum, sale) => sum + getEntryAmount(sale), 0)
 
   return (
     <SellerLayout>
@@ -38,7 +50,12 @@ export function Financeiro() {
                 {sales.map((sale) => (
                   <tr key={sale.id}>
                     <td className="px-6 py-4 text-gray-500">{formatDate(sale.created_at)}</td>
-                    <td className="px-6 py-4">{sale.products?.title ?? 'Produto removido'}</td>
+                    <td className="px-6 py-4">
+                      <div>{getSaleTitle(sale)}</div>
+                      {sale.affiliate_source === 'linkbio' && sale.affiliate_user_id === user?.id && (
+                        <span className="mt-1 inline-flex rounded-full bg-green-50 px-2 py-0.5 text-xs font-semibold text-green-700">comissão linkbio</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4">
                       {sale.status === 'paid' && sale.claim_until && new Date(sale.claim_until).getTime() > now ? (
                         <span className="inline-flex items-center gap-1 bg-yellow-50 text-yellow-700 px-2 py-1 rounded-sm text-xs font-semibold">
@@ -48,7 +65,7 @@ export function Financeiro() {
                         sale.status
                       )}
                     </td>
-                    <td className="px-6 py-4 text-right">{formatCurrency(sale.amount)}</td>
+                    <td className="px-6 py-4 text-right">{formatCurrency(getEntryAmount(sale))}</td>
                   </tr>
                 ))}
                 {sales.length === 0 && <tr><td className="px-6 py-8 text-center text-gray-500" colSpan={4}>Nenhuma movimentacao encontrada.</td></tr>}

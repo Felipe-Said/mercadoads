@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { CheckCircle2, Package } from 'lucide-react'
-import { ArrowRight2 } from 'iconsax-react'
+import { ArrowRight2, Chart2, CloudConnection, Mobile, Sms } from 'iconsax-react'
 import { PlatformLogo } from '../components/PlatformLogo'
 import { getProducts, getProfileBySlug, type Product, type Profile } from '../lib/data'
 import { DEFAULT_PLATFORM_SETTINGS, loadPlatformSettings, readCachedPlatformSettings, type StoreBioThemeSettings } from '../lib/platformSettings'
@@ -9,6 +9,13 @@ import { DEFAULT_PLATFORM_SETTINGS, loadPlatformSettings, readCachedPlatformSett
 function formatPrice(price: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)
 }
+
+const toolLinks = [
+  { key: 'proxy', label: 'Proxy', href: '/proxy', Icon: CloudConnection },
+  { key: 'smm', label: 'SMM', href: '/smm', Icon: Chart2 },
+  { key: 'numeroVirtual', label: 'Numero virtual', href: '/numero-virtual', Icon: Mobile },
+  { key: 'emailTemporario', label: 'Email temporario', href: '/email-temporario', Icon: Sms },
+]
 
 export function StoreBio() {
   const { storeSlug } = useParams<{ storeSlug: string }>()
@@ -72,6 +79,7 @@ export function StoreBio() {
 
   const storeName = profile.store_name || profile.full_name || 'Cookie Market'
   const bioText = profile.store_bio || profile.seller_category || 'Produtos digitais selecionados para compra segura.'
+  const enabledTools = toolLinks.filter((tool) => profile.store_bio_tools_json?.[tool.key])
 
   return (
     <div className="min-h-screen font-sans" style={{ background: theme.pageBackground }}>
@@ -100,6 +108,22 @@ export function StoreBio() {
           <p className="mt-2 max-w-sm text-sm leading-6" style={{ color: theme.bioText }}>{bioText}</p>
 
         </section>
+
+        {enabledTools.length > 0 && (
+          <section className="mb-5 flex flex-wrap justify-center gap-2">
+            {enabledTools.map(({ key, label, href, Icon }) => (
+              <Link
+                key={key}
+                to={`${href}?lbref=${profile.id}`}
+                className="inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-bold transition-transform hover:-translate-y-0.5"
+                style={{ backgroundColor: theme.productCardBackground, borderColor: theme.productCardBorder, color: theme.productTitleText, boxShadow: `0 8px 20px ${theme.productCardShadow}` }}
+              >
+                <Icon size={17} color="currentColor" variant="Linear" />
+                {label}
+              </Link>
+            ))}
+          </section>
+        )}
 
         <section className="w-full space-y-3">
           {products.length > 0 ? (

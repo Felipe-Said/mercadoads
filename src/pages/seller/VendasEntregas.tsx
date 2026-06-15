@@ -13,6 +13,20 @@ export function VendasEntregas() {
     getSales({ sellerId: user.id }).then(setSales).catch(console.error)
   }, [user])
 
+  const getSaleTitle = (sale: Sale) => (
+    sale.products?.title
+      ?? sale.proxy_offers?.name
+      ?? sale.virtual_number_service_name
+      ?? sale.temp_email_service_name
+      ?? (sale.smm_service_name ? `SMM - ${sale.smm_service_name}` : 'Ferramenta da plataforma')
+  )
+
+  const getSellerAmount = (sale: Sale) => (
+    sale.affiliate_source === 'linkbio' && sale.affiliate_user_id === user?.id
+      ? Number(sale.affiliate_commission_amount ?? 0)
+      : sale.amount
+  )
+
   return (
     <SellerLayout>
       <div className="space-y-6">
@@ -35,9 +49,14 @@ export function VendasEntregas() {
                   <tr key={sale.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4 text-gray-500">{formatDate(sale.created_at)}</td>
                     <td className="px-6 py-4 font-medium text-ml-dark">{sale.buyer?.full_name ?? 'Comprador'}</td>
-                    <td className="px-6 py-4">{sale.products?.title ?? 'Produto removido'}</td>
+                    <td className="px-6 py-4">
+                      <div className="font-medium text-ml-dark">{getSaleTitle(sale)}</div>
+                      {sale.affiliate_source === 'linkbio' && sale.affiliate_user_id === user?.id && (
+                        <span className="mt-1 inline-flex rounded-full bg-green-50 px-2 py-0.5 text-xs font-semibold text-green-700">comissão linkbio</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4"><span className="text-green-500 font-medium">{sale.status}</span></td>
-                    <td className="px-6 py-4 text-right">{formatCurrency(sale.amount)}</td>
+                    <td className="px-6 py-4 text-right">{formatCurrency(getSellerAmount(sale))}</td>
                   </tr>
                 ))}
                 {sales.length === 0 && (

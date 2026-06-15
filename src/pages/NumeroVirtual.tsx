@@ -7,6 +7,7 @@ import { getVirtualNumberServices, provisionVirtualNumberSale, type VirtualNumbe
 import { supabase } from '../lib/supabase'
 import { getWalletBalances } from '../lib/wallet'
 import { createWestPayPixInOrThrow, validateWestPayCustomer } from '../lib/westpay'
+import { getLinkBioToolSaleFields } from '../lib/affiliateTracking'
 
 const countryOptions = [
   { code: 'BR', name: 'Brasil' },
@@ -228,6 +229,8 @@ export function NumeroVirtual() {
         if (balance < service.priceAmount) throw new Error('Voce nao possui fundos suficiente')
       }
 
+      const affiliateFields = await getLinkBioToolSaleFields(service.priceAmount, user.id)
+
       const { data: saleData, error: saleError } = await supabase.from('sales').insert({
         product_id: null,
         buyer_id: user.id,
@@ -241,6 +244,7 @@ export function NumeroVirtual() {
         virtual_number_country_name: countryLabel(selectedCountry),
         virtual_number_ddd: selectedCountry === 'BR' ? selectedDdd || null : null,
         virtual_number_operator: selectedCountry === 'BR' ? dddLabel(selectedDdd) : null,
+        ...affiliateFields,
       }).select('id').single()
 
       if (saleError) throw saleError

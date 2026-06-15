@@ -4,6 +4,7 @@ import { Copy, Globe2, LockKeyhole, RefreshCw, Search, Server, Wifi } from 'luci
 import { createProxyTopupSale, getDecodoProxyCatalog, getMyProxyDeliveries, provisionProxySale, type DecodoProxyDelivery, type DecodoProxyOffer } from '../lib/decodo'
 import { useAuth } from '../contexts/AuthContext'
 import { createWestPayPixInOrThrow, validateWestPayCustomer } from '../lib/westpay'
+import { getLinkBioToolSaleFields } from '../lib/affiliateTracking'
 import { supabase } from '../lib/supabase'
 import { formatCurrency } from '../lib/data'
 import { getWalletBalances } from '../lib/wallet'
@@ -259,6 +260,8 @@ export function Proxy() {
         if (balance < proxy.priceAmount) throw new Error('Você não possui fundos suficiente')
       }
 
+      const affiliateFields = await getLinkBioToolSaleFields(proxy.priceAmount, user.id)
+
       const { data: saleData, error: saleError } = await supabase.from('sales').insert({
         product_id: null,
         proxy_offer_id: Number(proxy.id),
@@ -270,6 +273,7 @@ export function Proxy() {
         proxy_country_name: country.name,
         proxy_endpoint: country.endpoint,
         proxy_port: country.port,
+        ...affiliateFields,
       }).select('id').single()
 
       if (saleError) throw saleError
@@ -344,6 +348,11 @@ export function Proxy() {
       const result = await createProxyTopupSale(delivery.id, offerId)
       saleId = result.sale?.id ? String(result.sale.id) : null
       if (!saleId) throw new Error('Nao foi possivel gerar o pedido de recarga.')
+
+      const affiliateFields = await getLinkBioToolSaleFields(offer.priceAmount, user.id)
+      if (Object.keys(affiliateFields).length > 0) {
+        await supabase.from('sales').update(affiliateFields).eq('id', saleId)
+      }
 
       if (topupPaymentMethod === 'wallet') {
         const { error: spendError } = await supabase.from('wallet_spends').insert({

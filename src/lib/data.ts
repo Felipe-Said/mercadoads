@@ -14,9 +14,11 @@ export interface Profile {
   store_name?: string | null
   store_slug?: string | null
   store_bio?: string | null
+  store_bio_tools_json?: Record<string, boolean> | null
   store_bio_background_color?: string | null
   store_bio_button_color?: string | null
   store_bio_button_text_color?: string | null
+  linkbio_referrer_id?: string | null
   seller_category?: string | null
   created_at: string
 }
@@ -101,6 +103,7 @@ export interface Sale {
   payment_qrcode_text?: string | null
   payment_qrcode_expires_at?: string | null
   affiliate_user_id?: string | null
+  affiliate_source?: string | null
   affiliate_commission_percent?: number | null
   affiliate_commission_amount?: number | null
   proxy_country_code?: string | null
@@ -284,9 +287,11 @@ export async function getProfileBySlug(slug: string): Promise<Profile | null> {
     store_name: (data.store_name as string | null) ?? null,
     store_slug: (data.store_slug as string | null) ?? null,
     store_bio: (data.store_bio as string | null) ?? null,
+    store_bio_tools_json: (data.store_bio_tools_json as Record<string, boolean> | null) ?? null,
     store_bio_background_color: (data.store_bio_background_color as string | null) ?? null,
     store_bio_button_color: (data.store_bio_button_color as string | null) ?? null,
     store_bio_button_text_color: (data.store_bio_button_text_color as string | null) ?? null,
+    linkbio_referrer_id: (data.linkbio_referrer_id as string | null) ?? null,
     seller_category: (data.seller_category as string | null) ?? null,
     created_at: String(data.created_at ?? ''),
   }
@@ -540,7 +545,7 @@ export async function getSales(options: { buyerId?: string; sellerId?: string } 
     .order('created_at', { ascending: false })
 
   if (options.buyerId) query = query.eq('buyer_id', options.buyerId)
-  if (options.sellerId) query = query.eq('seller_id', options.sellerId)
+  if (options.sellerId) query = query.or(`seller_id.eq.${options.sellerId},and(affiliate_user_id.eq.${options.sellerId},affiliate_source.eq.linkbio)`)
 
   const { data, error } = await query
   if (error) throw error

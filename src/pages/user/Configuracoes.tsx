@@ -8,6 +8,12 @@ import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
 
 const AVATAR_BUCKET = 'profile_avatars'
+const storeBioToolOptions = [
+  { key: 'proxy', label: 'Proxy' },
+  { key: 'smm', label: 'SMM' },
+  { key: 'numeroVirtual', label: 'Numero virtual' },
+  { key: 'emailTemporario', label: 'Email temporario' },
+]
 
 export function Configuracoes() {
   const { user, profile, updateProfile } = useAuth()
@@ -16,6 +22,7 @@ export function Configuracoes() {
   const [avatarUrl, setAvatarUrl] = useState('')
   const [storeSlug, setStoreSlug] = useState('')
   const [storeBio, setStoreBio] = useState('')
+  const [storeBioTools, setStoreBioTools] = useState<Record<string, boolean>>({})
   const [saved, setSaved] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -27,6 +34,7 @@ export function Configuracoes() {
       setAvatarUrl(profile?.avatar_url ?? '')
       setStoreSlug(profile?.store_slug ?? '')
       setStoreBio(profile?.store_bio ?? '')
+      setStoreBioTools(profile?.store_bio_tools_json ?? {})
     }, 0)
     return () => window.clearTimeout(timeout)
   }, [profile])
@@ -75,6 +83,7 @@ export function Configuracoes() {
         ...(profile?.role === 'seller' ? {
           store_slug: finalSlug || null,
           store_bio: storeBio || null,
+          store_bio_tools_json: storeBioTools,
         } : {})
       })
       setSaved(true)
@@ -166,6 +175,23 @@ export function Configuracoes() {
                   <p className="rounded-sm border border-gray-200 bg-white p-3 text-xs text-gray-500">
                     As cores e aparencia do link bio sao controladas pelo admin em Personalizacao.
                   </p>
+                  <div className="rounded-sm border border-gray-200 bg-white p-4">
+                    <p className="text-sm font-semibold text-ml-dark">Ferramentas no link bio</p>
+                    <p className="mt-1 text-xs text-gray-500">Opcional. Ao ativar, elas aparecem discretamente abaixo da descricao da loja.</p>
+                    <div className="mt-3 grid gap-2 md:grid-cols-2">
+                      {storeBioToolOptions.map((tool) => (
+                        <label key={tool.key} className="flex items-center gap-2 rounded-sm border border-gray-100 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(storeBioTools[tool.key])}
+                            onChange={(event) => setStoreBioTools((current) => ({ ...current, [tool.key]: event.target.checked }))}
+                            className="h-4 w-4 accent-ml-blue"
+                          />
+                          {tool.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
 

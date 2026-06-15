@@ -7,6 +7,7 @@ import { getSmmServices, provisionSmmSale, type SmmService } from '../lib/smm'
 import { supabase } from '../lib/supabase'
 import { getWalletBalances } from '../lib/wallet'
 import { createWestPayPixInOrThrow, validateWestPayCustomer } from '../lib/westpay'
+import { getLinkBioToolSaleFields } from '../lib/affiliateTracking'
 
 function serviceNeedsComments(service: SmmService) {
   const type = service.type.toLowerCase()
@@ -218,6 +219,8 @@ export function SMM() {
         if (balance < totalAmount) throw new Error('Voce nao possui fundos suficiente')
       }
 
+      const affiliateFields = await getLinkBioToolSaleFields(totalAmount, user.id)
+
       const { data: saleData, error: saleError } = await supabase.from('sales').insert({
         product_id: null,
         buyer_id: user.id,
@@ -233,6 +236,7 @@ export function SMM() {
         smm_comments: comments.trim() || null,
         smm_username: username.trim() || null,
         smm_answer_number: answerNumber.trim() || null,
+        ...affiliateFields,
       }).select('id').single()
 
       if (saleError) throw saleError
