@@ -108,6 +108,29 @@ export function AfiliadosSeller() {
     setLoading(false)
   }
 
+  const removeAffiliate = async (affiliateId: string) => {
+    if (!user) return
+    const confirmed = window.confirm('Remover este afiliado da sua rede? Ele nao podera usar o link ate ser convidado novamente.')
+    if (!confirmed) return
+
+    setMessage(null)
+    const { error } = await supabase
+      .from('affiliates')
+      .update({ status: 'inactive' })
+      .eq('id', affiliateId)
+      .eq('seller_id', user.id)
+
+    if (error) {
+      setMessage(error.message)
+      return
+    }
+
+    await loadAffiliates()
+    setMessage('Afiliado removido da rede.')
+  }
+
+  const visibleAffiliates = affiliates.filter((item) => item.status !== 'inactive')
+
   return (
     <SellerLayout>
       <div className="space-y-6">
@@ -175,10 +198,11 @@ export function AfiliadosSeller() {
                   <th className="px-6 py-4">Afiliado</th>
                   <th className="px-6 py-4">Comissao</th>
                   <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4 text-right">Acoes</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {affiliates.map((item) => (
+                {visibleAffiliates.map((item) => (
                   <tr key={item.id}>
                     <td className="px-6 py-4">
                       <p className="font-medium text-ml-dark">{item.user?.full_name ?? 'Usuario'}</p>
@@ -186,9 +210,18 @@ export function AfiliadosSeller() {
                     </td>
                     <td className="px-6 py-4">{item.commission_percent}%</td>
                     <td className="px-6 py-4">{item.status}</td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        type="button"
+                        onClick={() => removeAffiliate(item.id)}
+                        className="rounded-sm px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 hover:text-red-700"
+                      >
+                        Remover
+                      </button>
+                    </td>
                   </tr>
                 ))}
-                {affiliates.length === 0 && <tr><td className="px-6 py-8 text-center text-gray-500" colSpan={3}>Nenhum afiliado encontrado.</td></tr>}
+                {visibleAffiliates.length === 0 && <tr><td className="px-6 py-8 text-center text-gray-500" colSpan={4}>Nenhum afiliado encontrado.</td></tr>}
               </tbody>
             </table>
           </Card>
