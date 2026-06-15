@@ -41,6 +41,8 @@ export function AfiliacoesUser() {
   const [withdrawAmount, setWithdrawAmount] = useState('')
   const [withdrawMessage, setWithdrawMessage] = useState<string | null>(null)
   const [isWithdrawing, setIsWithdrawing] = useState(false)
+  const [acceptingAffiliateId, setAcceptingAffiliateId] = useState<string | null>(null)
+  const [affiliateMessage, setAffiliateMessage] = useState<string | null>(null)
   const availableBalance = 0
 
   useEffect(() => {
@@ -83,6 +85,26 @@ export function AfiliacoesUser() {
     navigator.clipboard.writeText(link)
     setCopiedLink(link)
     setTimeout(() => setCopiedLink(null), 2000)
+  }
+
+  const acceptAffiliate = async (affiliateId: string) => {
+    setAffiliateMessage(null)
+    setAcceptingAffiliateId(affiliateId)
+
+    const { data, error } = await supabase.rpc('accept_affiliate_invite', {
+      target_affiliate_id: affiliateId,
+    })
+
+    if (error || data !== true) {
+      console.error(error ?? new Error('Convite de afiliado nao encontrado ou ja processado.'))
+      setAffiliateMessage('Nao foi possivel aceitar o convite. Atualize e tente novamente.')
+      setAcceptingAffiliateId(null)
+      return
+    }
+
+    setAffiliateMessage('Convite aceito. Seu link foi liberado.')
+    await loadData()
+    setAcceptingAffiliateId(null)
   }
 
   const handleWithdrawRequest = async () => {
@@ -159,6 +181,11 @@ export function AfiliacoesUser() {
               <div className="p-4 border-b border-gray-100 flex items-center justify-between">
                 <h3 className="text-lg font-medium text-ml-dark">Lojas Parceiras & Links</h3>
               </div>
+              {affiliateMessage && (
+                <div className={`border-b border-gray-100 px-6 py-3 text-sm font-semibold ${affiliateMessage.includes('aceito') ? 'text-green-600' : 'text-red-600'}`}>
+                  {affiliateMessage}
+                </div>
+              )}
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead className="bg-gray-50/50 text-gray-500 border-b border-gray-100">
@@ -193,18 +220,28 @@ export function AfiliacoesUser() {
                             </code>
                           </td>
                           <td className="px-6 py-4 text-right">
-                            <button 
-                              onClick={() => handleCopy(linkStr)}
-                              disabled={isPending}
-                              className="p-2 text-gray-400 hover:text-ml-blue hover:bg-blue-50 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40"
-                              title="Copiar Link"
-                            >
-                              {copiedLink === linkStr ? (
-                                <CheckCircle2 className="w-5 h-5 text-green-500" />
-                              ) : (
-                                <Copy className="w-5 h-5" />
-                              )}
-                            </button>
+                            {isPending ? (
+                              <button
+                                type="button"
+                                onClick={() => acceptAffiliate(affiliate.id)}
+                                disabled={acceptingAffiliateId === affiliate.id}
+                                className="rounded-sm bg-[var(--layout-button-primary-bg)] px-3 py-2 text-xs font-bold text-[var(--layout-button-primary-text)] disabled:cursor-wait disabled:opacity-70"
+                              >
+                                {acceptingAffiliateId === affiliate.id ? 'Aceitando...' : 'Aceitar convite'}
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleCopy(linkStr)}
+                                className="p-2 text-gray-400 hover:text-ml-blue hover:bg-blue-50 rounded-full transition-colors"
+                                title="Copiar Link"
+                              >
+                                {copiedLink === linkStr ? (
+                                  <CheckCircle2 className="w-5 h-5 text-green-500" />
+                                ) : (
+                                  <Copy className="w-5 h-5" />
+                                )}
+                              </button>
+                            )}
                           </td>
                         </tr>
                       )

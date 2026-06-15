@@ -296,8 +296,32 @@ export function Header() {
   }
 
   const acceptAffiliateInvite = async (notification: NotificationItem) => {
-    const affiliateId = String(notification.metadata?.affiliate_id ?? '').trim()
-    if (!affiliateId) return
+    const metadata = notification.metadata && typeof notification.metadata === 'object' ? notification.metadata : {}
+    let affiliateId = String(metadata.affiliate_id ?? '').trim()
+
+    if (!affiliateId && user) {
+      let query = supabase
+        .from('affiliates')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(1)
+
+      const sellerId = String(metadata.seller_id ?? '').trim()
+      if (sellerId) query = query.eq('seller_id', sellerId)
+
+      const { data: pendingAffiliate, error: pendingError } = await query.maybeSingle()
+      if (pendingError) {
+        console.error(pendingError)
+      }
+      affiliateId = String(pendingAffiliate?.id ?? '').trim()
+    }
+
+    if (!affiliateId) {
+      setNotificationActionError('Convite nao encontrado. Atualize a pagina e tente novamente.')
+      return
+    }
 
     setNotificationActionError(null)
     setNotificationActionId(notification.id)
