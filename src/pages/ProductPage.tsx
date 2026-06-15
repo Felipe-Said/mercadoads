@@ -34,6 +34,7 @@ export function ProductPage() {
   const { user, profile, loading: authLoading } = useAuth()
   const { addToCart } = useCart()
   const [product, setProduct] = useState<Product | null>(null)
+  const [selectedImage, setSelectedImage] = useState('')
   const [questions, setQuestions] = useState<Question[]>([])
   const [reviews, setReviews] = useState<Review[]>([])
   const [question, setQuestion] = useState('')
@@ -78,6 +79,10 @@ export function ProductPage() {
     setBuyerName(profile?.full_name ?? user?.user_metadata?.full_name ?? '')
     setBuyerPhone(profile?.phone ?? '')
   }, [profile?.full_name, profile?.phone, user?.user_metadata?.full_name])
+
+  useEffect(() => {
+    setSelectedImage(product?.images?.[0] || product?.image || '')
+  }, [product?.id, product?.image, product?.images])
 
   useEffect(() => {
     if (!user) {
@@ -310,6 +315,8 @@ export function ProductPage() {
   const sellerSubtitle = product.seller?.seller_category || product.seller?.full_name || 'Loja verificada'
   const sellerAvatar = product.seller?.avatar_url
   const averageRating = reviews.length ? reviews.reduce((sum, item) => sum + Number(item.rating), 0) / reviews.length : 0
+  const productImages = product.images?.length ? product.images : product.image ? [product.image] : []
+  const activeProductImage = selectedImage || productImages[0] || '/favicon.svg'
 
   return (
     <div className="min-h-screen bg-[var(--layout-page-background)] pb-16">
@@ -328,15 +335,42 @@ export function ProductPage() {
           <section className="overflow-hidden rounded-sm border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] shadow-sm">
             <div className="grid lg:grid-cols-[88px_minmax(0,1fr)]">
               <div className="hidden border-r border-gray-100 bg-gray-50 p-3 lg:block">
-                <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-sm border border-[var(--layout-accent-color)] bg-white p-1">
-                  <img src={product.image || '/favicon.svg'} alt={product.title} className="max-h-full max-w-full object-contain" />
+                <div className="space-y-2">
+                  {productImages.map((image) => (
+                    <button
+                      key={image}
+                      type="button"
+                      onClick={() => setSelectedImage(image)}
+                      className={`flex h-16 w-16 items-center justify-center overflow-hidden rounded-sm border bg-white p-1 transition-colors ${
+                        activeProductImage === image ? 'border-[var(--layout-accent-color)]' : 'border-gray-200 hover:border-gray-400'
+                      }`}
+                    >
+                      <img src={image || '/favicon.svg'} alt={product.title} className="max-h-full max-w-full object-contain" />
+                    </button>
+                  ))}
                 </div>
               </div>
 
               <div className="grid gap-0 xl:grid-cols-[minmax(0,1fr)_360px]">
                 <div className="flex min-h-[420px] items-center justify-center bg-white p-6 md:min-h-[610px]">
-                  <img src={product.image || '/favicon.svg'} alt={product.title} className="max-h-full max-w-full object-contain" />
+                  <img src={activeProductImage} alt={product.title} className="max-h-full max-w-full object-contain" />
                 </div>
+                {productImages.length > 1 && (
+                  <div className="flex gap-2 overflow-x-auto border-t border-gray-100 bg-gray-50 p-3 lg:hidden">
+                    {productImages.map((image) => (
+                      <button
+                        key={image}
+                        type="button"
+                        onClick={() => setSelectedImage(image)}
+                        className={`flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-sm border bg-white p-1 transition-colors ${
+                          activeProductImage === image ? 'border-[var(--layout-accent-color)]' : 'border-gray-200'
+                        }`}
+                      >
+                        <img src={image || '/favicon.svg'} alt={product.title} className="max-h-full max-w-full object-contain" />
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 <div className="border-t border-gray-200 p-6 xl:border-l xl:border-t-0">
                   <div className="mb-2 text-sm text-gray-500">Novo | +{product.sales_count} vendidos</div>

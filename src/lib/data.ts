@@ -33,6 +33,7 @@ export interface Product {
   installments?: string
   shipping: string
   image: string
+  images?: string[]
   category: string | null
   stock: number | null
   allow_affiliates?: boolean
@@ -197,6 +198,11 @@ export function decodeHtmlEntities(value: string) {
 }
 
 function mapProduct(row: Record<string, unknown>): Product {
+  const gallery = Array.isArray(row.image_gallery_json)
+    ? (row.image_gallery_json as unknown[]).map(String).filter(Boolean)
+    : []
+  const mainImage = String(row.image_url ?? gallery[0] ?? '')
+
   return {
     id: String(row.id),
     seller_id: (row.seller_id as string | null) ?? null,
@@ -206,7 +212,8 @@ function mapProduct(row: Record<string, unknown>): Product {
     originalPrice: row.original_price == null ? undefined : toNumber(row.original_price),
     installments: row.installments ? String(row.installments) : undefined,
     shipping: String(row.delivery_type ?? 'Entrega digital na plataforma'),
-    image: String(row.image_url ?? ''),
+    image: mainImage,
+    images: gallery.length ? gallery : mainImage ? [mainImage] : [],
     category: (row.category as string | null) ?? null,
     stock: row.stock == null ? null : toNumber(row.stock),
     allow_affiliates: Boolean(row.allow_affiliates ?? false),

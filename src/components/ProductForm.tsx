@@ -20,7 +20,7 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
   const [originalPrice, setOriginalPrice] = useState('')
   const [category, setCategory] = useState(productCategoryOptions[0]?.value ?? '')
   const [imageUrl, setImageUrl] = useState('')
-  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imageFiles, setImageFiles] = useState<File[]>([])
   const [themeFile, setThemeFile] = useState<File | null>(null)
   const [stock, setStock] = useState('')
   const [deliveryMethod, setDeliveryMethod] = useState<'ready' | 'dropservice'>('ready')
@@ -81,7 +81,7 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
     setOriginalPrice('')
     setCategory(productCategoryOptions[0]?.value ?? '')
     setImageUrl('')
-    setImageFile(null)
+    setImageFiles([])
     setThemeFile(null)
     setStock('')
     setDeliveryMethod('ready')
@@ -106,30 +106,36 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
 
     const allowedImageTypes = ['image/png', 'image/jpeg', 'image/svg+xml']
     let finalImageUrl = imageUrl.trim()
+    const galleryUrls: string[] = finalImageUrl ? [finalImageUrl] : []
 
-    if (imageFile) {
-      if (!allowedImageTypes.includes(imageFile.type)) {
-        setMessage('Envie imagem PNG, SVG ou JPEG.')
+    if (imageFiles.length) {
+      const invalidImage = imageFiles.find((file) => !allowedImageTypes.includes(file.type))
+      if (invalidImage) {
+        setMessage('Envie apenas imagens PNG, SVG ou JPEG.')
         setLoading(false)
         return
       }
 
-      const fileExt = imageFile.name.split('.').pop() || 'png'
-      const path = `${sellerId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
-      const { data, error: uploadError } = await supabase.storage.from('product_images').upload(path, imageFile, {
-        cacheControl: '3600',
-        upsert: true,
-        contentType: imageFile.type,
-      })
+      for (const file of imageFiles) {
+        const fileExt = file.name.split('.').pop() || 'png'
+        const path = `${sellerId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
+        const { data, error: uploadError } = await supabase.storage.from('product_images').upload(path, file, {
+          cacheControl: '3600',
+          upsert: true,
+          contentType: file.type,
+        })
 
-      if (uploadError) {
-        setMessage(uploadError.message)
-        setLoading(false)
-        return
+        if (uploadError) {
+          setMessage(uploadError.message)
+          setLoading(false)
+          return
+        }
+
+        const { data: publicData } = supabase.storage.from('product_images').getPublicUrl(data.path)
+        galleryUrls.push(publicData.publicUrl)
       }
 
-      const { data: publicData } = supabase.storage.from('product_images').getPublicUrl(data.path)
-      finalImageUrl = publicData.publicUrl
+      finalImageUrl = galleryUrls[0] || ''
     }
 
     if (allowAffiliates && Number(defaultCommission || 0) <= 0) {
@@ -183,6 +189,7 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
       price: Number(price),
       original_price: originalPrice ? Number(originalPrice) : null,
       image_url: finalImageUrl || null,
+      image_gallery_json: galleryUrls,
       category,
       delivery_type: isShopifyTheme ? 'Arquivo digital na plataforma' : 'Entrega digital na plataforma',
       delivery_method: deliveryMethod,
@@ -257,15 +264,25 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
         </div>
         <label className="flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed border-gray-300 bg-white p-4 text-center transition-colors hover:bg-gray-50">
           <ImagePlus className="mb-2 h-7 w-7 text-gray-400" />
-          <span className="text-sm font-semibold text-ml-dark">{imageFile ? imageFile.name : 'Clique para enviar imagem'}</span>
-          <span className="mt-1 text-xs text-gray-500">PNG, SVG ou JPEG</span>
+          <span className="text-sm font-semibold text-ml-dark">{imageFiles.length ? `${imageFiles.length} imagem(ns) selecionada(s)` : 'Clique para enviar imagens'}</span>
+          <span className="mt-1 text-xs text-gray-500">PNG, SVG ou JPEG. Voce pode selecionar mais de uma.</span>
           <input
             type="file"
             accept="image/png,image/jpeg,image/svg+xml"
+            multiple
             className="hidden"
-            onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
+            onChange={(event) => setImageFiles(Array.from(event.target.files ?? []))}
           />
         </label>
+        {imageFiles.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {imageFiles.map((file) => (
+              <span key={`${file.name}-${file.size}`} className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-gray-600 shadow-sm">
+                {file.name}
+              </span>
+            ))}
+          </div>
+        )}
         <input type="url" value={imageUrl} onChange={(event) => setImageUrl(event.target.value)} placeholder="https://..." className="w-full h-10 px-3 border border-gray-300 rounded-sm focus:outline-none focus:border-ml-blue" />
       </div>
 
