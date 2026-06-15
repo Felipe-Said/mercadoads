@@ -126,7 +126,7 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
         })
 
         if (uploadError) {
-          setMessage(uploadError.message)
+          setMessage(`Erro no upload da imagem: ${uploadError.message}`)
           setLoading(false)
           return
         }
@@ -161,7 +161,7 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
       })
 
       if (fileUploadError) {
-        setMessage(fileUploadError.message)
+        setMessage(`Erro no upload do tema: ${fileUploadError.message}`)
         setLoading(false)
         return
       }
@@ -203,7 +203,7 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
     })
 
     if (error) {
-      setMessage(error.message)
+      setMessage(`Erro ao salvar produto: ${error.message}`)
       setLoading(false)
       return
     }
