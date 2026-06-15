@@ -20,6 +20,7 @@ export function AfiliadosSeller() {
   const [commission, setCommission] = useState('15')
   const [message, setMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [affiliateToRemove, setAffiliateToRemove] = useState<Affiliate | null>(null)
 
   const loadAffiliates = useCallback(async () => {
     if (!user) return
@@ -108,16 +109,15 @@ export function AfiliadosSeller() {
     setLoading(false)
   }
 
-  const removeAffiliate = async (affiliateId: string) => {
+  const removeAffiliate = async () => {
     if (!user) return
-    const confirmed = window.confirm('Remover este afiliado da sua rede? Ele nao podera usar o link ate ser convidado novamente.')
-    if (!confirmed) return
+    if (!affiliateToRemove) return
 
     setMessage(null)
     const { error } = await supabase
       .from('affiliates')
       .update({ status: 'inactive' })
-      .eq('id', affiliateId)
+      .eq('id', affiliateToRemove.id)
       .eq('seller_id', user.id)
 
     if (error) {
@@ -125,6 +125,7 @@ export function AfiliadosSeller() {
       return
     }
 
+    setAffiliateToRemove(null)
     await loadAffiliates()
     setMessage('Afiliado removido da rede.')
   }
@@ -213,7 +214,7 @@ export function AfiliadosSeller() {
                     <td className="px-6 py-4 text-right">
                       <button
                         type="button"
-                        onClick={() => removeAffiliate(item.id)}
+                        onClick={() => setAffiliateToRemove(item)}
                         className="rounded-sm px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 hover:text-red-700"
                       >
                         Remover
@@ -225,6 +226,33 @@ export function AfiliadosSeller() {
               </tbody>
             </table>
           </Card>
+        )}
+
+        {affiliateToRemove && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+            <div className="w-full max-w-md rounded-md border border-[var(--layout-border-color)] bg-[var(--layout-surface-background)] p-6 shadow-2xl">
+              <h3 className="text-lg font-bold text-[var(--layout-text-primary)]">Remover afiliado</h3>
+              <p className="mt-2 text-sm leading-6 text-[var(--layout-text-muted)]">
+                {affiliateToRemove.user?.full_name ?? 'Este usuario'} sera removido da sua rede. Ele nao podera usar o link ate ser convidado novamente.
+              </p>
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setAffiliateToRemove(null)}
+                  className="rounded-sm border border-[var(--layout-border-color)] px-4 py-2 text-sm font-semibold text-[var(--layout-text-primary)] transition-colors hover:bg-[var(--layout-subtle-background)]"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={removeAffiliate}
+                  className="rounded-sm bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700"
+                >
+                  Remover afiliado
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </SellerLayout>
