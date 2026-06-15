@@ -177,6 +177,7 @@ export function AfiliacoesUser() {
                       const linkStr = productId
                         ? `${publicBaseUrl}/produto/${productId}?ref=${user?.id ?? ''}`
                         : `${publicBaseUrl}/loja/${fallbackStore}?ref=${user?.id ?? ''}`
+                      const isPending = affiliate.status === 'pending'
                       return (
                         <tr key={affiliate.id} className="hover:bg-gray-50/50 transition-colors">
                           <td className="px-6 py-4">
@@ -188,13 +189,14 @@ export function AfiliacoesUser() {
                           </td>
                           <td className="px-6 py-4">
                             <code className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-sm break-all">
-                              {linkStr}
+                              {isPending ? 'Aceite o convite nas notificacoes para liberar o link.' : linkStr}
                             </code>
                           </td>
                           <td className="px-6 py-4 text-right">
                             <button 
                               onClick={() => handleCopy(linkStr)}
-                              className="p-2 text-gray-400 hover:text-ml-blue hover:bg-blue-50 rounded-full transition-colors"
+                              disabled={isPending}
+                              className="p-2 text-gray-400 hover:text-ml-blue hover:bg-blue-50 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40"
                               title="Copiar Link"
                             >
                               {copiedLink === linkStr ? (

@@ -87,7 +87,7 @@ export function AfiliadosSeller() {
       user_id: profile.id,
       seller_id: user.id,
       commission_percent: Number(commission || 0),
-      status: 'active',
+      status: 'pending',
     }
 
     const { error } = existingAffiliate
@@ -103,7 +103,7 @@ export function AfiliadosSeller() {
     setAffiliateEmail('')
     setCommission('15')
     await loadAffiliates()
-    setMessage('Afiliado convidado e ativado.')
+    setMessage('Convite enviado para o usuario.')
     setActiveTab('lista')
     setLoading(false)
   }
@@ -157,7 +157,7 @@ export function AfiliadosSeller() {
                   />
                 </div>
                 <div className="md:col-span-2 flex items-center justify-end gap-3">
-                  {message && <span className={`text-sm ${message.includes('convidado') ? 'text-green-600' : 'text-red-600'}`}>{message}</span>}
+                  {message && <span className={`text-sm ${message.includes('enviado') ? 'text-green-600' : 'text-red-600'}`}>{message}</span>}
                   <Button type="submit" disabled={loading} className="bg-ml-blue text-white hover:bg-ml-hover rounded-sm">
                     {loading ? 'Enviando...' : 'Enviar convite'}
                   </Button>

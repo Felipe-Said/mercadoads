@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useRef, useState } from "react"
-import { Home, Search, Menu, ChevronDown, ChevronRight, LogOut, ShieldCheck, Store, UserRound, Zap, Smartphone } from "lucide-react"
+import { Bell, Home, Search, Menu, ChevronDown, ChevronRight, LogOut, ShieldCheck, Store, UserRound, Zap, Smartphone } from "lucide-react"
 import { Facebook, Google } from "iconsax-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
@@ -23,6 +23,17 @@ type HeaderSettings = {
   topbarTextColor: string
   navBackgroundColor: string
   navTextColor: string
+}
+
+type NotificationItem = {
+  id: number
+  type: string
+  title: string
+  body: string | null
+  link_url: string | null
+  metadata: Record<string, unknown> | null
+  read_at: string | null
+  created_at: string
 }
 
 const defaultSettings: HeaderSettings = {
@@ -95,8 +106,11 @@ export function Header() {
   const [settings, setSettings] = useState<HeaderSettings>(getHeaderSettings)
   const [walletBalance, setWalletBalance] = useState(0)
   const [categoryMenuOpen, setCategoryMenuOpen] = useState(false)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const categoryMenuRef = useRef<HTMLDivElement | null>(null)
+  const notificationsRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -171,6 +185,31 @@ export function Header() {
     }
   }, [role, user])
 
+  const loadNotifications = async () => {
+    if (!user) {
+      setNotifications([])
+      return
+    }
+
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('id, type, title, body, link_url, metadata, read_at, created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(12)
+
+    if (error) {
+      console.error(error)
+      return
+    }
+
+    setNotifications((data ?? []) as NotificationItem[])
+  }
+
+  useEffect(() => {
+    loadNotifications().catch(console.error)
+  }, [user?.id])
+
   useEffect(() => {
     if (!categoryMenuOpen) return
 
@@ -186,6 +225,22 @@ export function Header() {
       document.removeEventListener('mousedown', closeOnOutsideClick)
     }
   }, [categoryMenuOpen])
+
+  useEffect(() => {
+    if (!notificationsOpen) return
+
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (!notificationsRef.current?.contains(event.target as Node)) {
+        setNotificationsOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', closeOnOutsideClick)
+
+    return () => {
+      document.removeEventListener('mousedown', closeOnOutsideClick)
+    }
+  }, [notificationsOpen])
 
   const handleLogout = async () => {
     await logout()
@@ -207,9 +262,42 @@ export function Header() {
     navigate(`/category/${encodeURIComponent(query)}`)
   }
 
+  const markNotificationRead = async (notification: NotificationItem) => {
+    if (notification.read_at) return
+    await supabase.from('notifications').update({ read_at: new Date().toISOString() }).eq('id', notification.id)
+    setNotifications((current) => current.map((item) => item.id === notification.id ? { ...item, read_at: new Date().toISOString() } : item))
+  }
+
+  const openNotification = async (notification: NotificationItem) => {
+    await markNotificationRead(notification)
+    setNotificationsOpen(false)
+    if (notification.link_url) navigate(notification.link_url)
+  }
+
+  const acceptAffiliateInvite = async (notification: NotificationItem) => {
+    const affiliateId = Number(notification.metadata?.affiliate_id ?? 0)
+    if (!affiliateId) return
+
+    const { error } = await supabase
+      .from('affiliates')
+      .update({ status: 'active' })
+      .eq('id', affiliateId)
+      .eq('user_id', user?.id)
+      .eq('status', 'pending')
+
+    if (error) {
+      console.error(error)
+      return
+    }
+
+    await markNotificationRead(notification)
+    await loadNotifications()
+  }
+
   const firstName = profile?.full_name?.trim().split(/\s+/)[0] || user?.email?.split('@')[0] || 'usuario'
   const panelLink = role === 'admin' ? '/painel/admin' : role === 'seller' ? '/painel/vendedor' : '/painel/usuario'
   const panelLabel = role === 'admin' ? 'Painel Admin' : role === 'seller' ? 'Painel do Vendedor' : 'Meu Perfil'
+  const unreadNotifications = notifications.filter((item) => !item.read_at).length
   const bottomItemClass = (href: string) => {
     const active = href === '/' ? location.pathname === '/' : location.pathname.startsWith(href)
     return `flex flex-col items-center gap-1 rounded-sm px-1 py-1.5 text-[11px] font-semibold transition-colors ${active ? 'bg-[var(--layout-button-primary-bg)] text-[var(--layout-button-primary-text)]' : 'text-[var(--layout-text-muted)]'}`
@@ -262,12 +350,55 @@ export function Header() {
           </form>
 
           <div className="order-2 flex items-center justify-end gap-2 md:order-none md:gap-3">
-            <button className="relative hidden p-2 text-current transition-opacity hover:opacity-75 md:block" aria-label="Notificacoes">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-              </svg>
-            </button>
+            {user && (
+              <div ref={notificationsRef} className="relative hidden md:block">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNotificationsOpen((current) => !current)
+                    loadNotifications().catch(console.error)
+                  }}
+                  className="relative p-2 text-current transition-opacity hover:opacity-75"
+                  aria-label="Notificacoes"
+                >
+                  <Bell className="h-5 w-5" />
+                  {unreadNotifications > 0 && (
+                    <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                      {unreadNotifications}
+                    </span>
+                  )}
+                </button>
+                {notificationsOpen && (
+                  <div className="absolute right-0 top-full z-50 mt-2 w-[360px] overflow-hidden rounded-md border border-gray-200 bg-white text-[var(--layout-text-primary)] shadow-2xl">
+                    <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+                      <p className="text-sm font-black">Notificacoes</p>
+                      <button type="button" onClick={() => loadNotifications().catch(console.error)} className="text-xs font-semibold text-[var(--layout-link-color)]">Atualizar</button>
+                    </div>
+                    <div className="max-h-[420px] overflow-y-auto">
+                      {notifications.length === 0 && <p className="px-4 py-6 text-center text-sm text-gray-500">Nenhuma notificacao no momento.</p>}
+                      {notifications.map((notification) => (
+                        <div key={notification.id} className={`border-b border-gray-100 px-4 py-3 last:border-b-0 ${notification.read_at ? 'bg-white' : 'bg-blue-50/60'}`}>
+                          <button type="button" onClick={() => openNotification(notification)} className="block w-full text-left">
+                            <p className="text-sm font-bold text-[var(--layout-text-primary)]">{notification.title}</p>
+                            {notification.body && <p className="mt-1 text-xs leading-5 text-gray-600">{notification.body}</p>}
+                            <p className="mt-2 text-[11px] text-gray-400">{new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(notification.created_at))}</p>
+                          </button>
+                          {notification.type === 'affiliate_invite' && !notification.read_at && (
+                            <button
+                              type="button"
+                              onClick={() => acceptAffiliateInvite(notification)}
+                              className="mt-3 rounded-sm bg-[var(--layout-button-primary-bg)] px-3 py-2 text-xs font-bold text-[var(--layout-button-primary-text)]"
+                            >
+                              Aceitar convite
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             <Link to="/carrinho" className="relative p-2 text-current transition-opacity hover:opacity-75" aria-label="Carrinho">
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="9" cy="21" r="1" />
