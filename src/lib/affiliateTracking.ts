@@ -12,6 +12,23 @@ type AffiliateSaleFields = {
   affiliate_ref_product_id?: number
 }
 
+type ToolKey = 'proxy' | 'smm' | 'numeroVirtual' | 'emailTemporario'
+type ToolCommissionSettings = Record<ToolKey, { seller?: number; affiliate?: number }>
+
+const DEFAULT_TOOL_COMMISSIONS: ToolCommissionSettings = {
+  proxy: { seller: 5, affiliate: 5 },
+  smm: { seller: 5, affiliate: 5 },
+  numeroVirtual: { seller: 5, affiliate: 5 },
+  emailTemporario: { seller: 5, affiliate: 5 },
+}
+
+function getToolCommissionPercent(settings: unknown, toolKey: ToolKey, role?: string | null, fallback = 0) {
+  const source = (settings && typeof settings === 'object' ? settings : {}) as Partial<ToolCommissionSettings>
+  const roleKey = role === 'seller' || role === 'admin' ? 'seller' : 'affiliate'
+  const value = Number(source[toolKey]?.[roleKey] ?? DEFAULT_TOOL_COMMISSIONS[toolKey][roleKey] ?? fallback)
+  return Number.isFinite(value) ? value : fallback
+}
+
 export function storeAffiliateRefFromSearch(search: string, pathname = '') {
   if (typeof window === 'undefined') return
 
@@ -75,7 +92,11 @@ export async function applyStoredLinkBioRef(userId: string) {
   }
 }
 
-export async function getLinkBioToolSaleFields(amount: number, buyerId?: string | null): Promise<AffiliateSaleFields> {
+export async function getLinkBioToolSaleFields(
+  amount: number,
+  buyerId?: string | null,
+  toolKey: ToolKey = 'proxy',
+): Promise<AffiliateSaleFields> {
   if (!buyerId || amount <= 0) return {}
 
   const storedRef = await applyStoredLinkBioRef(buyerId)
@@ -94,12 +115,24 @@ export async function getLinkBioToolSaleFields(amount: number, buyerId?: string 
 
     const { data: settings, error: settingsError } = await supabase
       .from('platform_settings')
-      .select('affiliate_fee_percent')
+      .select('affiliate_fee_percent, tool_commissions_json')
       .eq('id', 1)
       .maybeSingle()
 
     if (settingsError) throw settingsError
-    const percent = Number(settings?.affiliate_fee_percent ?? 0)
+
+    const { data: referrerProfile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', referrerId)
+      .maybeSingle()
+
+    const percent = getToolCommissionPercent(
+      settings?.tool_commissions_json,
+      toolKey,
+      String(referrerProfile?.role ?? ''),
+      Number(settings?.affiliate_fee_percent ?? 0),
+    )
     if (percent <= 0) return {}
 
     return {

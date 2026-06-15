@@ -186,7 +186,7 @@ export function EmailTemporario() {
         if (balance < service.priceAmount) throw new Error('Voce nao possui fundos suficiente')
       }
 
-      const affiliateFields = await getLinkBioToolSaleFields(service.priceAmount, user.id)
+      const affiliateFields = await getLinkBioToolSaleFields(service.priceAmount, user.id, 'emailTemporario')
 
       const { data: saleData, error: saleError } = await supabase.from('sales').insert({
         product_id: null,

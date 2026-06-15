@@ -260,7 +260,7 @@ export function Proxy() {
         if (balance < proxy.priceAmount) throw new Error('Você não possui fundos suficiente')
       }
 
-      const affiliateFields = await getLinkBioToolSaleFields(proxy.priceAmount, user.id)
+      const affiliateFields = await getLinkBioToolSaleFields(proxy.priceAmount, user.id, 'proxy')
 
       const { data: saleData, error: saleError } = await supabase.from('sales').insert({
         product_id: null,
@@ -349,7 +349,7 @@ export function Proxy() {
       saleId = result.sale?.id ? String(result.sale.id) : null
       if (!saleId) throw new Error('Nao foi possivel gerar o pedido de recarga.')
 
-      const affiliateFields = await getLinkBioToolSaleFields(offer.priceAmount, user.id)
+      const affiliateFields = await getLinkBioToolSaleFields(offer.priceAmount, user.id, 'proxy')
       if (Object.keys(affiliateFields).length > 0) {
         await supabase.from('sales').update(affiliateFields).eq('id', saleId)
       }

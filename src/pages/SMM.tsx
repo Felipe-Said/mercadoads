@@ -219,7 +219,7 @@ export function SMM() {
         if (balance < totalAmount) throw new Error('Voce nao possui fundos suficiente')
       }
 
-      const affiliateFields = await getLinkBioToolSaleFields(totalAmount, user.id)
+      const affiliateFields = await getLinkBioToolSaleFields(totalAmount, user.id, 'smm')
 
       const { data: saleData, error: saleError } = await supabase.from('sales').insert({
         product_id: null,
