@@ -9,6 +9,7 @@ import { formatCurrency } from '../../lib/data'
 
 type Affiliate = {
   id: string
+  seller_id?: string | null
   product_id?: number | null
   commission_percent: number
   status: string
@@ -54,15 +55,50 @@ export function AfiliacoesUser() {
   const loadData = useCallback(async () => {
     if (!user) return
 
-    // Load Affiliates
     const { data: affData, error: affError } = await supabase
       .from('affiliates')
-      .select('id, product_id, commission_percent, status, created_at, seller:seller_id(full_name), product:product_id(id,title)')
+      .select('id, seller_id, product_id, commission_percent, status, created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
 
-    if (!affError && affData) {
-      setAffiliates(affData as Affiliate[])
+    if (affError) {
+      console.error(affError)
+      setAffiliates([])
+    } else {
+      const rows = (affData ?? []) as Affiliate[]
+      const sellerIds = Array.from(new Set(rows.map((item) => item.seller_id).filter(Boolean))) as string[]
+      const productIds = Array.from(new Set(rows.map((item) => item.product_id).filter(Boolean))) as number[]
+
+      const [{ data: sellers, error: sellersError }, { data: products, error: productsError }] = await Promise.all([
+        sellerIds.length > 0
+          ? supabase.from('profiles').select('id, full_name, store_name').in('id', sellerIds)
+          : Promise.resolve({ data: [], error: null }),
+        productIds.length > 0
+          ? supabase.from('products').select('id, title').in('id', productIds)
+          : Promise.resolve({ data: [], error: null }),
+      ])
+
+      if (sellersError) console.error(sellersError)
+      if (productsError) console.error(productsError)
+
+      const sellerMap = new Map(
+        ((sellers ?? []) as Array<{ id: string; full_name: string | null; store_name?: string | null }>).map((seller) => [
+          seller.id,
+          { full_name: seller.store_name || seller.full_name },
+        ]),
+      )
+      const productMap = new Map(
+        ((products ?? []) as Array<{ id: number; title: string | null }>).map((product) => [
+          product.id,
+          { id: product.id, title: product.title },
+        ]),
+      )
+
+      setAffiliates(rows.map((item) => ({
+        ...item,
+        seller: item.seller_id ? sellerMap.get(item.seller_id) ?? null : null,
+        product: item.product_id ? productMap.get(item.product_id) ?? null : null,
+      })))
     }
 
     // Load Withdrawals
