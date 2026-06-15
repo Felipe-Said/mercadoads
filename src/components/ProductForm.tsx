@@ -121,7 +121,7 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
         const path = `${sellerId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
         const { data, error: uploadError } = await supabase.storage.from('product_images').upload(path, file, {
           cacheControl: '3600',
-          upsert: true,
+          upsert: false,
           contentType: file.type,
         })
 
@@ -156,7 +156,7 @@ export function ProductForm({ sellerId, defaultStatus, showStatus = false, onCre
       const path = `${sellerId}/themes/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
       const { data, error: fileUploadError } = await supabase.storage.from('product_files').upload(path, themeFile, {
         cacheControl: '3600',
-        upsert: true,
+        upsert: false,
         contentType: themeFile.type || 'application/octet-stream',
       })
 
