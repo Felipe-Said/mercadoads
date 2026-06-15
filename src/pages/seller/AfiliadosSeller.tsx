@@ -12,6 +12,11 @@ type Affiliate = {
   user?: { full_name: string | null; email: string | null } | null
 }
 
+type ExistingAffiliate = {
+  id: string
+  status: string | null
+}
+
 export function AfiliadosSeller() {
   const { user } = useAuth()
   const [activeTab, setActiveTab] = useState<'lista' | 'convidar'>('lista')
@@ -73,7 +78,7 @@ export function AfiliadosSeller() {
 
     const { data: existingAffiliate, error: existingError } = await supabase
       .from('affiliates')
-      .select('id')
+      .select('id, status')
       .eq('user_id', profile.id)
       .eq('seller_id', user.id)
       .maybeSingle()
@@ -92,13 +97,27 @@ export function AfiliadosSeller() {
     }
 
     const { error } = existingAffiliate
-      ? await supabase.from('affiliates').update(payload).eq('id', existingAffiliate.id)
+      ? await supabase.from('affiliates').update(payload).eq('id', (existingAffiliate as ExistingAffiliate).id)
       : await supabase.from('affiliates').insert(payload)
 
     if (error) {
       setMessage(error.message)
       setLoading(false)
       return
+    }
+
+    if (existingAffiliate && (existingAffiliate as ExistingAffiliate).status !== 'pending') {
+      await supabase.rpc('create_notification', {
+        target_user_id: profile.id,
+        notification_type: 'affiliate_invite',
+        notification_title: 'Convite de afiliado',
+        notification_body: 'Voce recebeu um convite para ser afiliado.',
+        notification_link: '/painel/usuario/afiliacoes',
+        notification_metadata: {
+          affiliate_id: (existingAffiliate as ExistingAffiliate).id,
+          seller_id: user.id,
+        },
+      })
     }
 
     setAffiliateEmail('')
