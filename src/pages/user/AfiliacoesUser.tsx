@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { UserLayout } from '../../components/layouts/UserLayout'
 import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
-import { Copy, CheckCircle2, Clock } from 'lucide-react'
+import { Copy, CheckCircle2, Clock, ExternalLink } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
 import { formatCurrency } from '../../lib/data'
@@ -213,6 +213,37 @@ export function AfiliacoesUser() {
         {/* TAB: VISÃO GERAL */}
         {activeTab === 'geral' && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <Card className="bg-white border-none shadow-sm rounded-md">
+              <CardContent className="p-5">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-500">Link bio de afiliado</p>
+                    <h3 className="mt-1 text-lg font-bold text-ml-dark">Produtos afiliados em uma unica pagina</h3>
+                    <p className="mt-1 text-sm text-gray-500">Mostra apenas produtos em que voce foi aprovado como afiliado.</p>
+                  </div>
+                  {profile?.store_slug ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <a href={`https://cookiemarket.lat/loja/${profile.store_slug}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full bg-ml-blue/10 px-3 py-2 text-sm font-semibold text-ml-blue hover:text-ml-hover">
+                        <ExternalLink className="h-4 w-4" /> cookiemarket.lat/loja/{profile.store_slug}
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(`https://cookiemarket.lat/loja/${profile.store_slug}`)}
+                        className="rounded-full border border-gray-200 p-2 text-gray-500 hover:bg-gray-50 hover:text-ml-dark"
+                        title="Copiar link bio"
+                      >
+                        {copiedLink === `https://cookiemarket.lat/loja/${profile.store_slug}` ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  ) : (
+                    <a href="/painel/usuario/configuracoes" className="rounded-sm bg-ml-blue px-4 py-2 text-sm font-bold text-white hover:bg-ml-hover">
+                      Configurar link bio
+                    </a>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
             <Card className="bg-white border-none shadow-sm rounded-md overflow-hidden">
               <div className="p-4 border-b border-gray-100 flex items-center justify-between">
                 <h3 className="text-lg font-medium text-ml-dark">Lojas Parceiras & Links</h3>

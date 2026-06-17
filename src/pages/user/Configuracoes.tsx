@@ -68,10 +68,12 @@ export function Configuracoes() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     
-    // Auto-generate slug if not provided but user is a seller
     let finalSlug = storeSlug
     if (profile?.role === 'seller' && !finalSlug && profile.store_name) {
       finalSlug = profile.store_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '')
+      setStoreSlug(finalSlug)
+    } else if (!finalSlug && fullName) {
+      finalSlug = fullName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '')
       setStoreSlug(finalSlug)
     }
 
@@ -80,11 +82,9 @@ export function Configuracoes() {
         full_name: fullName, 
         phone, 
         avatar_url: avatarUrl || null,
-        ...(profile?.role === 'seller' ? {
-          store_slug: finalSlug || null,
-          store_bio: storeBio || null,
-          store_bio_tools_json: storeBioTools,
-        } : {})
+        store_slug: finalSlug || null,
+        store_bio: storeBio || null,
+        store_bio_tools_json: storeBioTools,
       })
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
@@ -141,10 +141,10 @@ export function Configuracoes() {
                 <p className="text-xs text-gray-400 mt-2">O e-mail nao pode ser alterado por motivos de seguranca.</p>
               </div>
 
-              {profile?.role === 'seller' && (
+              {profile?.role && (
                 <div className="space-y-5 rounded-md border border-ml-blue/20 bg-ml-blue/5 p-4">
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-ml-dark">Link bio da loja</label>
+                    <label className="mb-2 block text-sm font-semibold text-ml-dark">{profile.role === 'user' ? 'Link bio de afiliado' : 'Link bio da loja'}</label>
                     <div className="flex items-center">
                       <span className="flex h-12 items-center rounded-l-sm border border-r-0 border-gray-300 bg-gray-100 px-3 text-sm text-gray-500">
                         cookiemarket.lat/loja/
@@ -157,7 +157,11 @@ export function Configuracoes() {
                         className="h-12 w-full rounded-r-sm border border-gray-300 px-4 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-ml-blue"
                       />
                     </div>
-                    <p className="mt-2 text-xs text-gray-500">Este sera o link publico da sua loja para Instagram, TikTok e bio.</p>
+                    <p className="mt-2 text-xs text-gray-500">
+                      {profile.role === 'user'
+                        ? 'Este sera seu link publico de afiliado. Ele mostra os produtos em que voce se afiliou.'
+                        : 'Este sera o link publico da sua loja para Instagram, TikTok e bio.'}
+                    </p>
                   </div>
 
                   <div>
@@ -167,7 +171,7 @@ export function Configuracoes() {
                       onChange={(event) => setStoreBio(event.target.value)}
                       maxLength={180}
                       rows={3}
-                      placeholder="Ex: Produtos digitais selecionados, suporte rapido e entrega segura."
+                      placeholder={profile.role === 'user' ? 'Ex: Produtos digitais que eu recomendo.' : 'Ex: Produtos digitais selecionados, suporte rapido e entrega segura.'}
                       className="w-full rounded-sm border border-gray-300 px-4 py-3 text-sm transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-ml-blue"
                     />
                     <p className="mt-1 text-xs text-gray-400">{storeBio.length}/180</p>

@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { CheckCircle2, Package } from 'lucide-react'
 import { ArrowRight2, Chart2, CloudConnection, Mobile, Sms } from 'iconsax-react'
 import { PlatformLogo } from '../components/PlatformLogo'
+import { supabase } from '../lib/supabase'
 import { getProducts, getProfileBySlug, type Product, type Profile } from '../lib/data'
 import { DEFAULT_PLATFORM_SETTINGS, loadPlatformSettings, readCachedPlatformSettings, type StoreBioThemeSettings } from '../lib/platformSettings'
 
@@ -16,6 +17,55 @@ const toolLinks = [
   { key: 'numeroVirtual', label: 'Numero virtual', href: '/numero-virtual', Icon: Mobile },
   { key: 'emailTemporario', label: 'Email temporario', href: '/email-temporario', Icon: Sms },
 ]
+
+async function getAffiliateProducts(profileId: string) {
+  const { data: affiliates, error: affiliateError } = await supabase
+    .from('affiliates')
+    .select('product_id')
+    .eq('user_id', profileId)
+    .eq('status', 'active')
+    .not('product_id', 'is', null)
+
+  if (affiliateError) throw affiliateError
+
+  const productIds = Array.from(new Set((affiliates ?? []).map((affiliate) => affiliate.product_id).filter(Boolean))).map(String)
+  if (productIds.length === 0) return []
+
+  const { data: products, error: productsError } = await supabase
+    .from('products')
+    .select('*, profiles:seller_id(id, role, full_name, store_name, seller_category, avatar_url, pix_key, created_at)')
+    .in('id', productIds)
+    .eq('status', 'active')
+    .eq('hidden_by_admin', false)
+    .order('created_at', { ascending: false })
+
+  if (productsError) throw productsError
+
+  return (products ?? []).map((row) => ({
+    id: String(row.id),
+    seller_id: (row.seller_id as string | null) ?? null,
+    title: String(row.title ?? ''),
+    description: (row.description as string | null) ?? null,
+    price: Number(row.price ?? 0),
+    originalPrice: row.original_price == null ? undefined : Number(row.original_price ?? 0),
+    shipping: String(row.delivery_type ?? 'Entrega digital na plataforma'),
+    image: String(row.image_url ?? '/favicon.svg'),
+    images: row.image_gallery_json && Array.isArray(row.image_gallery_json) ? (row.image_gallery_json as string[]) : [String(row.image_url ?? '/favicon.svg')],
+    category: (row.category as string | null) ?? null,
+    stock: row.stock == null ? null : Number(row.stock),
+    allow_affiliates: Boolean(row.allow_affiliates ?? false),
+    default_commission: Number(row.default_commission ?? 0),
+    sales_count: Number(row.sales_count ?? 0),
+    status: (row.status as Product['status']) ?? 'active',
+    hidden_by_admin: Boolean(row.hidden_by_admin ?? false),
+    delivery_method: (row.delivery_method as Product['delivery_method']) ?? 'ready',
+    is_boosted: Boolean(row.is_boosted ?? false),
+    boosted_at: (row.boosted_at as string | null) ?? null,
+    boost_expires_at: (row.boost_expires_at as string | null) ?? null,
+    created_at: String(row.created_at ?? ''),
+    seller: (row.profiles as Profile | null) ?? null,
+  })) as Product[]
+}
 
 export function StoreBio() {
   const { storeSlug } = useParams<{ storeSlug: string }>()
@@ -42,7 +92,9 @@ export function StoreBio() {
           return
         }
 
-        const sellerProducts = await getProducts({ sellerId: sellerProfile.id })
+        const sellerProducts = sellerProfile.role === 'user'
+          ? await getAffiliateProducts(sellerProfile.id)
+          : await getProducts({ sellerId: sellerProfile.id })
         setProfile(sellerProfile)
         setProducts(sellerProducts)
         setTheme(settings.storeBioTheme)
@@ -77,8 +129,9 @@ export function StoreBio() {
     )
   }
 
+  const isAffiliateBio = profile.role === 'user'
   const storeName = profile.store_name || profile.full_name || 'Cookie Market'
-  const bioText = profile.store_bio || profile.seller_category || 'Produtos digitais selecionados para compra segura.'
+  const bioText = profile.store_bio || profile.seller_category || (isAffiliateBio ? 'Produtos recomendados por afiliado verificado.' : 'Produtos digitais selecionados para compra segura.')
   const enabledTools = toolLinks.filter((tool) => profile.store_bio_tools_json?.[tool.key])
 
   return (
@@ -130,7 +183,7 @@ export function StoreBio() {
             products.map((product) => (
               <Link
                 key={product.id}
-                to={`/produto/${product.id}`}
+                to={isAffiliateBio ? `/produto/${product.id}?ref=${profile.id}` : `/produto/${product.id}`}
                 className="group flex min-h-[84px] w-full items-center gap-3 rounded-[22px] border p-3 text-left transition-all hover:-translate-y-0.5"
                 style={{ backgroundColor: theme.productCardBackground, borderColor: theme.productCardBorder, boxShadow: `0 12px 34px ${theme.productCardShadow}` }}
               >
@@ -151,7 +204,9 @@ export function StoreBio() {
             ))
           ) : (
             <div className="rounded-[24px] border p-8 text-center shadow-[0_12px_34px_rgba(31,19,15,0.10)]" style={{ backgroundColor: theme.emptyCardBackground, borderColor: theme.emptyCardBorder }}>
-              <p className="text-sm" style={{ color: theme.emptyText }}>Esta loja ainda nao possui produtos ativos no momento.</p>
+              <p className="text-sm" style={{ color: theme.emptyText }}>
+                {isAffiliateBio ? 'Este afiliado ainda nao possui produtos ativos no momento.' : 'Esta loja ainda nao possui produtos ativos no momento.'}
+              </p>
             </div>
           )}
         </section>
