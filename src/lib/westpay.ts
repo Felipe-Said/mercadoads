@@ -52,6 +52,27 @@ function extractGatewayMessage(value: unknown) {
   return JSON.stringify(data)
 }
 
+function normalizeGatewayErrorMessage(message?: string | null) {
+  const text = String(message ?? '').trim()
+  const lower = text.toLowerCase()
+
+  if (!text) return 'Nao foi possivel gerar o Pix agora. Tente novamente em instantes.'
+
+  if (
+    lower.includes('company account is not active') ||
+    lower.includes('account is not active') ||
+    lower.includes('company inactive')
+  ) {
+    return 'Pagamento via Pix temporariamente indisponivel. A conta de pagamentos da plataforma ainda nao esta ativa.'
+  }
+
+  if (lower.includes('http 403') || lower.includes('forbidden')) {
+    return 'Pagamento via Pix temporariamente indisponivel. Tente novamente mais tarde.'
+  }
+
+  return text
+}
+
 export function onlyDigits(value: string) {
   return value.replace(/\D/g, '')
 }
@@ -125,7 +146,7 @@ async function invokeWestPayDirect(action: string, payload?: Record<string, unkn
       configured: true,
       success: false,
       data,
-      error: extractGatewayMessage(data) ?? `Gateway retornou HTTP ${response.status}.`,
+      error: normalizeGatewayErrorMessage(extractGatewayMessage(data) ?? `Gateway retornou HTTP ${response.status}.`),
     } satisfies WestPayInvokeResult
   }
 
@@ -162,41 +183,49 @@ export async function invokeWestPay(action: string, payload?: Record<string, unk
 }
 
 export async function invokeWestPayStrict(action: string, payload?: Record<string, unknown>) {
-  const { data, error } = await supabase.functions.invoke('westpay', {
-    body: { action, ...(payload ?? {}) },
-  })
+  try {
+    const { data, error } = await supabase.functions.invoke('westpay', {
+      body: { action, ...(payload ?? {}) },
+    })
 
-  if (error) {
-    const fallbackResult = await invokeWestPayDirect(action, payload)
-    if (!fallbackResult) {
-      throw new Error(error.message || 'Gateway indisponivel.')
+    if (error) {
+      const fallbackResult = await invokeWestPayDirect(action, payload)
+      if (!fallbackResult) {
+        throw new Error(normalizeGatewayErrorMessage(error.message || 'Gateway indisponivel.'))
+      }
+
+      if (fallbackResult.configured === false) {
+        throw new Error('Gateway WestPay desativado ou sem credenciais no painel admin.')
+      }
+
+      if (fallbackResult.success === false) {
+        throw new Error(normalizeGatewayErrorMessage(extractGatewayMessage(fallbackResult.data) || fallbackResult.error || error.message || 'WestPay recusou a requisicao.'))
+      }
+
+      return fallbackResult
     }
 
-    if (fallbackResult.configured === false) {
+    const result = data as WestPayInvokeResult | null
+    if (!result) {
+      throw new Error('Resposta vazia da funcao WestPay.')
+    }
+
+    if (result.configured === false) {
       throw new Error('Gateway WestPay desativado ou sem credenciais no painel admin.')
     }
 
-    if (fallbackResult.success === false) {
-      throw new Error(extractGatewayMessage(fallbackResult.data) || fallbackResult.error || error.message || 'WestPay recusou a requisicao.')
+    if (result.success === false) {
+      throw new Error(normalizeGatewayErrorMessage(extractGatewayMessage(result.data) || result.error || 'WestPay recusou a requisicao.'))
     }
 
-    return fallbackResult
+    return result
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    if (msg.includes('Gateway WestPay desativado')) throw err
+    if (msg.includes('Pagamento via Pix temporariamente')) throw err
+    
+    throw new Error(normalizeGatewayErrorMessage(msg))
   }
-
-  const result = data as WestPayInvokeResult | null
-  if (!result) {
-    throw new Error('Resposta vazia da funcao WestPay.')
-  }
-
-  if (result.configured === false) {
-    throw new Error('Gateway WestPay desativado ou sem credenciais no painel admin.')
-  }
-
-  if (result.success === false) {
-    throw new Error(extractGatewayMessage(result.data) || result.error || 'WestPay recusou a requisicao.')
-  }
-
-  return result
 }
 
 export async function ensureWestPayReady() {

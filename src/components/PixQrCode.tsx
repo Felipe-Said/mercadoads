@@ -6,25 +6,31 @@ type PixQrCodeProps = {
 }
 
 export function PixQrCode({ value }: PixQrCodeProps) {
-  const [dataUrl, setDataUrl] = useState<string | null>(null)
+  const [svgStr, setSvgStr] = useState<string | null>(null)
 
   useEffect(() => {
     let mounted = true
 
-    QRCode.toDataURL(value, {
+    if (!value) {
+      setSvgStr(null)
+      return
+    }
+
+    QRCode.toString(value, {
+      type: 'svg',
       errorCorrectionLevel: 'M',
       margin: 2,
-      scale: 6,
       color: {
         dark: '#111827',
         light: '#ffffff',
       },
     })
-      .then((nextDataUrl) => {
-        if (mounted) setDataUrl(nextDataUrl)
+      .then((svg) => {
+        if (mounted) setSvgStr(svg)
       })
-      .catch(() => {
-        if (mounted) setDataUrl(null)
+      .catch((err) => {
+        console.error('Failed to generate QR Code:', err)
+        if (mounted) setSvgStr(null)
       })
 
     return () => {
@@ -32,19 +38,18 @@ export function PixQrCode({ value }: PixQrCodeProps) {
     }
   }, [value])
 
-  if (!dataUrl) {
+  if (!svgStr) {
     return (
-      <div className="h-44 w-44 rounded-md border border-yellow-200 bg-white flex items-center justify-center text-xs text-gray-400">
-        Gerando QR...
+      <div className="h-44 w-44 rounded-md border border-yellow-200 bg-white flex items-center justify-center text-xs text-gray-400 text-center p-4">
+        {value ? 'Erro ao gerar QR' : 'Gerando QR...'}
       </div>
     )
   }
 
   return (
-    <img
-      src={dataUrl}
-      alt="QR Code Pix"
-      className="h-44 w-44 rounded-md border border-yellow-200 bg-white p-2"
+    <div
+      className="h-44 w-44 rounded-md border border-yellow-200 bg-white p-2 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full"
+      dangerouslySetInnerHTML={{ __html: svgStr }}
     />
   )
 }
