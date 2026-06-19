@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { UserLayout } from '../../components/layouts/UserLayout'
+import { AdminLayout } from '../../components/layouts/AdminLayout'
+import { SellerLayout } from '../../components/layouts/SellerLayout'
 import { CheckCircle2, Clock, Copy, Package, X, Download, Star } from 'lucide-react'
 import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
@@ -18,8 +20,9 @@ import { useAuth } from '../../contexts/AuthContext'
 import { PixQrCode } from '../../components/PixQrCode'
 
 export function Compras() {
-  const { user } = useAuth()
+  const { user, role } = useAuth()
   const location = useLocation()
+  const Layout = role === 'admin' ? AdminLayout : role === 'seller' ? SellerLayout : UserLayout
   const [sales, setSales] = useState<Sale[]>([])
   const [copiedSaleId, setCopiedSaleId] = useState<string | null>(null)
   const [cancelingSaleId, setCancelingSaleId] = useState<string | null>(null)
@@ -174,7 +177,7 @@ export function Compras() {
   }
 
   return (
-    <UserLayout>
+    <Layout>
       <div className="space-y-6">
         <h2 className="text-xl font-light text-ml-dark mb-4">Minhas Compras</h2>
 
@@ -612,6 +615,6 @@ export function Compras() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </UserLayout>
+    </Layout>
   )
 }
