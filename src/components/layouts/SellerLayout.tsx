@@ -1,11 +1,12 @@
 import React from 'react'
 import { DashboardLayout, NavItem } from '../DashboardLayout'
-import { Store, DollarSign, PackageOpen, Tag, Megaphone, Users, Settings } from 'lucide-react'
+import { Store, DollarSign, PackageOpen, Tag, Megaphone, Users, Settings, ShoppingBag } from 'lucide-react'
 
 const NAV_ITEMS: NavItem[] = [
   { title: "Resumo de Vendas", href: "/painel/vendedor", icon: Store },
   { title: "Meus Anúncios", href: "/painel/vendedor/anuncios", icon: Tag },
   { title: "Vendas e Entregas", href: "/painel/vendedor/vendas", icon: PackageOpen },
+  { title: "Minhas Compras", href: "/painel/usuario/compras", icon: ShoppingBag },
   { title: "Meus Afiliados", href: "/painel/vendedor/afiliados", icon: Users },
   { title: "Financeiro", href: "/painel/vendedor/financeiro", icon: DollarSign },
   { title: "Ads Manager", href: "/painel/vendedor/ads", icon: Megaphone },
