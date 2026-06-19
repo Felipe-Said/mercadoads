@@ -90,10 +90,10 @@ function App() {
           <Route path="/politicas/comunidade" element={<CommunityPolicy />} />
           <Route path="/acessibilidade" element={<AccessibilityPolicy />} />
           <Route path="/trabalhe-conosco" element={<WorkWithUsPolicy />} />
-          <Route path="/painel/usuario" element={<ProtectedRoute allowedRoles={['user']}><Resumo /></ProtectedRoute>} />
-          <Route path="/painel/usuario/compras" element={<ProtectedRoute allowedRoles={['user']}><Compras /></ProtectedRoute>} />
-          <Route path="/painel/usuario/configuracoes" element={<ProtectedRoute allowedRoles={['user']}><Configuracoes /></ProtectedRoute>} />
-          <Route path="/painel/usuario/afiliacoes" element={<ProtectedRoute allowedRoles={['user']}><AfiliacoesUser /></ProtectedRoute>} />
+          <Route path="/painel/usuario" element={<ProtectedRoute allowedRoles={['user', 'seller', 'admin']}><Resumo /></ProtectedRoute>} />
+          <Route path="/painel/usuario/compras" element={<ProtectedRoute allowedRoles={['user', 'seller', 'admin']}><Compras /></ProtectedRoute>} />
+          <Route path="/painel/usuario/configuracoes" element={<ProtectedRoute allowedRoles={['user', 'seller', 'admin']}><Configuracoes /></ProtectedRoute>} />
+          <Route path="/painel/usuario/afiliacoes" element={<ProtectedRoute allowedRoles={['user', 'seller', 'admin']}><AfiliacoesUser /></ProtectedRoute>} />
           <Route path="/painel/vendedor" element={<ProtectedRoute allowedRoles={['seller']}><ResumoVendas /></ProtectedRoute>} />
           <Route path="/painel/vendedor/anuncios" element={<ProtectedRoute allowedRoles={['seller']}><MeusAnuncios /></ProtectedRoute>} />
           <Route path="/painel/vendedor/vendas" element={<ProtectedRoute allowedRoles={['seller']}><VendasEntregas /></ProtectedRoute>} />
