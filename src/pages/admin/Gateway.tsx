@@ -15,6 +15,10 @@ type GatewaySettings = {
   westpay_public_key: string | null
   westpay_user_agent: string | null
   westpay_webhook_secret: string | null
+  bspay_active: boolean
+  bspay_client_id: string | null
+  bspay_client_secret: string | null
+  bspay_webhook_secret: string | null
 }
 
 type DecodoSettings = {
@@ -139,6 +143,10 @@ export function Gateway() {
   const [publicKey, setPublicKey] = useState('')
   const [userAgent, setUserAgent] = useState(defaultUserAgent)
   const [webhookSecret, setWebhookSecret] = useState('')
+  const [bspayActive, setBspayActive] = useState(false)
+  const [bspayClientId, setBspayClientId] = useState('')
+  const [bspayClientSecret, setBspayClientSecret] = useState('')
+  const [bspayWebhookSecret, setBspayWebhookSecret] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -193,7 +201,7 @@ export function Gateway() {
     Promise.all([
       supabase
       .from('payment_gateway_settings')
-      .select('id, active, westpay_api_key, westpay_public_key, westpay_user_agent, westpay_webhook_secret')
+      .select('id, active, westpay_api_key, westpay_public_key, westpay_user_agent, westpay_webhook_secret, bspay_active, bspay_client_id, bspay_client_secret, bspay_webhook_secret')
       .eq('id', 1)
       .maybeSingle(),
       supabase
@@ -243,6 +251,11 @@ export function Gateway() {
         setPublicKey(settings?.westpay_public_key ?? '')
         setUserAgent(settings?.westpay_user_agent ?? defaultUserAgent)
         setWebhookSecret(settings?.westpay_webhook_secret ?? '')
+
+        setBspayActive(settings?.bspay_active ?? false)
+        setBspayClientId(settings?.bspay_client_id ?? '')
+        setBspayClientSecret(settings?.bspay_client_secret ?? '')
+        setBspayWebhookSecret(settings?.bspay_webhook_secret ?? '')
 
         const decodoSettings = decodoResult.data as DecodoSettings | null
         setDecodoActive(decodoSettings?.active ?? false)
@@ -312,6 +325,10 @@ export function Gateway() {
       westpay_public_key: publicKey.trim() || null,
       westpay_user_agent: userAgent.trim() || defaultUserAgent,
       westpay_webhook_secret: webhookSecret.trim() || null,
+      bspay_active: bspayActive,
+      bspay_client_id: bspayClientId.trim() || null,
+      bspay_client_secret: bspayClientSecret.trim() || null,
+      bspay_webhook_secret: bspayWebhookSecret.trim() || null,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'id' })
 
@@ -323,7 +340,7 @@ export function Gateway() {
 
     const { data: savedSettings, error: reloadError } = await supabase
       .from('payment_gateway_settings')
-      .select('active, westpay_api_key, westpay_public_key, westpay_user_agent, westpay_webhook_secret')
+      .select('active, westpay_api_key, westpay_public_key, westpay_user_agent, westpay_webhook_secret, bspay_active, bspay_client_id, bspay_client_secret, bspay_webhook_secret')
       .eq('id', 1)
       .maybeSingle()
 
@@ -339,6 +356,10 @@ export function Gateway() {
     setPublicKey(settings?.westpay_public_key ?? '')
     setUserAgent(settings?.westpay_user_agent ?? defaultUserAgent)
     setWebhookSecret(settings?.westpay_webhook_secret ?? '')
+    setBspayActive(settings?.bspay_active ?? bspayActive)
+    setBspayClientId(settings?.bspay_client_id ?? '')
+    setBspayClientSecret(settings?.bspay_client_secret ?? '')
+    setBspayWebhookSecret(settings?.bspay_webhook_secret ?? '')
     setMessage(settings?.westpay_api_key && settings?.westpay_public_key
       ? 'Gateway salvo e credenciais confirmadas.'
       : 'Gateway salvo, mas API Key ou Public Key continuam vazias.')
@@ -855,6 +876,74 @@ export function Gateway() {
 
             {message && <p className={`text-sm ${message.includes('confirmadas') ? 'text-green-600' : 'text-red-600'}`}>{message}</p>}
             {testMessage && <p className={`text-sm ${testMessage.includes('ativa') ? 'text-green-600' : 'text-red-600'}`}>{testMessage}</p>}
+          </CardContent>
+        </Card>
+
+        {/* BSPay Card */}
+        <Card className="bg-white border-none shadow-sm rounded-md">
+          <CardContent className="p-6 space-y-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-medium text-ml-dark">BSPay</h3>
+                <p className="text-sm text-gray-500">Gateway alternativo para Pix e Criptomoedas (USDT).</p>
+              </div>
+              <label className="flex items-center gap-2 text-sm text-gray-600">
+                <input
+                  type="checkbox"
+                  checked={bspayActive}
+                  onChange={(event) => setBspayActive(event.target.checked)}
+                  className="h-4 w-4 accent-ml-blue"
+                />
+                Ativo
+              </label>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Client ID</label>
+                <input
+                  type="text"
+                  value={bspayClientId}
+                  onChange={(event) => setBspayClientId(event.target.value)}
+                  placeholder="BSPay Client ID"
+                  className="w-full h-12 px-4 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-ml-blue focus:border-transparent transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Client Secret</label>
+                <input
+                  type="password"
+                  value={bspayClientSecret}
+                  onChange={(event) => setBspayClientSecret(event.target.value)}
+                  placeholder="BSPay Client Secret"
+                  className="w-full h-12 px-4 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-ml-blue focus:border-transparent transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Webhook Secret (HMAC)</label>
+                <input
+                  type="password"
+                  value={bspayWebhookSecret}
+                  onChange={(event) => setBspayWebhookSecret(event.target.value)}
+                  placeholder="BSPay Webhook Secret"
+                  className="w-full h-12 px-4 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-ml-blue focus:border-transparent transition-all"
+                />
+                <p className="text-xs text-gray-500 mt-1">Configurar URL no painel: {functionBaseUrl}/bspay?action=webhook</p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <Button
+                type="button"
+                onClick={save}
+                disabled={saving || loading}
+                className="bg-ml-blue text-white hover:bg-ml-hover font-semibold py-3 px-6 rounded-sm shadow-sm"
+              >
+                {saving ? 'Salvando...' : 'Salvar configuracoes'}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

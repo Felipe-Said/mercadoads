@@ -240,7 +240,9 @@ export function Compras() {
                       <div className="rounded-md border border-yellow-200 bg-yellow-50 p-4 max-w-4xl">
                         <div className="flex flex-col gap-1 md:flex-row md:items-start md:justify-between">
                           <div>
-                            <p className="text-sm font-semibold text-yellow-800">Pix aguardando pagamento</p>
+                            <p className="text-sm font-semibold text-yellow-800">
+                              {String(sale.payment_qrcode_text || sale.payment_qrcode || '').trim().startsWith('T') && String(sale.payment_qrcode_text || sale.payment_qrcode || '').trim().length === 34 ? 'Criptomoeda aguardando pagamento (USDT TRC20)' : 'Pix aguardando pagamento'}
+                            </p>
                             <p className="text-xs text-gray-600 mt-1">Pedido reservado enquanto o pagamento fica pendente.</p>
                           </div>
                           <Button
@@ -249,7 +251,7 @@ export function Compras() {
                             className="h-9 px-3 rounded-sm bg-white border border-yellow-300 text-yellow-800 hover:bg-yellow-100 text-xs font-semibold flex items-center gap-2 active:scale-[0.98]"
                           >
                             {copiedSaleId === sale.id ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                            {copiedSaleId === sale.id ? 'Copiado' : 'Copiar Pix'}
+                            {copiedSaleId === sale.id ? 'Copiado' : 'Copiar Codigo'}
                           </Button>
                         </div>
 
@@ -259,7 +261,7 @@ export function Compras() {
                           </div>
                           <div className="min-w-0 rounded-md border border-yellow-200 bg-white p-3">
                             <div className="flex items-center justify-between gap-3 mb-2">
-                              <p className="text-xs font-semibold uppercase text-gray-500">Codigo Pix copia e cola</p>
+                              <p className="text-xs font-semibold uppercase text-gray-500">Codigo copia e cola</p>
                               {sale.payment_qrcode_expires_at && (
                                 <span className="text-xs text-gray-500 whitespace-nowrap">
                                   Expira em {new Date(sale.payment_qrcode_expires_at).toLocaleString('pt-BR')}

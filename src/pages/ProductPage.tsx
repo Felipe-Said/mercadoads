@@ -46,21 +46,25 @@ export function ProductPage() {
   const [buyerName, setBuyerName] = useState('')
   const [buyerPhone, setBuyerPhone] = useState('')
   const [buyerDocument, setBuyerDocument] = useState('')
-  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'wallet'>('pix')
+  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'wallet' | 'crypto'>('pix')
   const [walletBalance, setWalletBalance] = useState(0)
   const [affiliateLoading, setAffiliateLoading] = useState(false)
   const [affiliateMessage, setAffiliateMessage] = useState<string | null>(null)
+  const [bspayActive, setBspayActive] = useState(false)
 
   useEffect(() => {
     if (!id) return
 
     async function load() {
       setLoading(true)
-      const [productData, questionsResult, reviewsResult] = await Promise.all([
+      const [productData, questionsResult, reviewsResult, gatewayResult] = await Promise.all([
         getProduct(id),
         supabase.from('product_questions').select('id, question, answer, created_at, profiles:user_id(full_name, avatar_url)').eq('product_id', id).order('created_at', { ascending: false }).limit(5),
         supabase.from('product_reviews').select('id, rating, title, body, created_at, profiles:user_id(full_name, avatar_url)').eq('product_id', id).order('created_at', { ascending: false }).limit(10),
+        supabase.from('payment_gateway_settings').select('bspay_active').eq('id', 1).maybeSingle(),
       ])
+
+      setBspayActive(gatewayResult.data?.bspay_active ?? false)
 
       setProduct(productData)
       if (productData) recordProductClick(productData, user?.id).catch(console.error)
@@ -165,7 +169,13 @@ export function ProductPage() {
           amount: product.price,
         })
         if (spendError) throw spendError
-      } else if (westPayCustomer) {
+      } else if (bspayActive) {
+        const { data, error } = await supabase.functions.invoke('bspay', {
+          body: { action: paymentMethod === 'crypto' ? 'create_crypto_in' : 'create_pix_in', saleId }
+        })
+        if (error) throw new Error(error.message)
+        if (data?.error) throw new Error(data.error)
+      } else if (westPayCustomer && paymentMethod === 'pix') {
         await createWestPayPixInOrThrow({
           saleId,
           amount: product.price,
@@ -174,7 +184,7 @@ export function ProductPage() {
         })
       }
     } catch (err) {
-      if (saleId && paymentMethod === 'pix') await supabase.from('sales').delete().eq('id', saleId)
+      if (saleId && (paymentMethod === 'pix' || paymentMethod === 'crypto')) await supabase.from('sales').delete().eq('id', saleId)
       setError(err instanceof Error ? err.message : 'Nao foi possivel concluir a compra.')
       setBuying(false)
       return
@@ -527,6 +537,12 @@ export function ProductPage() {
                         <span className="font-semibold text-[var(--layout-text-primary)]">Gerar Pix agora</span>
                         <input type="radio" checked={paymentMethod === 'pix'} onChange={() => setPaymentMethod('pix')} />
                       </label>
+                      {bspayActive && (
+                        <label className={`flex cursor-pointer items-center justify-between rounded-sm border p-3 text-sm ${paymentMethod === 'crypto' ? 'border-[var(--layout-accent-color)] bg-[var(--layout-subtle-background)]' : 'border-gray-200'}`}>
+                          <span className="font-semibold text-[var(--layout-text-primary)]">Criptomoedas (USDT)</span>
+                          <input type="radio" checked={paymentMethod === 'crypto'} onChange={() => setPaymentMethod('crypto')} />
+                        </label>
+                      )}
                       <label className={`flex cursor-pointer items-center justify-between rounded-sm border p-3 text-sm ${paymentMethod === 'wallet' ? 'border-[var(--layout-accent-color)] bg-[var(--layout-subtle-background)]' : 'border-gray-200'}`}>
                         <span>
                           <span className="block font-semibold text-[var(--layout-text-primary)]">Fundos da carteira</span>
@@ -536,7 +552,7 @@ export function ProductPage() {
                       </label>
                     </div>
                   </div>
-                  {paymentMethod === 'pix' && (
+                  {(paymentMethod === 'pix' || paymentMethod === 'crypto') && (
                     <>
                   <div>
                     <label className="mb-1 block text-sm font-bold text-gray-700">Nome completo</label>
