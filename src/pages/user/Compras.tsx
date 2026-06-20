@@ -61,7 +61,8 @@ export function Compras() {
   }, [user])
 
   const handleCopy = async (sale: Sale) => {
-    const value = sale.payment_qrcode_text || sale.payment_qrcode
+    const rawValue = sale.payment_qrcode_text || sale.payment_qrcode
+    const value = typeof rawValue === 'string' ? rawValue.trim() : ''
     if (!value) return
     await navigator.clipboard.writeText(value)
     setCopiedSaleId(sale.id)
@@ -254,7 +255,7 @@ export function Compras() {
 
                         <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-[176px_minmax(0,1fr)] md:items-stretch">
                           <div className="flex justify-center md:justify-start">
-                            <PixQrCode value={(sale.payment_qrcode_text || sale.payment_qrcode) as string} />
+                            <PixQrCode value={String(sale.payment_qrcode_text || sale.payment_qrcode || '').trim()} />
                           </div>
                           <div className="min-w-0 rounded-md border border-yellow-200 bg-white p-3">
                             <div className="flex items-center justify-between gap-3 mb-2">
@@ -267,7 +268,7 @@ export function Compras() {
                             </div>
                             <textarea
                               readOnly
-                              value={sale.payment_qrcode_text || sale.payment_qrcode || ''}
+                              value={String(sale.payment_qrcode_text || sale.payment_qrcode || '').trim()}
                               rows={5}
                               className="w-full resize-none rounded-sm border border-gray-100 bg-gray-50 p-3 font-mono text-xs leading-relaxed text-gray-700 outline-none"
                             />
