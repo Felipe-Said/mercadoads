@@ -548,7 +548,7 @@ export async function getBanners(position?: Banner['position']) {
 export async function getSales(options: { buyerId?: string; sellerId?: string } = {}) {
   let query = supabase
     .from('sales')
-    .select('*, products(title, image_url, file_url, seller_note), product_reviews(id, rating, title, body), proxy_offers(name, traffic, protocol), proxy_deliveries(username, password, host, port, traffic_limit_gb, status), virtual_number_deliveries(service_name, phone_number, sms_code, status, expires_at), temp_email_deliveries(service_name, domain, email, code, status, expires_at), smm_deliveries(service_name, provider_order_id, link, quantity, status, start_count, remains), buyer:buyer_id(full_name), seller:seller_id(full_name)')
+    .select('*, products!sales_product_id_fkey(title, image_url, file_url, seller_note), product_reviews(id, rating, title, body), proxy_offers(name, traffic, protocol), proxy_deliveries(username, password, host, port, traffic_limit_gb, status), virtual_number_deliveries(service_name, phone_number, sms_code, status, expires_at), temp_email_deliveries(service_name, domain, email, code, status, expires_at), smm_deliveries(service_name, provider_order_id, link, quantity, status, start_count, remains), buyer:buyer_id(full_name), seller:seller_id(full_name)')
     .order('created_at', { ascending: false })
 
   if (options.buyerId) query = query.eq('buyer_id', options.buyerId)

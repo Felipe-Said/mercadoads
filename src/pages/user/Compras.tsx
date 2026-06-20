@@ -181,9 +181,9 @@ export function Compras() {
       <div className="space-y-6">
         <h2 className="text-xl font-light text-ml-dark mb-4">Minhas Compras</h2>
 
-        {checkoutSales.some((sale) => sale.status === 'pending') && (
-          <div className="rounded-md border border-blue-100 bg-blue-50 p-4 text-sm text-blue-700">
-            Seu pedido foi gerado. Se o Pix ainda nao apareceu, a plataforma esta atualizando os dados agora.
+        {checkoutSaleIds.length > 0 && (
+          <div className="rounded-md border border-blue-100 bg-blue-50 p-4 text-sm text-blue-700 mb-6 shadow-sm">
+            Seu pedido foi gerado e estamos preparando o seu Pix. Se ele não aparecer abaixo imediatamente, aguarde alguns segundos que a página atualizará sozinha.
           </div>
         )}
 

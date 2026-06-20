@@ -181,7 +181,11 @@ export function ProductPage() {
     }
 
     setBuying(false)
-    navigate('/painel/usuario/compras')
+    if (saleId) {
+      navigate('/painel/usuario/compras', { state: { checkoutSaleIds: [saleId] } })
+    } else {
+      navigate('/painel/usuario/compras')
+    }
   }
 
   const handleQuestion = async () => {
